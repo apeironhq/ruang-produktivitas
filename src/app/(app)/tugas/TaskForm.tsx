@@ -3,7 +3,7 @@
 import { CalendarClock, Check, CheckSquare, MapPin, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useRunAction } from '@/components/ui/actions'
-import { Field, FormModal, errClass } from '@/components/ui/forms'
+import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
 import { PRIORITY, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
 import type { LinkOptions } from '@/lib/queries'
 import { saveTask, setTaskStatus } from './actions'
@@ -71,13 +71,12 @@ export function TaskFormModal({ open, onClose, initial, options }: {
       {(errors) => (
         <div className="form-stack">
           {initial.id && <input type="hidden" name="id" value={initial.id} />}
-          <div className="field">
-            <span className="field-label">Jenis</span>
-            <div className="seg" role="radiogroup" aria-label="Jenis">
-              <label><input type="radio" name="kind" value="tugas" checked={kind === 'tugas'} onChange={() => setKind('tugas')} /><CheckSquare size={15} />Tugas</label>
-              <label><input type="radio" name="kind" value="kegiatan" checked={kind === 'kegiatan'} onChange={() => setKind('kegiatan')} /><CalendarClock size={15} />Kegiatan</label>
-            </div>
-          </div>
+          {editing ? <input type="hidden" name="kind" value={kind} /> : (
+            <Choices name="kind" label="Jenis" value={kind} onChange={(v) => setKind(v as 'tugas' | 'kegiatan')} options={[
+              { value: 'tugas', title: 'Tugas', desc: 'Punya tenggat, prioritas, status, dan subtugas' },
+              { value: 'kegiatan', title: 'Kegiatan', desc: 'Punya jadwal jam mulai–selesai dan lokasi' },
+            ]} />
+          )}
           <Field label="Judul" name="title" error={errors.title}>
             <input id="title" name="title" className={`input${errClass(errors, 'title')}`} defaultValue={initial.title} required maxLength={200}
               placeholder={kind === 'kegiatan' ? 'Mis. Kajian rutin' : 'Mis. Selesaikan modul 7 Next.js'} />

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Inbox, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
@@ -125,6 +125,29 @@ export function PageHead({ title, description, actions }: { title: string; descr
   )
 }
 
+/** Tombol kembali halaman detail (pola MDUNDIG: btn ghost kecil + panah kiri). */
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} className="link-sm inline-flex items-center gap-1 w-fit">← {children}</Link>
+  return <Link href={href} className="btn btn-ghost btn-sm self-start -ml-3"><ArrowLeft size={16} />{children}</Link>
+}
+
+/** Kepala kartu seragam: ikon 18px + judul + keterangan, aksi di kanan (card-header MDUNDIG). */
+export function SectionHead({ id, icon, title, desc, children }: { id?: string; icon?: React.ReactNode; title: string; desc?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className="card-header">
+      <div className="min-w-0">
+        <h2 id={id}>{icon}{title}</h2>
+        {desc && <p className="text-caption">{desc}</p>}
+      </div>
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
+    </div>
+  )
+}
+
+/** Kaki kartu: jumlah item yang ditampilkan. */
+export function CountFoot({ shown, total, noun = 'item' }: { shown: number; total?: number; noun?: string }) {
+  return (
+    <div className="card-foot">
+      <p className="text-caption">Menampilkan <strong>{formatNumber(shown)}</strong>{total !== undefined && total !== shown ? <> dari <strong>{formatNumber(total)}</strong></> : null} {noun}</p>
+    </div>
+  )
 }

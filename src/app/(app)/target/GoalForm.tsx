@@ -2,7 +2,7 @@
 
 import { Flag, Plus, Target } from 'lucide-react'
 import { useState } from 'react'
-import { Field, FormModal, errClass } from '@/components/ui/forms'
+import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
 import { METRIC, PROGRESS_SOURCE } from '@/lib/labels'
 import { addContribution, addMilestone, saveGoal } from './actions'
 
@@ -22,7 +22,7 @@ export interface GoalFormValues {
   due_date: string
 }
 
-const blank = (today: string): GoalFormValues => ({
+export const blankGoal = (today: string): GoalFormValues => ({
   title: '', description: '', category: '', metric_type: 'rupiah', unit_label: '', direction: 'naik', progress_source: 'manual',
   start_value: '0', target_value: '', priority: 'sedang', start_date: today, due_date: '',
 })
@@ -44,13 +44,8 @@ export function GoalFormModal({ open, onClose, initial }: { open: boolean; onClo
           <Field label="Nama target" name="title" error={errors.title}>
             <input id="title" name="title" className={`input${errClass(errors, 'title')}`} defaultValue={initial.title} maxLength={160} required placeholder="Mis. Tabungan Rp100.000.000" />
           </Field>
-          <Field label="Sumber progres" name="progress_source" error={errors.progress_source} hint={PROGRESS_SOURCE[source]?.hint}>
-            <div className="seg" role="radiogroup" aria-label="Sumber progres">
-              {Object.entries(PROGRESS_SOURCE).map(([k, v]) => (
-                <label key={k}><input type="radio" name="progress_source" value={k} checked={source === k} onChange={() => setSource(k)} />{v.label}</label>
-              ))}
-            </div>
-          </Field>
+          <Choices name="progress_source" label="Sumber progres" value={source} onChange={setSource} error={errors.progress_source} columns={3}
+            options={Object.entries(PROGRESS_SOURCE).map(([k, v]) => ({ value: k, title: v.label, desc: v.hint }))} />
           {!manual && <input type="hidden" name="metric_type" value="jumlah" />}
           {manual && (
             <div className="form-grid form-grid-2">
@@ -117,7 +112,7 @@ export function NewGoalButton({ today, label = 'Buat target', className = 'btn b
   return (
     <>
       <button type="button" className={className} onClick={() => setOpen(true)}><Plus size={16} />{label}</button>
-      {open && <GoalFormModal open={open} onClose={() => setOpen(false)} initial={blank(today)} />}
+      {open && <GoalFormModal open={open} onClose={() => setOpen(false)} initial={blankGoal(today)} />}
     </>
   )
 }
@@ -143,10 +138,13 @@ export function ContributionButton({ goalId, metric, today, direction }: { goalI
           {(errors) => (
             <div className="form-stack">
               <input type="hidden" name="goal_id" value={goalId} />
-              <div className="seg" role="radiogroup" aria-label="Jenis kontribusi">
-                <label><input type="radio" name="mode" value={direction === 'turun' ? 'kurang' : 'tambah'} defaultChecked />{direction === 'turun' ? 'Kurangi (mis. bayar utang)' : 'Tambah'}</label>
-                <label><input type="radio" name="mode" value={direction === 'turun' ? 'tambah' : 'kurang'} />{direction === 'turun' ? 'Tambah' : 'Kurangi (koreksi/penarikan)'}</label>
-              </div>
+              <Choices name="mode" label="Jenis kontribusi" options={direction === 'turun' ? [
+                { value: 'kurang', title: 'Kurangi', desc: 'Mis. membayar cicilan utang' },
+                { value: 'tambah', title: 'Tambah', desc: 'Koreksi bila nilai bertambah' },
+              ] : [
+                { value: 'tambah', title: 'Tambah', desc: 'Mis. menabung atau menambah capaian' },
+                { value: 'kurang', title: 'Kurangi', desc: 'Koreksi atau penarikan' },
+              ]} />
               <Field label={metric === 'rupiah' ? 'Jumlah (Rp)' : metric === 'durasi' ? 'Jumlah (menit)' : 'Jumlah'} name="amount" error={errors.amount}>
                 <input id="amount" name="amount" inputMode="decimal" className={`input${errClass(errors, 'amount')}`} required placeholder={metric === 'rupiah' ? '500.000' : '1'} />
               </Field>

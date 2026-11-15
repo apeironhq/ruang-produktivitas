@@ -1,13 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, NotebookPen, Plus } from 'lucide-react'
-import { EmptyState, PageHead } from '@/components/ui/display'
+import { ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react'
+import { EmptyState, PageHead, SectionHead } from '@/components/ui/display'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
+import { todayIn } from '@/lib/dates'
 import { formatDay, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND } from '@/lib/labels'
-import { createClient } from '@/lib/supabase/server'
+import { loadLinkOptions } from '@/lib/queries'
+import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { JournalEntry } from '@/lib/types'
 import { hrefWith, pageHref, str } from '@/lib/url'
+import { NewJournalButton } from './JournalForm'
 
 export const metadata: Metadata = { title: 'Catatan & Jurnal' }
 
@@ -35,7 +38,12 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
     const next = m === 12 ? `${y! + 1}-01` : `${y}-${String(m! + 1).padStart(2, '0')}`
     query = query.gte('entry_date', `${period}-01`).lt('entry_date', `${next}-01`)
   }
-  const { data, count } = await query.order('entry_date', { ascending: false }).order('created_at', { ascending: false }).range((page - 1) * PER_PAGE, page * PER_PAGE - 1)
+  const user = (await getCurrentUser())!
+  const today = todayIn(user.timezone)
+  const [{ data, count }, options] = await Promise.all([
+    query.order('entry_date', { ascending: false }).order('created_at', { ascending: false }).range((page - 1) * PER_PAGE, page * PER_PAGE - 1),
+    loadLinkOptions(supabase),
+  ])
   const entries = (data ?? []) as JournalEntry[]
   const total = count ?? 0
   const pages = Math.max(1, Math.ceil(total / PER_PAGE))
@@ -52,27 +60,30 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
   return (
     <div className="page">
       <PageHead title="Catatan & Jurnal" description="Catatan bebas, jurnal harian, belajar, trading, dan ide — dalam satu tempat."
-        actions={<Link href={kind ? `/jurnal/baru?jenis=${kind}` : '/jurnal/baru'} className="btn btn-primary"><Plus size={16} />Catatan baru</Link>} />
+        actions={<NewJournalButton today={today} goals={options.goals} subjects={options.subjects} preset={kind ? { kind: kind as JournalEntry['kind'] } : undefined} />} />
 
       <nav className="tabs" aria-label="Jenis catatan">
-        <Link href={hrefWith('/jurnal', sp, { jenis: null })} className={`tab${!kind ? ' active' : ''}`}>Semua</Link>
+        <Link href={hrefWith('/jurnal', sp, { jenis: null })} className={`tab${!kind ? ' active' : ''}`} aria-current={!kind ? 'page' : undefined}>Semua</Link>
         {Object.entries(JOURNAL_KIND).map(([k, v]) => (
-          <Link key={k} href={hrefWith('/jurnal', sp, { jenis: k })} className={`tab${kind === k ? ' active' : ''}`}>{v.label}</Link>
+          <Link key={k} href={hrefWith('/jurnal', sp, { jenis: k })} className={`tab${kind === k ? ' active' : ''}`} aria-current={kind === k ? 'page' : undefined}>{v.label}</Link>
         ))}
       </nav>
 
-      <div className="control-row">
-        <SearchParamInput label="Cari catatan" placeholder="Cari judul atau isi…" />
-        <ParamSelect param="periode" label="Bulan" options={[{ value: '', label: 'Semua tanggal' }, ...months]} />
-        <ParamSelect param="arsip" label="Arsip" options={[{ value: '', label: 'Tidak diarsipkan' }, { value: '1', label: 'Diarsipkan' }]} />
-      </div>
-      {tag && <p className="text-caption">Menyaring tag <span className="tag">#{tag}</span> · <Link href={hrefWith('/jurnal', sp, { tag: null })} className="link">hapus saringan</Link></p>}
-
-      <section className="card" aria-label="Daftar catatan">
+      <section className="card" aria-labelledby="note-title">
+        <SectionHead id="note-title" icon={<NotebookPen size={18} />} title={kind ? JOURNAL_KIND[kind]!.label : 'Semua catatan'}
+          desc={archived ? 'Catatan yang diarsipkan' : 'Terbaru di atas'}>
+          {total > 0 && <span className="badge">{formatNumber(total)} catatan</span>}
+        </SectionHead>
+        <div className="card-filters">
+          <SearchParamInput label="Cari catatan" placeholder="Cari judul atau isi catatan" />
+          <ParamSelect param="periode" label="Bulan" options={[{ value: '', label: 'Semua tanggal' }, ...months]} />
+          <ParamSelect param="arsip" label="Arsip" options={[{ value: '', label: 'Tidak diarsipkan' }, { value: '1', label: 'Diarsipkan' }]} />
+          {tag && <span className="text-caption w-full">Menyaring tag <span className="tag">#{tag}</span> · <Link href={hrefWith('/jurnal', sp, { tag: null })} className="link">hapus saringan</Link></span>}
+        </div>
         {entries.length === 0 ? (
           <EmptyState icon={<NotebookPen size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : archived ? 'Arsip kosong' : 'Belum ada catatan'}
             description={filtered ? 'Coba kata kunci atau saringan lain.' : 'Tulis catatan atau jurnal pertama Anda.'}
-            action={!filtered && !archived ? <Link href="/jurnal/baru" className="btn btn-primary"><Plus size={16} />Catatan baru</Link> : undefined} />
+            action={!filtered && !archived ? <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} /> : undefined} />
         ) : (
           <>
             <ul className="items">
@@ -99,8 +110,8 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
                 )
               })}
             </ul>
-            <nav className="flex items-center justify-between gap-4 flex-wrap px-5 py-4 border-t border-[var(--border)]" aria-label="Paginasi">
-              <p className="text-caption">Menampilkan <strong className="text-[var(--text-heading)]">{formatNumber((page - 1) * PER_PAGE + 1)}–{formatNumber(Math.min(total, page * PER_PAGE))}</strong> dari <strong className="text-[var(--text-heading)]">{formatNumber(total)}</strong></p>
+            <nav className="card-foot" aria-label="Paginasi">
+              <p className="text-caption">Menampilkan <strong>{formatNumber((page - 1) * PER_PAGE + 1)}–{formatNumber(Math.min(total, page * PER_PAGE))}</strong> dari <strong>{formatNumber(total)}</strong></p>
               {pages > 1 && (
                 <div className="flex items-center gap-2">
                   {page > 1 ? <Link className="btn btn-secondary btn-sm btn-icon" aria-label="Halaman sebelumnya" href={pageHref('/jurnal', sp, page - 1)}><ChevronLeft size={16} /></Link>

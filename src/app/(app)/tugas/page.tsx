@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckSquare, Columns3, List } from 'lucide-react'
-import { EmptyState, PageHead } from '@/components/ui/display'
+import { CountFoot, EmptyState, PageHead, SectionHead } from '@/components/ui/display'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { addDays, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
@@ -90,37 +90,38 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
         actions={
           <>
             <NewTaskButton options={options} preset={{ kind: 'kegiatan' }} label="Kegiatan" className="btn btn-secondary" />
-            <NewTaskButton options={options} autoOpen={str(sp.baru) === '1'} />
+            <NewTaskButton options={options} />
           </>
         } />
 
       {error && <p className="alert tone-err" role="alert">Gagal memuat data. Muat ulang halaman.</p>}
 
-      <div className="control-row justify-between">
-        <nav className="tabs" aria-label="Tampilan">
-          <Link href={hrefWith('/tugas', sp, { tampilan: null })} className={`tab${view === 'daftar' ? ' active' : ''}`} aria-current={view === 'daftar' ? 'page' : undefined}><List size={15} />Daftar</Link>
-          <Link href={hrefWith('/tugas', sp, { tampilan: 'papan', tab: null, jenis: null })} className={`tab${view === 'papan' ? ' active' : ''}`} aria-current={view === 'papan' ? 'page' : undefined}><Columns3 size={15} />Papan</Link>
+      {view === 'daftar' && (
+        <nav className="tabs" aria-label="Saring status">
+          {TABS.map((t) => (
+            <Link key={t.key} href={hrefWith('/tugas', sp, { tab: t.key || null })} className={`tab${tab === t.key ? ' active' : ''}`} aria-current={tab === t.key ? 'page' : undefined}>
+              {t.label}{counts[t.key] != null && <span className="tab-count">{formatNumber(counts[t.key])}</span>}
+            </Link>
+          ))}
         </nav>
-        {view === 'daftar' && (
-          <nav className="tabs" aria-label="Saring status">
-            {TABS.map((t) => (
-              <Link key={t.key} href={hrefWith('/tugas', sp, { tab: t.key || null })} className={`tab${tab === t.key ? ' active' : ''}`} aria-current={tab === t.key ? 'page' : undefined}>
-                {t.label}{counts[t.key] != null && <span className="tab-count">{formatNumber(counts[t.key])}</span>}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
+      )}
 
-      <div className="control-row">
-        <SearchParamInput label="Cari tugas" placeholder="Cari judul…" />
-        {view === 'daftar' && <ParamSelect param="jenis" label="Jenis" options={[{ value: '', label: 'Semua jenis' }, { value: 'tugas', label: 'Tugas' }, { value: 'kegiatan', label: 'Kegiatan' }]} />}
-        <ParamSelect param="prioritas" label="Prioritas" options={[{ value: '', label: 'Semua prioritas' }, ...Object.entries(PRIORITY).map(([k, v]) => ({ value: k, label: v.label }))]} />
-      </div>
+      <section className="card" aria-labelledby="task-title">
+        <SectionHead id="task-title" icon={<CheckSquare size={18} />} title={view === 'papan' ? 'Papan tugas' : 'Daftar tugas & kegiatan'}
+          desc={view === 'papan' ? 'Tugas dikelompokkan menurut status' : 'Centang lingkaran untuk menandai tugas selesai'}>
+          <div className="seg" role="group" aria-label="Tampilan">
+            <Link href={hrefWith('/tugas', sp, { tampilan: null })} className={view === 'daftar' ? 'on' : ''} aria-current={view === 'daftar' ? 'page' : undefined}><List size={15} />Daftar</Link>
+            <Link href={hrefWith('/tugas', sp, { tampilan: 'papan', tab: null, jenis: null })} className={view === 'papan' ? 'on' : ''} aria-current={view === 'papan' ? 'page' : undefined}><Columns3 size={15} />Papan</Link>
+          </div>
+        </SectionHead>
+        <div className="card-filters">
+          <SearchParamInput label="Cari tugas" placeholder="Cari judul tugas atau kegiatan" />
+          {view === 'daftar' && <ParamSelect param="jenis" label="Jenis" options={[{ value: '', label: 'Semua jenis' }, { value: 'tugas', label: 'Tugas' }, { value: 'kegiatan', label: 'Kegiatan' }]} />}
+          <ParamSelect param="prioritas" label="Prioritas" options={[{ value: '', label: 'Semua prioritas' }, ...Object.entries(PRIORITY).map(([k, v]) => ({ value: k, label: v.label }))]} />
+        </div>
 
-      {view === 'daftar' ? (
-        <section className="card" aria-label="Daftar tugas">
-          {tasks.length === 0 ? (
+        {view === 'daftar' ? (
+          tasks.length === 0 ? (
             <EmptyState icon={<CheckSquare size={20} strokeWidth={1.75} />}
               title={q || priority || kind ? 'Tidak ada yang cocok' : tab === 'selesai' ? 'Belum ada yang selesai' : 'Belum ada tugas di sini'}
               description={q || priority || kind ? 'Coba ubah kata kunci atau saringan.' : 'Tambahkan tugas atau kegiatan pertama Anda.'}
@@ -128,26 +129,28 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
           ) : (
             <>
               <ul className="items">{tasks.map((t) => <TaskRow key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}</ul>
-              <p className="text-caption px-5 py-3 border-t border-[var(--border)]">Menampilkan <strong className="text-[var(--text-heading)]">{formatNumber(tasks.length)}</strong> item</p>
+              <CountFoot shown={tasks.length} noun="item" />
             </>
-          )}
-        </section>
-      ) : (
-        <div className="board" aria-label="Papan tugas">
-          {columns.map((c) => (
-            <section key={c.status} className="board-col" aria-label={TASK_STATUS[c.status]!.label}>
-              <div className="board-head">
-                <span className={`badge badge-dot ${TASK_STATUS[c.status]!.tone}`}>{TASK_STATUS[c.status]!.label}</span>
-                <span className="text-caption">{c.items.length}</span>
-              </div>
-              <div className="board-list">
-                {c.items.length === 0 ? <p className="text-caption text-center py-4">Kosong</p>
-                  : c.items.map((t) => <TaskCard key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+          )
+        ) : (
+          <div className="card-body">
+            <div className="board" aria-label="Papan tugas">
+              {columns.map((c) => (
+                <section key={c.status} className="board-col" aria-label={TASK_STATUS[c.status]!.label}>
+                  <div className="board-head">
+                    <span className={`badge badge-dot ${TASK_STATUS[c.status]!.tone}`}>{TASK_STATUS[c.status]!.label}</span>
+                    <span className="text-caption">{c.items.length}</span>
+                  </div>
+                  <div className="board-list">
+                    {c.items.length === 0 ? <p className="text-caption text-center py-4">Kosong</p>
+                      : c.items.map((t) => <TaskCard key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

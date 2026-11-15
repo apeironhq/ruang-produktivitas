@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
-import { EmptyState, PageHead } from '@/components/ui/display'
+import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from 'lucide-react'
+import { EmptyState, PageHead, SectionHead } from '@/components/ui/display'
 import { addDays, isoToDay, startOfDayIso, todayIn, weekdayMon0 } from '@/lib/dates'
 import { formatDayLong, formatTime } from '@/lib/format'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -69,7 +69,7 @@ export default async function Page({ searchParams }: PageProps<'/kalender'>) {
 
       <section className="card" aria-labelledby="cal-title">
         <div className="card-header">
-          <h2 id="cal-title" className="text-[length:var(--fs-h3)] capitalize">{title}</h2>
+          <h2 id="cal-title" className="capitalize"><CalendarDays size={18} />{title}</h2>
           <div className="control-row">
             <div className="flex items-center gap-3 text-caption max-sm:hidden">
               <span className="flex items-center gap-1.5"><span className="swatch" style={{ background: 'var(--c-blue)' }} />Tugas</span>
@@ -104,7 +104,9 @@ export default async function Page({ searchParams }: PageProps<'/kalender'>) {
       </section>
 
       <section className="card" aria-labelledby="agenda-title">
-        <div className="card-header"><div><h2 id="agenda-title" className="text-[length:var(--fs-h3)]">Agenda bulan ini</h2><p className="text-caption">{monthEvents.length} agenda</p></div></div>
+        <SectionHead id="agenda-title" icon={<ListChecks size={18} />} title="Agenda bulan ini" desc="Diurutkan menurut tanggal">
+          {monthEvents.length > 0 && <span className="badge">{monthEvents.length} agenda</span>}
+        </SectionHead>
         {agendaDays.length === 0 ? <EmptyState icon={<CalendarDays size={20} strokeWidth={1.75} />} title="Tidak ada agenda bulan ini" description="Tambahkan tenggat ke tugas atau buat kegiatan." /> : (
           <div className="card-body pt-2 flex flex-col gap-4">
             {agendaDays.map((d) => (

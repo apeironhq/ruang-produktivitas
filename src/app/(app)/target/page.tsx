@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Gauge, Target, Trophy } from 'lucide-react'
-import { EmptyState, KpiCard, PageHead } from '@/components/ui/display'
+import { EmptyState, KpiCard, PageHead, SectionHead } from '@/components/ui/display'
 import { todayIn } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
@@ -54,16 +54,20 @@ export default async function Page({ searchParams }: PageProps<'/target'>) {
         ))}
       </nav>
 
-      {shown.length === 0 ? (
-        <section className="card">
+      <section className="card" aria-labelledby="goal-title">
+        <SectionHead id="goal-title" icon={<Target size={18} />} title={`Target ${tab.label.toLowerCase()}`}
+          desc={tab.status === 'aktif' ? 'Progres dihitung dari satu sumber data' : tab.status === 'tercapai' ? 'Tercatat sekali saat syaratnya terpenuhi' : 'Target yang disimpan tanpa dipantau'}>
+          {shown.length > 0 && <span className="badge">{shown.length} target</span>}
+        </SectionHead>
+        {shown.length === 0 ? (
           <EmptyState icon={<Target size={20} strokeWidth={1.75} />}
             title={tab.status === 'aktif' ? 'Belum ada target aktif' : tab.status === 'tercapai' ? 'Belum ada target tercapai' : 'Tidak ada target diarsipkan'}
             description={tab.status === 'aktif' ? 'Contoh: Tabungan Rp100.000.000, Menyelesaikan 10 modul Next.js, atau Membaca 12 buku.' : undefined}
             action={tab.status === 'aktif' ? <NewGoalButton today={today} /> : undefined} />
-        </section>
-      ) : (
-        <div className="grid-cards">{shown.map((g) => <GoalCard key={g.id} g={g} />)}</div>
-      )}
+        ) : (
+          <div className="card-body"><div className="grid-cards">{shown.map((g) => <GoalCard key={g.id} g={g} />)}</div></div>
+        )}
+      </section>
     </div>
   )
 }

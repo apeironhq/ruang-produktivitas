@@ -85,6 +85,31 @@ export function FormModal({ action, onClose, submitLabel = 'Simpan', children, r
   )
 }
 
+/** Pilihan radio berbingkai (pola InvitationPicker MDUNDIG). Terkontrol bila `value` + `onChange` diberikan. */
+export function Choices({ name, label, options, value, defaultValue, onChange, error, columns = 2 }: {
+  name: string; label: string; options: Array<{ value: string; title: string; desc?: string }>
+  value?: string; defaultValue?: string; onChange?: (v: string) => void; error?: string; columns?: 1 | 2 | 3
+}) {
+  return (
+    <fieldset className="field">
+      <legend className="field-label mb-2">{label}</legend>
+      <div className={`choices${columns > 1 ? ` choices-${columns}` : ''}`}>
+        {options.map((o) => (
+          <label key={o.value} className="choice">
+            <input type="radio" name={name} value={o.value}
+              {...(value !== undefined ? { checked: value === o.value, onChange: () => onChange?.(o.value) } : { defaultChecked: (defaultValue ?? options[0]?.value) === o.value })} />
+            <span className="min-w-0">
+              <span className="choice-title">{o.title}</span>
+              {o.desc && <span className="choice-desc">{o.desc}</span>}
+            </span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="field-error mt-1">{error}</p>}
+    </fieldset>
+  )
+}
+
 export function errClass(errors: Record<string, string>, name: string) {
   return errors[name] ? ' has-error' : ''
 }

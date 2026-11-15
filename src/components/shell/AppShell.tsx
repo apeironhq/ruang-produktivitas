@@ -6,6 +6,7 @@ import { ChevronRight, LayoutGrid, LogOut, Menu, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { signOut } from '@/app/auth-actions'
 import { AppLogo, APP_NAME, APP_TAGLINE } from './AppLogo'
+import { QuickAddMenu, QuickAddProvider } from './QuickAdd'
 import { ALL_ITEMS, BOTTOM_ITEMS, NAV_GROUPS, isActivePath } from './nav'
 
 interface ShellUser { name: string; email: string }
@@ -22,6 +23,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   }, [open])
 
   return (
+    <QuickAddProvider>
     <div className="shell has-bnav">
       <a href="#konten" className="skip-link">Lewati ke konten</a>
       <Sidebar open={open} onClose={() => setOpen(false)} pathname={pathname} />
@@ -37,6 +39,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
         <MobileBottomNav pathname={pathname} />
       </div>
     </div>
+    </QuickAddProvider>
   )
 }
 
@@ -90,8 +93,7 @@ function TopBar({ user, onToggle }: { user: ShellUser; onToggle: () => void }) {
       <button className="topbar-burger" type="button" aria-label="Buka menu" onClick={onToggle}><Menu size={20} /></button>
       <AppLogo size={32} className="topbar-logo" />
       <div className="topbar-actions">
-        <Link href="/tugas?baru=1" className="btn btn-secondary btn-sm topbar-quick">+ Tugas</Link>
-        <Link href="/jurnal/baru" className="btn btn-secondary btn-sm topbar-quick">+ Catatan</Link>
+        <QuickAddMenu />
       </div>
       <div className="topbar-user">
         <span className="avatar" aria-hidden="true">{initial}</span>

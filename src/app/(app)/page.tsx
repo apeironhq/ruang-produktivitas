@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, NotebookPen, Plus, Target } from 'lucide-react'
+import { BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, NotebookPen, Target } from 'lucide-react'
 import { DonutChart, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
 import { TrendChart } from '@/components/ui/charts'
 import { ParamSelect } from '@/components/ui/filters'
@@ -11,6 +11,7 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task } from '@/lib/types'
 import { str } from '@/lib/url'
+import { QuickAddButton } from '@/components/shell/QuickAdd'
 import { SessionButton, type SubjectBundle } from './belajar/LearningForms'
 import { NewGoalButton } from './target/GoalForm'
 import { goalNumbers } from './target/GoalCard'
@@ -122,8 +123,8 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           <p className="text-caption">{greet}, {user.displayName}. {formatDayLong(today)}.</p>
         </div>
         <div className="control-row">
-          <Link href="/tugas?baru=1" className="btn btn-secondary"><Plus size={16} />Tugas</Link>
-          <Link href="/jurnal/baru" className="btn btn-secondary"><Plus size={16} />Catatan</Link>
+          <QuickAddButton kind="tugas" label="Tugas" />
+          <QuickAddButton kind="catatan" label="Catatan" />
           <NewGoalButton today={today} label="Target" className="btn btn-secondary" />
           <SessionButton subjects={bundles} today={today} label="Catat belajar" />
         </div>

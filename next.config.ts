@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Halaman yang baru dibuka disimpan di cache klien → kembali ke menu yang sama terasa instan.
+    // Aksi simpan/ubah/hapus memanggil revalidatePath sehingga data tetap segar setelah perubahan.
+    staleTimes: { dynamic: 60, static: 300 },
+  },
   turbopack: {
     rules: {
       "*.css": {

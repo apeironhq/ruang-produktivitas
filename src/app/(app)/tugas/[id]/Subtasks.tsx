@@ -1,31 +1,38 @@
 'use client'
 
-import { Check, Plus, Trash2 } from 'lucide-react'
-import { useRef } from 'react'
+import { Check, ListChecks, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { useRunAction } from '@/components/ui/actions'
-import { SubmitButton, useFormAction } from '@/components/ui/forms'
+import { Field, FormModal, errClass } from '@/components/ui/forms'
 import type { Subtask } from '@/lib/types'
 import { addSubtask, deleteSubtask, toggleSubtask } from '../actions'
 
-export function Subtasks({ taskId, items }: { taskId: string; items: Subtask[] }) {
-  const form = useRef<HTMLFormElement | null>(null)
-  const { formAction, errors } = useFormAction(addSubtask, { silent: true, onSuccess: () => form.current?.reset() })
+/** Tombol "Tambah subtugas" di kepala kartu → popup (boleh banyak baris sekaligus). */
+export function AddSubtaskButton({ taskId }: { taskId: string }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div>
-      {items.length > 0 && (
-        <ul className="items mb-3">
-          {items.map((s) => <SubtaskRow key={s.id} s={s} taskId={taskId} />)}
-        </ul>
+    <>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}><Plus size={15} />Subtugas</button>
+      {open && (
+        <FormModal open={open} onClose={() => setOpen(false)} action={addSubtask} icon={<ListChecks size={18} />}
+          title="Tambah subtugas" subtitle="Pecah tugas menjadi langkah kecil." submitLabel="Tambah">
+          {(errors) => (
+            <div className="form-stack">
+              <input type="hidden" name="task_id" value={taskId} />
+              <Field label="Subtugas" name="titles" error={errors.titles} hint="Satu subtugas per baris.">
+                <textarea id="titles" name="titles" rows={5} className={`textarea${errClass(errors, 'titles')}`} required
+                  placeholder={'Baca dokumentasi\nPraktik middleware\nTulis ringkasan'} />
+              </Field>
+            </div>
+          )}
+        </FormModal>
       )}
-      <form ref={form} action={formAction} className="flex gap-2" noValidate>
-        <input type="hidden" name="task_id" value={taskId} />
-        <label htmlFor="new-subtask" className="sr-only">Subtugas baru</label>
-        <input id="new-subtask" name="title" className={`input${errors.title ? ' has-error' : ''}`} placeholder="Tambah subtugas…" maxLength={200} required />
-        <SubmitButton variant="secondary" loadingText="…"><Plus size={16} /><span className="hidden sm:inline">Tambah</span></SubmitButton>
-      </form>
-      {errors.title && <p className="field-error mt-1">{errors.title}</p>}
-    </div>
+    </>
   )
+}
+
+export function Subtasks({ taskId, items }: { taskId: string; items: Subtask[] }) {
+  return <ul className="items">{items.map((s) => <SubtaskRow key={s.id} s={s} taskId={taskId} />)}</ul>
 }
 
 function SubtaskRow({ s, taskId }: { s: Subtask; taskId: string }) {

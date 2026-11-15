@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BookOpen, Clock, ExternalLink, Library, ListChecks, Target, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
+import { BackLink, Badge, EmptyState, KpiCard, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { addDays, todayIn } from '@/lib/dates'
 import { formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { SOURCE_TYPE, SUBJECT_STATUS } from '@/lib/labels'
@@ -11,7 +11,7 @@ import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Module, Option, Session, Source, Subject } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
 import { deleteSession, deleteSource, deleteSubject } from '../actions'
-import { EditSubjectButton, ModuleList, SessionButton, SourceButton } from '../LearningForms'
+import { AddModulesButton, EditSubjectButton, ModuleList, SessionButton, SourceButton } from '../LearningForms'
 
 export const metadata: Metadata = { title: 'Bidang belajar' }
 
@@ -86,21 +86,22 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
       </div>
 
       <div className="row-2">
-        <section className="card" aria-labelledby="mod-title">
-          <div className="card-header">
-            <div><h2 id="mod-title" className="text-[length:var(--fs-h3)]">Modul & materi</h2><p className="text-caption">Progres = modul selesai ÷ modul yang berlaku.</p></div>
-          </div>
-          <div className="card-body">
-            {applicable.length > 0 && <div className="mb-4"><ProgressBar percent={pct} label="Progres modul" /></div>}
-            <ModuleList subjectId={subject.id} modules={modules} />
-          </div>
+        <section className="card h-fit" aria-labelledby="mod-title">
+          <SectionHead id="mod-title" icon={<ListChecks size={18} />} title="Modul & materi" desc={`${done} dari ${applicable.length} modul selesai`}>
+            <AddModulesButton subjectId={subject.id} />
+          </SectionHead>
+          {modules.length === 0 ? <EmptyState icon={<ListChecks size={20} strokeWidth={1.75} />} title="Belum ada modul" description="Tambahkan daftar modul atau materi; progres dihitung dari modul yang selesai." /> : (
+            <div className="card-body pt-3">
+              <div className="mb-2"><ProgressBar percent={pct} label="Progres modul" /></div>
+              <ModuleList subjectId={subject.id} modules={modules} />
+            </div>
+          )}
         </section>
 
         <section className="card h-fit" aria-labelledby="src-title">
-          <div className="card-header">
-            <div><h2 id="src-title" className="text-[length:var(--fs-h3)]">Sumber belajar</h2><p className="text-caption">Posisi terakhir ikut diperbarui dari sesi.</p></div>
+          <SectionHead id="src-title" icon={<Library size={18} />} title="Sumber belajar" desc="Posisi terakhir ikut diperbarui dari sesi">
             <SourceButton subjectId={subject.id} />
-          </div>
+          </SectionHead>
           <div className="card-body pt-1">
             {sources.length === 0 ? <EmptyState icon={<Library size={20} strokeWidth={1.75} />} title="Belum ada sumber" description="Dokumentasi, buku, PDF, video, atau kursus." /> : (
               <ul className="items">
@@ -124,13 +125,12 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
       </div>
 
       <section className="card" aria-labelledby="ses-title">
-        <div className="card-header">
-          <div><h2 id="ses-title" className="text-[length:var(--fs-h3)]">Riwayat sesi</h2>
-            <p className="text-caption">{formatDuration(rangeMinutes)} dalam {sessions.length} sesi · {range.days ? `${range.days} hari terakhir` : 'sejak awal'}</p></div>
-          <nav className="tabs" aria-label="Rentang waktu">
-            {RANGES.map((r) => <Link key={r.key} href={hrefWith(`/belajar/${id}`, sp, { rentang: r.key || null })} className={`tab${range.key === r.key ? ' active' : ''}`} scroll={false}>{r.label}</Link>)}
-          </nav>
-        </div>
+        <SectionHead id="ses-title" icon={<Clock size={18} />} title="Riwayat sesi"
+          desc={`${formatDuration(rangeMinutes)} dalam ${sessions.length} sesi · ${range.days ? `${range.days} hari terakhir` : 'sejak awal'}`}>
+          <div className="seg" role="group" aria-label="Rentang waktu">
+            {RANGES.map((r) => <Link key={r.key} href={hrefWith(`/belajar/${id}`, sp, { rentang: r.key || null })} className={range.key === r.key ? 'on' : ''} scroll={false}>{r.label}</Link>)}
+          </div>
+        </SectionHead>
         {sessions.length === 0 ? <EmptyState icon={<Clock size={20} strokeWidth={1.75} />} title="Belum ada sesi di rentang ini" description="Catat sesi belajar untuk membangun riwayat." /> : (
           <ul className="items">
             {sessions.map((s) => (

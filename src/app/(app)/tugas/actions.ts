@@ -97,14 +97,16 @@ export async function deleteTask(id: string): Promise<ActionState> {
 }
 
 export async function addSubtask(_: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = parseForm(z.object({ task_id: zUuid, title: zText(200, 'Subtugas') }), formData)
+  const parsed = parseForm(z.object({ task_id: zUuid, titles: zText(8000, 'Subtugas') }), formData)
   if (parsed.error) return parsed.error
+  const titles = parsed.data.titles.split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 50).map((s) => s.slice(0, 200))
+  if (!titles.length) return fail('Periksa kembali isian yang ditandai.', { titles: 'Subtugas wajib diisi.' })
   const supabase = await createClient()
   const { count } = await supabase.from('task_subtasks').select('id', { count: 'exact', head: true }).eq('task_id', parsed.data.task_id)
-  const { error } = await supabase.from('task_subtasks').insert({ ...parsed.data, sort_order: count ?? 0 })
+  const { error } = await supabase.from('task_subtasks').insert(titles.map((title, i) => ({ task_id: parsed.data.task_id, title, sort_order: (count ?? 0) + i })))
   if (error) return dbError(error)
   revalidateTasks(parsed.data.task_id)
-  return ok('Subtugas ditambahkan.')
+  return ok(titles.length > 1 ? `${titles.length} subtugas ditambahkan.` : 'Subtugas ditambahkan.')
 }
 
 export async function toggleSubtask(id: string, taskId: string, done: boolean): Promise<ActionState> {

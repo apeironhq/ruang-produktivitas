@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, ArchiveRestore, BookOpen, Pencil, Target, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, BookOpen, Info, LineChart, NotebookPen, Target, Trash2 } from 'lucide-react'
+import { EditJournalButton } from '../JournalForm'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink } from '@/components/ui/display'
+import { BackLink, SectionHead } from '@/components/ui/display'
 import { formatDateTime, formatDayLong, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND, MOOD } from '@/lib/labels'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -45,7 +46,8 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
           <p className="text-caption mt-1">{formatDayLong(e.entry_date)} · diperbarui {formatDateTime(e.updated_at, user.timezone)}</p>
         </div>
         <div className="control-row">
-          <Link href={`/jurnal/${e.id}/ubah`} className="btn btn-primary"><Pencil size={16} />Ubah</Link>
+          <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []}
+            initial={{ id: e.id, kind: e.kind, title: e.title, content: e.content, entry_date: e.entry_date, tags: e.tags.join(', '), mood: e.mood, goal_id: e.goal_id, subject_id: e.subject_id, trading: e.trading }} />
           <ActionButton action={setArchived.bind(null, e.id, !e.is_archived)}>{e.is_archived ? <><ArchiveRestore size={16} />Kembalikan</> : <><Archive size={16} />Arsipkan</>}</ActionButton>
           <ConfirmButton action={deleteEntry.bind(null, e.id)} redirect="/jurnal" title="Hapus catatan?" message={`"${e.title || 'Tanpa judul'}" akan dihapus permanen. Pilih Arsipkan jika hanya ingin menyembunyikannya.`}
             className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus catatan"><Trash2 size={16} /></ConfirmButton>
@@ -53,13 +55,17 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
       </div>
 
       <div className="row-2" style={{ alignItems: 'start' }}>
-        <article className="card">
+        <div className="flex flex-col gap-4 min-w-0">
+        <article className="card" aria-labelledby="isi-title">
+          <SectionHead id="isi-title" icon={<NotebookPen size={18} />} title="Isi catatan" />
           <div className="card-body">
             {e.content ? <div className="prose-plain text-[1rem]">{e.content}</div> : <p className="text-caption">Belum ada isi.</p>}
           </div>
+        </article>
           {t && (
-            <div className="card-body border-t border-[var(--border)]">
-              <h2 className="text-[length:var(--fs-h3)] mb-3">Detail trading</h2>
+            <section className="card" aria-labelledby="trade-title">
+              <SectionHead id="trade-title" icon={<LineChart size={18} />} title="Detail trading" desc="Catatan analisis — tidak dihitung sebagai transaksi keuangan" />
+              <div className="card-body">
               <dl className="dl">
                 <div><dt>Instrumen</dt><dd>{t.instrument || '—'}</dd></div>
                 <div><dt>Posisi</dt><dd>{t.side === 'beli' ? 'Beli / long' : t.side === 'jual' ? 'Jual / short' : '—'}</dd></div>
@@ -70,10 +76,12 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
                 <div><dt>Hasil</dt><dd style={{ color: (t.result ?? 0) < 0 ? 'var(--err)' : undefined }}>{num(t.result)}</dd></div>
                 {t.evaluation && <div className="col-span-full"><dt>Evaluasi</dt><dd className="prose-plain font-normal">{t.evaluation}</dd></div>}
               </dl>
-            </div>
+              </div>
+            </section>
           )}
-        </article>
-        <aside className="card">
+        </div>
+        <aside className="card h-fit" aria-labelledby="info-title">
+          <SectionHead id="info-title" icon={<Info size={18} />} title="Informasi" />
           <div className="card-body flex flex-col gap-4">
             <div>
               <p className="text-overline mb-2">Tag</p>

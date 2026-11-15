@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircle2, Clock, Flag, Trophy } from 'lucide-react'
-import { EmptyState, KpiCard, PageHead, tint } from '@/components/ui/display'
+import { EmptyState, KpiCard, PageHead, SectionHead, tint } from '@/components/ui/display'
 import { isoToDay } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
@@ -40,7 +40,9 @@ export default async function Page() {
 
       <div className="row-2">
         <section className="card" aria-labelledby="ach-title">
-          <div className="card-header"><div><h2 id="ach-title" className="text-[length:var(--fs-h3)]">Target tercapai</h2><p className="text-caption">Terbaru di atas</p></div></div>
+          <SectionHead id="ach-title" icon={<Trophy size={18} />} title="Target tercapai" desc="Terbaru di atas">
+            {achieved.length > 0 && <span className="badge">{achieved.length} target</span>}
+          </SectionHead>
           {achieved.length === 0 ? <EmptyState icon={<Trophy size={20} strokeWidth={1.75} />} title="Belum ada target tercapai" description="Saat progres target mencapai 100%, target otomatis tercatat di sini." action={<Link href="/target" className="btn btn-secondary">Lihat target</Link>} /> : (
             <ul className="items">
               {achieved.map((g) => {
@@ -64,7 +66,7 @@ export default async function Page() {
         </section>
 
         <section className="card h-fit" aria-labelledby="ms-title">
-          <div className="card-header"><div><h2 id="ms-title" className="text-[length:var(--fs-h3)]">Tahapan terbaru</h2><p className="text-caption">Langkah-langkah yang sudah dilewati</p></div></div>
+          <SectionHead id="ms-title" icon={<Flag size={18} />} title="Tahapan terbaru" desc="Langkah-langkah yang sudah dilewati" />
           <div className="card-body pt-1">
             {(ms.data ?? []).length === 0 ? <p className="text-caption py-3">Belum ada tahapan tercapai.</p> : (
               <ul className="items">

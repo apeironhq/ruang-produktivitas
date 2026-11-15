@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, BookOpen, Check, CheckSquare, History, RotateCcw, Trash2, Trophy } from 'lucide-react'
+import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, Trophy } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, EmptyState, ProgressBar, tint } from '@/components/ui/display'
+import { BackLink, Badge, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { NewJournalButton } from '../../jurnal/JournalForm'
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
 import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, TASK_STATUS } from '@/lib/labels'
-import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
+import { GOAL_COLUMNS, loadLinkOptions, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, GoalEvent, Milestone, Task } from '@/lib/types'
 import { deleteContribution, deleteGoal, deleteMilestone, markBinaryDone, setGoalStatus } from '../actions'
@@ -23,7 +24,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
   const tz = user.timezone
   const supabase = await createClient()
   // Satu putaran paralel: target, progres, tahapan, kontribusi, dan relasi sekaligus.
-  const [{ data: raw }, progress, ms, ev, tasks, subjects, journals] = await Promise.all([
+  const [{ data: raw }, progress, ms, ev, tasks, subjects, journals, options] = await Promise.all([
     supabase.from('goals').select(GOAL_COLUMNS).eq('id', id).maybeSingle(),
     loadProgress(supabase, id),
     supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').eq('goal_id', id).order('threshold'),
@@ -31,6 +32,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
     supabase.from('tasks').select('id, title, status, kind, due_at').eq('goal_id', id).order('status').limit(100),
     supabase.from('learning_subjects').select('id, title, status').eq('goal_id', id),
     supabase.from('journal_entries').select('id, title, kind, entry_date').eq('goal_id', id).order('entry_date', { ascending: false }).limit(10),
+    loadLinkOptions(supabase),
   ])
   if (!raw) notFound()
   const goal = mergeProgress([raw as Goal], progress)[0]!
@@ -86,10 +88,8 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
 
       <div className="row-2">
         <section className="card panel" aria-labelledby="prog-title">
-          <div className="panel-head">
-            <div><h2 id="prog-title">Perkembangan</h2><p className="text-caption">{PROGRESS_SOURCE[goal.progress_source]!.hint}</p></div>
-          </div>
-          <div className="panel-body gap-5">
+          <SectionHead id="prog-title" icon={<Gauge size={18} />} title="Perkembangan" desc={PROGRESS_SOURCE[goal.progress_source]!.hint} />
+          <div className="card-body flex flex-col gap-5">
             <div>
               <div className="flex items-baseline justify-between gap-3 flex-wrap">
                 <span className="kpi-value text-[2.25rem]">{formatNumber(goal.percent)}%</span>
@@ -109,12 +109,11 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
         </section>
 
         <section className="card panel" aria-labelledby="ms-title">
-          <div className="panel-head">
-            <div><h2 id="ms-title">Tahapan</h2><p className="text-caption">{milestones.filter((m) => m.reached_at).length} dari {milestones.length} tercapai</p></div>
+          <SectionHead id="ms-title" icon={<Flag size={18} />} title="Tahapan" desc={`${milestones.filter((m) => m.reached_at).length} dari ${milestones.length} tercapai`}>
             {!binary && <MilestoneButton goalId={goal.id} hint={manual ? `Dalam satuan target, mis. ${goal.metric_type === 'rupiah' ? '25.000.000' : '5'}` : `Jumlah ${goal.unit_label} selesai`} />}
-          </div>
-          <div className="panel-body">
-            {milestones.length === 0 ? <EmptyState title="Belum ada tahapan" description="Pecah target menjadi langkah yang bisa dirayakan." className="fill" /> : (
+          </SectionHead>
+          <div className="card-body pt-2 flex-1 flex flex-col">
+            {milestones.length === 0 ? <EmptyState icon={<Flag size={20} strokeWidth={1.75} />} title="Belum ada tahapan" description="Pecah target menjadi langkah yang bisa dirayakan." className="fill" /> : (
               <ul className="milestones">
                 {milestones.map((m) => (
                   <li key={m.id} className={`ms${m.reached_at ? ' reached' : ''}`}>
@@ -136,7 +135,9 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
       <div className="row-2">
         {manual ? (
           <section className="card" aria-labelledby="hist-title">
-            <div className="card-header"><div><h2 id="hist-title" className="text-[length:var(--fs-h3)]">Riwayat kontribusi</h2><p className="text-caption">Setiap perubahan nilai tercatat dan bisa ditelusuri.</p></div></div>
+            <SectionHead id="hist-title" icon={<History size={18} />} title="Riwayat kontribusi" desc="Setiap perubahan nilai tercatat dan bisa ditelusuri">
+              {events.length > 0 && <span className="badge">{events.length} kontribusi</span>}
+            </SectionHead>
             {events.length === 0 ? <EmptyState icon={<History size={20} strokeWidth={1.75} />} title="Belum ada kontribusi" description="Catat kontribusi pertama untuk mulai melihat progres." /> : (
               <div className="table-wrap" tabIndex={0}>
                 <table className="table table-stack">
@@ -162,8 +163,9 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           </section>
         ) : (
           <section className="card" aria-labelledby="src-title">
-            <div className="card-header"><div><h2 id="src-title" className="text-[length:var(--fs-h3)]">{goal.progress_source === 'modul' ? 'Bidang belajar tertaut' : 'Tugas tertaut'}</h2>
-              <p className="text-caption">{goal.progress_source === 'modul' ? 'Tautkan bidang belajar ke target ini dari halaman Ruang Belajar.' : 'Tautkan tugas ke target ini saat membuat/mengubah tugas.'}</p></div></div>
+            <SectionHead id="src-title" icon={goal.progress_source === 'modul' ? <BookOpen size={18} /> : <CheckSquare size={18} />}
+              title={goal.progress_source === 'modul' ? 'Bidang belajar tertaut' : 'Tugas tertaut'}
+              desc={goal.progress_source === 'modul' ? 'Tautkan bidang belajar ke target ini dari halaman Ruang Belajar' : 'Tautkan tugas ke target ini saat membuat atau mengubah tugas'} />
             <div className="card-body pt-2">
               {goal.progress_source === 'modul' ? (
                 (subjects.data ?? []).length === 0 ? <EmptyState icon={<BookOpen size={20} strokeWidth={1.75} />} title="Belum ada bidang belajar tertaut" action={<Link href="/belajar" className="btn btn-secondary">Buka Ruang Belajar</Link>} /> : (
@@ -185,7 +187,9 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
         )}
 
         <section className="card h-fit" aria-labelledby="rel-title">
-          <div className="card-header"><h2 id="rel-title" className="text-[length:var(--fs-h3)]">Terkait</h2></div>
+          <SectionHead id="rel-title" icon={<Link2 size={18} />} title="Terkait" desc="Tugas & catatan yang ditautkan ke target ini">
+            <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} preset={{ goal_id: goal.id }} label="Catatan" className="btn btn-secondary btn-sm" />
+          </SectionHead>
           <div className="card-body pt-2">
             {manual && linkedTasks.length > 0 && (
               <>
@@ -201,7 +205,6 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                 <li key={j.id} className="item"><Link href={`/jurnal/${j.id}`} className="item-title flex-1 truncate hover:text-[var(--brand)]">{j.title || 'Tanpa judul'}</Link><span className="item-meta">{formatDay(j.entry_date)}</span></li>
               ))}</ul>
             )}
-            <Link href={`/jurnal/baru?target=${goal.id}`} className="btn btn-secondary btn-sm mt-3">+ Tulis catatan</Link>
           </div>
         </section>
       </div>

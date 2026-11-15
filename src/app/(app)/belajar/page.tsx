@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BookOpen, CheckCircle2, Clock, Layers } from 'lucide-react'
-import { Badge, EmptyState, KpiCard, PageHead, ProgressBar } from '@/components/ui/display'
+import { Badge, EmptyState, KpiCard, PageHead, ProgressBar, SectionHead } from '@/components/ui/display'
 import { addDays, dayRange, todayIn } from '@/lib/dates'
 import { formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { SUBJECT_STATUS } from '@/lib/labels'
@@ -74,14 +74,16 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
         <Link href={hrefWith('/belajar', sp, { tab: 'arsip' })} className={`tab${showArchived ? ' active' : ''}`}>Diarsipkan<span className="tab-count">{subjects.length - active.length}</span></Link>
       </nav>
 
+      <section className="card" aria-labelledby="subj-title">
+        <SectionHead id="subj-title" icon={<BookOpen size={18} />} title="Bidang belajar" desc="Progres = modul selesai ÷ modul yang berlaku">
+          {shown.length > 0 && <span className="badge">{shown.length} bidang</span>}
+        </SectionHead>
       {shown.length === 0 ? (
-        <section className="card">
           <EmptyState icon={<BookOpen size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada bidang diarsipkan' : 'Belum ada bidang belajar'}
             description={showArchived ? undefined : 'Mulai dengan satu bidang, mis. "Next.js", lalu tambahkan modul dan sumbernya.'}
             action={showArchived ? undefined : <NewSubjectButton goals={goals} />} />
-        </section>
       ) : (
-        <div className="grid-cards">
+        <div className="card-body"><div className="grid-cards">
           {shown.map((s) => {
             const ms = modules.filter((m) => m.subject_id === s.id && m.is_applicable)
             const done = ms.filter((m) => m.completed_at).length
@@ -109,8 +111,9 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
               </Link>
             )
           })}
-        </div>
+        </div></div>
       )}
+      </section>
     </div>
   )
 }

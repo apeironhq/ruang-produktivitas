@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
+import { AlignLeft, Info, ListChecks, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, ProgressBar } from '@/components/ui/display'
+import { BackLink, Badge, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
 import { isoToLocalInput } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
 import { PRIORITY, TASK_KIND, TASK_STATUS } from '@/lib/labels'
@@ -13,7 +13,7 @@ import type { Subtask, Task } from '@/lib/types'
 import { deleteTask } from '../actions'
 import { EditTaskButton, StatusSelect, type TaskFormValues } from '../TaskForm'
 import { whenLabel } from '../TaskItems'
-import { Subtasks } from './Subtasks'
+import { AddSubtaskButton, Subtasks } from './Subtasks'
 
 export const metadata: Metadata = { title: 'Detail tugas' }
 
@@ -57,36 +57,36 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
         <div className="control-row">
           <EditTaskButton initial={initial} options={options} />
           <ConfirmButton action={deleteTask.bind(null, t.id)} redirect="/tugas" title={`Hapus ${TASK_KIND[t.kind]!.toLowerCase()}?`}
-            message={`"${t.title}" beserta subtugasnya akan dihapus permanen.`} className="btn btn-danger-ghost"><Trash2 size={16} />Hapus</ConfirmButton>
+            message={`"${t.title}" beserta subtugasnya akan dihapus permanen.`} className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 
       <div className="row-2">
         <div className="flex flex-col gap-4 min-w-0">
           <section className="card" aria-labelledby="desc-title">
-            <div className="card-header"><h2 id="desc-title" className="text-[length:var(--fs-h3)]">Deskripsi</h2></div>
+            <SectionHead id="desc-title" icon={<AlignLeft size={18} />} title="Deskripsi" />
             <div className="card-body">
               {t.description ? <p className="prose-plain">{t.description}</p> : <p className="text-caption">Belum ada deskripsi.</p>}
             </div>
           </section>
           {t.kind === 'tugas' && (
             <section className="card" aria-labelledby="sub-title">
-              <div className="card-header">
-                <div>
-                  <h2 id="sub-title" className="text-[length:var(--fs-h3)]">Subtugas</h2>
-                  <p className="text-caption">{subtasks.length ? `${done} dari ${subtasks.length} selesai` : 'Pecah tugas menjadi langkah kecil.'}</p>
+              <SectionHead id="sub-title" icon={<ListChecks size={18} />} title="Subtugas"
+                desc={subtasks.length ? `${done} dari ${subtasks.length} selesai` : 'Pecah tugas menjadi langkah kecil.'}>
+                <AddSubtaskButton taskId={t.id} />
+              </SectionHead>
+              {subtasks.length === 0 ? <EmptyState icon={<ListChecks size={20} strokeWidth={1.75} />} title="Belum ada subtugas" description="Tambahkan langkah-langkah kecil untuk tugas ini." /> : (
+                <div className="card-body pt-3">
+                  <div className="mb-2"><ProgressBar percent={(done / subtasks.length) * 100} label="Progres subtugas" /></div>
+                  <Subtasks taskId={t.id} items={subtasks} />
                 </div>
-              </div>
-              <div className="card-body">
-                {subtasks.length > 0 && <div className="mb-4"><ProgressBar percent={(done / subtasks.length) * 100} label="Progres subtugas" /></div>}
-                <Subtasks taskId={t.id} items={subtasks} />
-              </div>
+              )}
             </section>
           )}
         </div>
 
         <section className="card h-fit" aria-labelledby="info-title">
-          <div className="card-header"><h2 id="info-title" className="text-[length:var(--fs-h3)]">Informasi</h2></div>
+          <SectionHead id="info-title" icon={<Info size={18} />} title="Informasi" />
           <div className="card-body flex flex-col gap-5">
             <div className="field">
               <span className="field-label">Status</span>

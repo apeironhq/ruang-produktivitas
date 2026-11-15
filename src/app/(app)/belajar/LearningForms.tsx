@@ -1,9 +1,9 @@
 'use client'
 
-import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, ListChecks, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useRunAction } from '@/components/ui/actions'
-import { Field, FormModal, SubmitButton, errClass, useFormAction } from '@/components/ui/forms'
+import { Field, FormModal, errClass } from '@/components/ui/forms'
 import { SOURCE_TYPE } from '@/lib/labels'
 import type { Module, Option, Source } from '@/lib/types'
 import { addModules, deleteModule, logSession, moveModule, saveSource, saveSubject, setModuleApplicable, setModuleDone } from './actions'
@@ -79,17 +79,30 @@ export function SessionButton({ subjects, defaultSubjectId, today, className = '
   subjects: SubjectBundle[]; defaultSubjectId?: string; today: string; className?: string; label?: string
 }) {
   const [open, setOpen] = useState(false)
+  const [key, setKey] = useState(0)
+  const disabled = subjects.length === 0
+  return (
+    <>
+      <button type="button" className={className} disabled={disabled} title={disabled ? 'Buat bidang belajar terlebih dahulu' : undefined}
+        onClick={() => { setKey((k) => k + 1); setOpen(true) }}><Clock size={16} />{label}</button>
+      {open && <SessionFormModal key={key} open={open} onClose={() => setOpen(false)} subjects={subjects} defaultSubjectId={defaultSubjectId} today={today} />}
+    </>
+  )
+}
+
+/** Popup catat sesi belajar (dipakai tombol halaman & menu Tambah di topbar). */
+export function SessionFormModal({ open, onClose, subjects, defaultSubjectId, today }: {
+  open: boolean; onClose: () => void; subjects: SubjectBundle[]; defaultSubjectId?: string; today: string
+}) {
   const [subjectId, setSubjectId] = useState(defaultSubjectId ?? subjects[0]?.id ?? '')
   const [sourceId, setSourceId] = useState('')
   const [moduleId, setModuleId] = useState('')
   const subject = useMemo(() => subjects.find((s) => s.id === subjectId), [subjects, subjectId])
   const source = subject?.sources.find((s) => s.id === sourceId)
   const openModules = subject?.modules.filter((m) => !m.completed_at) ?? []
-  const disabled = subjects.length === 0
+  const setOpen = (v: boolean) => { if (!v) onClose() }
   return (
     <>
-      <button type="button" className={className} disabled={disabled} title={disabled ? 'Buat bidang belajar terlebih dahulu' : undefined}
-        onClick={() => { setSourceId(''); setModuleId(''); setOpen(true) }}><Clock size={16} />{label}</button>
       {open && (
         <FormModal open={open} onClose={() => setOpen(false)} action={logSession} size="lg" icon={<Clock size={18} />}
           title="Catat sesi belajar" subtitle="Durasi, posisi terakhir, ringkasan, kendala, dan langkah berikutnya." submitLabel="Simpan sesi">
@@ -191,27 +204,35 @@ export function SourceButton({ subjectId, initial, label }: { subjectId: string;
 }
 
 // ---------- Modul ----------
-export function ModuleList({ subjectId, modules }: { subjectId: string; modules: Module[] }) {
-  const form = useRef<HTMLFormElement | null>(null)
-  const { formAction, errors } = useFormAction(addModules, { onSuccess: () => form.current?.reset() })
+/** Tombol "Tambah modul" di kepala kartu → popup (boleh banyak baris sekaligus). */
+export function AddModulesButton({ subjectId }: { subjectId: string }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div>
-      {modules.length > 0 && (
-        <ol className="items mb-4">
-          {modules.map((m, i) => <ModuleRow key={m.id} m={m} subjectId={subjectId} index={i} last={i === modules.length - 1} />)}
-        </ol>
+    <>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}><Plus size={15} />Modul</button>
+      {open && (
+        <FormModal open={open} onClose={() => setOpen(false)} action={addModules} icon={<ListChecks size={18} />}
+          title="Tambah modul" subtitle="Modul baru ditambahkan di akhir daftar." submitLabel="Tambah">
+          {(errors) => (
+            <div className="form-stack">
+              <input type="hidden" name="subject_id" value={subjectId} />
+              <Field label="Nama modul / materi" name="titles" error={errors.titles} hint="Satu modul per baris — bisa tempel banyak sekaligus.">
+                <textarea id="titles" name="titles" rows={6} className={`textarea${errClass(errors, 'titles')}`} required
+                  placeholder={'Routing & layout\nServer Actions\nAutentikasi Supabase'} />
+              </Field>
+            </div>
+          )}
+        </FormModal>
       )}
-      <form ref={form} action={formAction} className="flex gap-2 items-start" noValidate>
-        <input type="hidden" name="subject_id" value={subjectId} />
-        <div className="flex-1 min-w-0">
-          <label htmlFor="titles" className="sr-only">Modul baru</label>
-          <textarea id="titles" name="titles" rows={1} className={`textarea${errors.titles ? ' has-error' : ''}`} style={{ minHeight: 40, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}
-            placeholder="Tambah modul… (tempel banyak baris sekaligus)" required />
-          {errors.titles && <p className="field-error mt-1">{errors.titles}</p>}
-        </div>
-        <SubmitButton variant="secondary" loadingText="…"><Plus size={16} /><span className="hidden sm:inline">Tambah</span></SubmitButton>
-      </form>
-    </div>
+    </>
+  )
+}
+
+export function ModuleList({ subjectId, modules }: { subjectId: string; modules: Module[] }) {
+  return (
+    <ol className="items">
+      {modules.map((m, i) => <ModuleRow key={m.id} m={m} subjectId={subjectId} index={i} last={i === modules.length - 1} />)}
+    </ol>
   )
 }
 
