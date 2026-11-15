@@ -4,7 +4,7 @@ import { Gauge, Target, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead } from '@/components/ui/display'
 import { todayIn } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
-import { GOAL_COLUMNS, withProgress } from '@/lib/queries'
+import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
@@ -24,12 +24,15 @@ export default async function Page({ searchParams }: PageProps<'/target'>) {
   const user = (await getCurrentUser())!
   const supabase = await createClient()
   const tab = TABS.find((t) => t.key === str(sp.tab)) ?? TABS[0]
-  const { data: all } = await supabase.from('goals').select(GOAL_COLUMNS).order('priority', { ascending: false }).order('due_date', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false })
-  const goals = (all ?? []) as Goal[]
+  const [{ data: all }, progress] = await Promise.all([
+    supabase.from('goals').select(GOAL_COLUMNS).order('priority', { ascending: false }).order('due_date', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
+    loadProgress(supabase),
+  ])
+  const goals = mergeProgress((all ?? []) as Goal[], progress)
   const counts = { aktif: 0, tercapai: 0, arsip: 0 }
   for (const g of goals) counts[g.status]++
-  const shown = await withProgress(supabase, goals.filter((g) => g.status === tab.status))
-  const activeWithProgress = tab.status === 'aktif' ? shown : await withProgress(supabase, goals.filter((g) => g.status === 'aktif'))
+  const shown = goals.filter((g) => g.status === tab.status)
+  const activeWithProgress = goals.filter((g) => g.status === 'aktif')
   const avg = activeWithProgress.length ? activeWithProgress.reduce((n, g) => n + g.percent, 0) / activeWithProgress.length : 0
   const today = todayIn(user.timezone)
 

@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, Flag, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead, tint } from '@/components/ui/display'
 import { isoToDay } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
-import { GOAL_COLUMNS, withProgress } from '@/lib/queries'
+import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal } from '@/lib/types'
 import { goalNumbers } from '../target/GoalCard'
@@ -14,18 +14,18 @@ export const metadata: Metadata = { title: 'Pencapaian' }
 export default async function Page() {
   const user = (await getCurrentUser())!
   const supabase = await createClient()
-  const [goalsRes, ms, tasks, mods, mins] = await Promise.all([
+  const [goalsRes, ms, tasks, mods, mins, progress, titles] = await Promise.all([
     supabase.from('goals').select(GOAL_COLUMNS).not('achieved_at', 'is', null).order('achieved_at', { ascending: false }),
     supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').not('reached_at', 'is', null).order('reached_at', { ascending: false }).limit(20),
     supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'selesai'),
     supabase.from('learning_modules').select('id', { count: 'exact', head: true }).not('completed_at', 'is', null),
     supabase.from('learning_sessions').select('duration_minutes'),
+    loadProgress(supabase),
+    supabase.from('goals').select('id, title'),
   ])
-  const achieved = await withProgress(supabase, (goalsRes.data ?? []) as Goal[])
+  const achieved = mergeProgress((goalsRes.data ?? []) as Goal[], progress)
   const totalMinutes = (mins.data ?? []).reduce((n, s) => n + s.duration_minutes, 0)
-  const goalTitle = new Map(achieved.map((g) => [g.id, g.title]))
-  const { data: msGoals } = await supabase.from('goals').select('id, title').in('id', [...new Set((ms.data ?? []).map((m) => m.goal_id))])
-  for (const g of msGoals ?? []) goalTitle.set(g.id, g.title)
+  const goalTitle = new Map((titles.data ?? []).map((g) => [g.id, g.title]))
 
   return (
     <div className="page">

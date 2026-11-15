@@ -59,20 +59,18 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
     : query.order('due_at', { ascending: true, nullsFirst: false }).order('start_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false })
 
   const count = (b: ReturnType<typeof supabase.from>) => b.select('id', { count: 'exact', head: true })
-  const [{ data, error }, options, cActive, cToday, cLate] = await Promise.all([
+  // Satu putaran paralel. Subtugas diambil sekaligus (bukan menunggu daftar tugas dulu); RLS membatasi ke milik sendiri.
+  const [{ data, error }, options, cActive, cToday, cLate, { data: subs }] = await Promise.all([
     query.limit(300),
     loadLinkOptions(supabase),
     count(supabase.from('tasks')).in('status', [...OPEN_STATUSES]),
     count(supabase.from('tasks')).or(todayOr),
     count(supabase.from('tasks')).eq('kind', 'tugas').in('status', [...OPEN_STATUSES]).lt('due_at', nowIso),
+    supabase.from('task_subtasks').select('task_id, is_completed').limit(5000),
   ])
   const tasks = (data ?? []) as Task[]
   const counts: Record<string, number | null> = { '': cActive.count, 'hari-ini': cToday.count, terlambat: cLate.count }
 
-  const ids = tasks.map((t) => t.id)
-  const { data: subs } = ids.length
-    ? await supabase.from('task_subtasks').select('task_id, is_completed').in('task_id', ids)
-    : { data: [] as Array<{ task_id: string; is_completed: boolean }> }
   const goalTitle = new Map(options.goals.map((g) => [g.id, g.title]))
   const meta = new Map<string, TaskMeta>()
   for (const t of tasks) meta.set(t.id, { subDone: 0, subTotal: 0, goalTitle: t.goal_id ? goalTitle.get(t.goal_id) : undefined })

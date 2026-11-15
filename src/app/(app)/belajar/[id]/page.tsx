@@ -31,18 +31,18 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
   const today = todayIn(user.timezone)
   const range = RANGES.find((r) => r.key === str(sp.rentang)) ?? RANGES[0]
 
-  const { data: subjectRow } = await supabase.from('learning_subjects').select('*').eq('id', id).maybeSingle()
-  if (!subjectRow) notFound()
-  const subject = subjectRow as Subject
   let sessionsQ = supabase.from('learning_sessions').select('*').eq('subject_id', id).order('session_date', { ascending: false }).order('created_at', { ascending: false })
   if (range.days) sessionsQ = sessionsQ.gte('session_date', addDays(today, -(range.days - 1)))
-  const [mods, srcs, sess, goals, allMin] = await Promise.all([
+  const [{ data: subjectRow }, mods, srcs, sess, goals, allMin] = await Promise.all([
+    supabase.from('learning_subjects').select('*').eq('id', id).maybeSingle(),
     supabase.from('learning_modules').select('id, subject_id, title, sort_order, is_applicable, completed_at').eq('subject_id', id).order('sort_order').order('created_at'),
     supabase.from('learning_sources').select('*').eq('subject_id', id).order('updated_at', { ascending: false }),
     sessionsQ.limit(200),
     supabase.from('goals').select('id, title').neq('status', 'arsip').order('created_at', { ascending: false }),
     supabase.from('learning_sessions').select('duration_minutes').eq('subject_id', id),
   ])
+  if (!subjectRow) notFound()
+  const subject = subjectRow as Subject
   const modules = (mods.data ?? []) as Module[]
   const sources = (srcs.data ?? []) as Source[]
   const sessions = (sess.data ?? []) as Session[]

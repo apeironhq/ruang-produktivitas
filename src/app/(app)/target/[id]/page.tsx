@@ -7,7 +7,7 @@ import { BackLink, Badge, EmptyState, ProgressBar, tint } from '@/components/ui/
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
 import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, TASK_STATUS } from '@/lib/labels'
-import { GOAL_COLUMNS, withProgress } from '@/lib/queries'
+import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, GoalEvent, Milestone, Task } from '@/lib/types'
 import { deleteContribution, deleteGoal, deleteMilestone, markBinaryDone, setGoalStatus } from '../actions'
@@ -22,18 +22,20 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
   const user = (await getCurrentUser())!
   const tz = user.timezone
   const supabase = await createClient()
-  const { data: raw } = await supabase.from('goals').select(GOAL_COLUMNS).eq('id', id).maybeSingle()
-  if (!raw) notFound()
-  const [g] = await withProgress(supabase, [raw as Goal])
-  const [ms, ev, tasks, subjects, journals] = await Promise.all([
-    supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').eq('goal_id', id).order('threshold', { ascending: g!.direction !== 'turun' }),
+  // Satu putaran paralel: target, progres, tahapan, kontribusi, dan relasi sekaligus.
+  const [{ data: raw }, progress, ms, ev, tasks, subjects, journals] = await Promise.all([
+    supabase.from('goals').select(GOAL_COLUMNS).eq('id', id).maybeSingle(),
+    loadProgress(supabase, id),
+    supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').eq('goal_id', id).order('threshold'),
     supabase.from('goal_progress_events').select('id, goal_id, value, note, occurred_on, source_type, created_at').eq('goal_id', id).order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).limit(100),
     supabase.from('tasks').select('id, title, status, kind, due_at').eq('goal_id', id).order('status').limit(100),
     supabase.from('learning_subjects').select('id, title, status').eq('goal_id', id),
     supabase.from('journal_entries').select('id, title, kind, entry_date').eq('goal_id', id).order('entry_date', { ascending: false }).limit(10),
   ])
-  const goal = g!
+  if (!raw) notFound()
+  const goal = mergeProgress([raw as Goal], progress)[0]!
   const milestones = (ms.data ?? []) as Milestone[]
+  if (goal.direction === 'turun') milestones.reverse()
   const events = (ev.data ?? []) as GoalEvent[]
   const linkedTasks = (tasks.data ?? []) as Pick<Task, 'id' | 'title' | 'status' | 'kind' | 'due_at'>[]
   const n = goalNumbers(goal)

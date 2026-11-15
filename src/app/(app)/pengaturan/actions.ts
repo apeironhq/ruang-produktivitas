@@ -17,6 +17,9 @@ export async function saveProfile(_: ActionState, formData: FormData): Promise<A
   const supabase = await createClient()
   const { error } = await supabase.from('profiles').update(parsed.data).eq('id', user.id)
   if (error) return dbError(error)
+  // Salin ke user_metadata lalu segarkan sesi agar token baru langsung membawa nama & zona waktu.
+  const { error: metaError } = await supabase.auth.updateUser({ data: parsed.data })
+  if (!metaError) await supabase.auth.refreshSession()
   revalidatePath('/', 'layout')
   return ok('Profil disimpan.')
 }

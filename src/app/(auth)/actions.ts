@@ -45,7 +45,8 @@ export async function signUp(_: ActionState, formData: FormData): Promise<Action
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { display_name: parsed.data.display_name },
+      // Ikut di token login → halaman tidak perlu query profil (lihat getCurrentUser).
+      data: { display_name: parsed.data.display_name, timezone: 'Asia/Jakarta' },
       emailRedirectTo: `${await siteUrl()}/auth/confirm?next=/`,
     },
   })

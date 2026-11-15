@@ -17,13 +17,16 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
   const user = (await getCurrentUser())!
   const supabase = await createClient()
-  const { data } = await supabase.from('journal_entries').select('*').eq('id', id).maybeSingle()
+  // Satu putaran paralel: catatan + judul target/bidang (dicocokkan di memori).
+  const [{ data }, goals, subjects] = await Promise.all([
+    supabase.from('journal_entries').select('*').eq('id', id).maybeSingle(),
+    supabase.from('goals').select('id, title').limit(1000),
+    supabase.from('learning_subjects').select('id, title').limit(1000),
+  ])
   if (!data) notFound()
   const e = data as JournalEntry
-  const [goal, subject] = await Promise.all([
-    e.goal_id ? supabase.from('goals').select('id, title').eq('id', e.goal_id).maybeSingle() : Promise.resolve({ data: null }),
-    e.subject_id ? supabase.from('learning_subjects').select('id, title').eq('id', e.subject_id).maybeSingle() : Promise.resolve({ data: null }),
-  ])
+  const goal = { data: (goals.data ?? []).find((g) => g.id === e.goal_id) ?? null }
+  const subject = { data: (subjects.data ?? []).find((s) => s.id === e.subject_id) ?? null }
   const k = JOURNAL_KIND[e.kind]!
   const t = e.kind === 'trading' ? e.trading : null
   const num = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatNumber(v))

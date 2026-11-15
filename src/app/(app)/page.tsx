@@ -7,7 +7,7 @@ import { ParamSelect } from '@/components/ui/filters'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDayLong, formatDuration, formatNumber, formatShort, formatTime } from '@/lib/format'
 import { OPEN_STATUSES, TASK_STATUS } from '@/lib/labels'
-import { GOAL_COLUMNS, withProgress } from '@/lib/queries'
+import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task } from '@/lib/types'
 import { str } from '@/lib/url'
@@ -33,7 +33,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
   const tomorrowIso = startOfDayIso(addDays(today, 1), tz)
   const nowIso = new Date().toISOString()
 
-  const [doneRes, sessRes, journRes, goalsRes, agendaRes, statusRes, recentSess, recentJ, recentT, subjectsRes, sourcesRes, modulesRes] = await Promise.all([
+  const [doneRes, sessRes, journRes, goalsRes, agendaRes, statusRes, recentSess, recentJ, recentT, subjectsRes, sourcesRes, modulesRes, progress] = await Promise.all([
     supabase.from('tasks').select('completed_at').gte('completed_at', fromIso),
     supabase.from('learning_sessions').select('session_date, duration_minutes').gte('session_date', from),
     supabase.from('journal_entries').select('entry_date').gte('entry_date', from),
@@ -49,6 +49,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
     supabase.from('learning_subjects').select('id, title').eq('status', 'aktif').order('updated_at', { ascending: false }),
     supabase.from('learning_sources').select('id, subject_id, title, position'),
     supabase.from('learning_modules').select('id, subject_id, title, completed_at').eq('is_applicable', true).order('sort_order'),
+    loadProgress(supabase),
   ])
 
   // ----- KPI: 7 hari terakhir vs 7 hari sebelumnya -----
@@ -67,7 +68,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
   const kLearn = series((sessRes.data ?? []).map((s) => [s.session_date, s.duration_minutes]))
   const kNotes = series((journRes.data ?? []).map((j) => [j.entry_date, 1]))
 
-  const goals = await withProgress(supabase, (goalsRes.data ?? []) as Goal[])
+  const goals = mergeProgress((goalsRes.data ?? []) as Goal[], progress)
   const avg = goals.length ? goals.reduce((n, g) => n + g.percent, 0) / goals.length : 0
 
   // ----- Grafik tren belajar -----
