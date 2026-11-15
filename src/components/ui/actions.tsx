@@ -2,7 +2,7 @@
 
 import { TriangleAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useOptimistic, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import type { ActionState } from '@/lib/action'
 import { Modal } from './Modal'
 import { useToast } from './Toast'
@@ -37,17 +37,22 @@ export function useRunAction() {
  * Bila server gagal, useOptimistic otomatis mengembalikan nilai lama dan toast galat muncul.
  */
 export function useOptimisticToggle(value: boolean) {
-  const [checked, setChecked] = useOptimistic(value)
+  // Nilai lokal dicatat bersama nilai server saat diklik ("base"). Begitu server mengirim nilai baru,
+  // base berbeda → tampilan otomatis mengikuti server. Update ini mendesak (bukan transition) sehingga
+  // langsung tergambar tanpa menunggu respons server.
+  const [local, setLocal] = useState<{ v: boolean; base: boolean } | null>(null)
+  const checked = local && local.base === value ? local.v : value
   const [pending, start] = useTransition()
   const toast = useToast()
   function toggle(fn: (next: boolean) => Promise<ActionState>) {
+    const next = !checked
+    setLocal({ v: next, base: value })
     start(async () => {
-      const next = !checked
-      setChecked(next)
       try {
         const res = await fn(next)
-        if (!res?.ok) toast.error(res?.message ?? 'Gagal menyimpan. Coba lagi.')
+        if (!res?.ok) { setLocal(null); toast.error(res?.message ?? 'Gagal menyimpan. Coba lagi.') }
       } catch {
+        setLocal(null)
         toast.error('Koneksi bermasalah. Coba lagi.')
       }
     })
