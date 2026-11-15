@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AlignLeft, Info, ListChecks, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
+import { BackLink, DetailTitle, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
 import { isoToLocalInput } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
 import { PRIORITY, TASK_KIND, displayStatus } from '@/lib/labels'
@@ -46,14 +46,8 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
     <div className="page">
       <BackLink href="/tugas">Tugas & Kegiatan</BackLink>
       <div className="page-head">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="badge">{TASK_KIND[t.kind]}</span>
-            <Badge tone={displayStatus(t).tone}>{displayStatus(t).label}</Badge>
-          </div>
-          <h1 className="break-words">{t.title}</h1>
-          {when && <p className={`text-caption mt-1${when.overdue ? ' overdue' : ''}`}>{when.text}</p>}
-        </div>
+        <DetailTitle title={t.title} status={displayStatus(t)}
+          meta={[TASK_KIND[t.kind], when ? <span className={when.overdue ? 'overdue' : ''}>{when.text}</span> : null, t.kind === 'tugas' ? `Prioritas ${PRIORITY[t.priority]!.label.toLowerCase()}` : t.location || null]} />
         <div className="control-row">
           <EditTaskButton initial={initial} options={options} />
           <ConfirmButton action={deleteTask.bind(null, t.id)} redirect="/tugas" title={`Hapus ${TASK_KIND[t.kind]!.toLowerCase()}?`}

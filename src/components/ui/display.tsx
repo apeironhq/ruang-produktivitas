@@ -127,6 +127,26 @@ export function PageHead({ title, description, actions }: { title: string; descr
   )
 }
 
+/**
+ * Kepala halaman detail (pola MDUNDIG): judul dulu, lalu satu baris keterangan kecil dipisah "·".
+ * Status ditulis sebagai teks bertitik warna, bukan kotak badge di atas judul.
+ */
+export function DetailTitle({ title, status, meta = [], desc }: {
+  title: string; status?: { label: string; tone: string }; meta?: React.ReactNode[]; desc?: string
+}) {
+  const items = meta.filter((m) => m !== null && m !== undefined && m !== false && m !== '')
+  return (
+    <div className="min-w-0">
+      <h1 className="break-words">{title}</h1>
+      <p className="detail-meta">
+        {status && <span className={`meta-status ${status.tone}`}>{status.label}</span>}
+        {items.map((m, i) => <span key={i}>{m}</span>)}
+      </p>
+      {desc && <p className="text-caption mt-2 max-w-[70ch]">{desc}</p>}
+    </div>
+  )
+}
+
 /** Tombol kembali halaman detail (pola MDUNDIG: btn ghost kecil + panah kiri). */
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
   return <Link href={href} className="btn btn-ghost btn-sm self-start -ml-3"><ArrowLeft size={16} />{children}</Link>

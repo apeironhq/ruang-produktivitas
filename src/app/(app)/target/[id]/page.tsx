@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, Trophy } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
@@ -56,15 +56,8 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
     <div className="page">
       <BackLink href="/target">Target Saya</BackLink>
       <div className="page-head">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <Badge tone={st.tone}>{st.label}</Badge>
-            <span className="badge">{PROGRESS_SOURCE[goal.progress_source]!.label}</span>
-            {goal.category && <span className="tag">{goal.category}</span>}
-          </div>
-          <h1 className="break-words">{goal.title}</h1>
-          {goal.description && <p className="text-caption mt-1 max-w-[70ch]">{goal.description}</p>}
-        </div>
+        <DetailTitle title={goal.title} status={st} desc={goal.description}
+          meta={[PROGRESS_SOURCE[goal.progress_source]!.label, goal.category, goal.due_date ? `Tenggat ${formatDay(goal.due_date)}` : null]} />
         <div className="control-row">
           {goal.status === 'aktif' && manual && !binary && <ContributionButton goalId={goal.id} metric={goal.metric_type} today={today} direction={goal.direction} />}
           {goal.status === 'aktif' && manual && binary && <ActionButton action={markBinaryDone.bind(null, goal.id)} className="btn btn-primary"><Check size={16} />Tandai tercapai</ActionButton>}

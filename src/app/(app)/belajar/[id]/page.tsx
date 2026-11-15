@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BookOpen, Clock, ExternalLink, Library, ListChecks, Target, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, EmptyState, KpiCard, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { BackLink, DetailTitle, EmptyState, KpiCard, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { addDays, todayIn } from '@/lib/dates'
 import { formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { SOURCE_TYPE, SUBJECT_STATUS } from '@/lib/labels'
@@ -62,14 +62,11 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
     <div className="page">
       <BackLink href="/belajar">Ruang Belajar</BackLink>
       <div className="page-head">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <Badge tone={st.tone}>{st.label}</Badge>
-            {goal && <Link href={`/target/${goal.id}`} className="badge hover:border-[var(--brand-border)]"><Target size={12} aria-hidden="true" />{goal.title}</Link>}
-          </div>
-          <h1 className="break-words">{subject.title}</h1>
-          {subject.description && <p className="text-caption mt-1 max-w-[70ch]">{subject.description}</p>}
-        </div>
+        <DetailTitle title={subject.title} status={st} desc={subject.description}
+          meta={[
+            `${applicable.length} modul`,
+            goal ? <Link href={`/target/${goal.id}`} className="inline-flex items-center gap-1"><Target size={13} aria-hidden="true" />{goal.title}</Link> : null,
+          ]} />
         <div className="control-row">
           <SessionButton subjects={bundle} defaultSubjectId={subject.id} today={today} />
           <EditSubjectButton initial={{ id: subject.id, title: subject.title, description: subject.description, goal_id: subject.goal_id, status: subject.status }} goals={goalOptions} />

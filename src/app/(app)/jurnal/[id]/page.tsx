@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Archive, ArchiveRestore, BookOpen, Info, LineChart, NotebookPen, Target, Trash2 } from 'lucide-react'
 import { EditJournalButton } from '../JournalForm'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, SectionHead } from '@/components/ui/display'
+import { BackLink, DetailTitle, SectionHead } from '@/components/ui/display'
 import { formatDateTime, formatDayLong, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND, MOOD } from '@/lib/labels'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -36,14 +36,9 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
     <div className="page">
       <BackLink href="/jurnal">Catatan & Jurnal</BackLink>
       <div className="page-head">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="badge badge-dot" style={{ '--tone-fg': k.color } as React.CSSProperties}>{k.label}</span>
-            {e.is_archived && <span className="badge">Diarsipkan</span>}
-            {e.mood && <span className="badge">Suasana: {MOOD[e.mood]}</span>}
-          </div>
-          <h1 className="break-words">{e.title || 'Tanpa judul'}</h1>
-          <p className="text-caption mt-1">{formatDayLong(e.entry_date)} · diperbarui {formatDateTime(e.updated_at, user.timezone)}</p>
+        <div className="min-w-0" style={{ '--tone-fg': k.color } as React.CSSProperties}>
+          <DetailTitle title={e.title || 'Tanpa judul'} status={{ label: k.label, tone: '' }}
+            meta={[formatDayLong(e.entry_date), e.mood ? `Suasana ${MOOD[e.mood]!.toLowerCase()}` : null, e.is_archived ? 'Diarsipkan' : null, `Diperbarui ${formatDateTime(e.updated_at, user.timezone)}`]} />
         </div>
         <div className="control-row">
           <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []}
