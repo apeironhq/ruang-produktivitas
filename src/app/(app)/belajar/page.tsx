@@ -64,7 +64,7 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
 
       <div className="kpis kpis-4">
         <KpiCard label="Bidang aktif" value={subjects.filter((s) => s.status === 'aktif').length} icon={<BookOpen size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${subjects.filter((s) => s.status === 'selesai').length} selesai`} />
-        <KpiCard label="Waktu belajar" value={thisWeek} display={formatDuration(thisWeek)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={days.map((d) => minutesByDay.get(d) ?? 0)} thisWeek={thisWeek} lastWeek={lastWeek} />
+        <KpiCard label="Waktu belajar" duration value={thisWeek} display={formatDuration(thisWeek)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={days.map((d) => minutesByDay.get(d) ?? 0)} thisWeek={thisWeek} lastWeek={lastWeek} />
         <KpiCard label="Sesi 7 hari" value={sessionsWeek} icon={<Layers size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption="Sesi tercatat minggu ini" />
         <KpiCard label="Modul selesai" value={doneModules} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-rose)" caption={`dari ${formatNumber(applicable.length)} modul`} />
       </div>

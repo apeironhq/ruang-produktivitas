@@ -8,13 +8,19 @@ import type { GoalWithProgress } from '@/lib/types'
 export function goalNumbers(g: GoalWithProgress) {
   if (g.progress_source !== 'manual') {
     const unit = g.progress_source === 'modul' ? 'modul' : 'tugas'
-    return { current: `${g.itemDone} ${unit}`, target: `${g.itemTotal} ${unit}`, remaining: `${Math.max(0, g.itemTotal - g.itemDone)} ${unit}` }
+    return {
+      current: `${g.itemDone} ${unit}`, target: `${g.itemTotal} ${unit}`, remaining: `${Math.max(0, g.itemTotal - g.itemDone)} ${unit}`,
+      summary: `${g.itemDone} dari ${g.itemTotal} ${unit}`,
+    }
   }
   const remaining = g.direction === 'turun' ? g.current - g.effTarget : g.effTarget - g.current
+  const current = formatMetric(g.current, g.metric_type, g.unit_label)
+  const target = formatMetric(g.effTarget, g.metric_type, g.unit_label)
   return {
-    current: formatMetric(g.current, g.metric_type, g.unit_label),
-    target: formatMetric(g.effTarget, g.metric_type, g.unit_label),
+    current,
+    target,
     remaining: g.metric_type === 'biner' ? (g.current >= 1 ? '—' : 'Belum') : formatMetric(Math.max(0, remaining), g.metric_type, g.unit_label),
+    summary: g.metric_type === 'biner' ? current : `${current} dari ${target}`,
   }
 }
 
@@ -33,7 +39,7 @@ export function GoalCard({ g }: { g: GoalWithProgress }) {
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <span className="kpi-value text-[1.5rem]">{formatNumber(g.percent)}%</span>
-          <span className="item-sub text-right">{n.current} <span className="text-[var(--text-faint)]">/ {n.target}</span></span>
+          <span className="item-sub text-right">{n.summary}</span>
         </div>
         <ProgressBar percent={g.percent} label={`Progres ${g.title}`} />
       </div>

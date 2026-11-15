@@ -41,12 +41,14 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
   const dayEnd = startOfDayIso(addDays(today, 1), tz)
   const nowIso = new Date().toISOString()
   const todayOr = `and(due_at.gte.${dayStart},due_at.lt.${dayEnd}),and(start_at.gte.${dayStart},start_at.lt.${dayEnd})`
+  // "Aktif": tugas yang belum selesai + kegiatan yang belum lewat (kegiatan yang sudah lewat tidak menumpuk di sini).
+  const activeOr = `kind.eq.tugas,end_at.gte.${nowIso},and(end_at.is.null,start_at.gte.${nowIso})`
 
   let query = supabase.from('tasks').select(TASK_COLS)
   if (view === 'papan') {
     query = query.eq('kind', 'tugas').neq('status', 'dibatalkan')
   } else {
-    if (tab === '') query = query.in('status', [...OPEN_STATUSES])
+    if (tab === '') query = query.in('status', [...OPEN_STATUSES]).or(activeOr)
     if (tab === 'hari-ini') query = query.or(todayOr)
     if (tab === 'terlambat') query = query.eq('kind', 'tugas').in('status', [...OPEN_STATUSES]).lt('due_at', nowIso)
     if (tab === 'selesai') query = query.eq('status', 'selesai')
@@ -63,7 +65,7 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
   const [{ data, error }, options, cActive, cToday, cLate, { data: subs }] = await Promise.all([
     query.limit(300),
     loadLinkOptions(supabase),
-    count(supabase.from('tasks')).in('status', [...OPEN_STATUSES]),
+    count(supabase.from('tasks')).in('status', [...OPEN_STATUSES]).or(activeOr),
     count(supabase.from('tasks')).or(todayOr),
     count(supabase.from('tasks')).eq('kind', 'tugas').in('status', [...OPEN_STATUSES]).lt('due_at', nowIso),
     supabase.from('task_subtasks').select('task_id, is_completed').limit(5000),

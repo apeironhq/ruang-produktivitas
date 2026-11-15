@@ -2,7 +2,7 @@
 
 import { TriangleAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
 import type { ActionState } from '@/lib/action'
 import { Modal } from './Modal'
 import { useToast } from './Toast'
@@ -30,6 +30,29 @@ export function useRunAction() {
     })
   }
   return { pending, run }
+}
+
+/**
+ * Centang optimistis: tampilan langsung berubah saat diklik, server menyusul di belakang.
+ * Bila server gagal, useOptimistic otomatis mengembalikan nilai lama dan toast galat muncul.
+ */
+export function useOptimisticToggle(value: boolean) {
+  const [checked, setChecked] = useOptimistic(value)
+  const [pending, start] = useTransition()
+  const toast = useToast()
+  function toggle(fn: (next: boolean) => Promise<ActionState>) {
+    start(async () => {
+      const next = !checked
+      setChecked(next)
+      try {
+        const res = await fn(next)
+        if (!res?.ok) toast.error(res?.message ?? 'Gagal menyimpan. Coba lagi.')
+      } catch {
+        toast.error('Koneksi bermasalah. Coba lagi.')
+      }
+    })
+  }
+  return { checked, pending, toggle }
 }
 
 /** Tombol yang menjalankan aksi langsung (mis. arsipkan). */

@@ -3,7 +3,7 @@ import { CalendarClock, Clock, Flag, ListChecks, MapPin, Target } from 'lucide-r
 import { Badge } from '@/components/ui/display'
 import { formatShort, formatTime } from '@/lib/format'
 import { isoToDay } from '@/lib/dates'
-import { PRIORITY, TASK_STATUS } from '@/lib/labels'
+import { PRIORITY, displayStatus } from '@/lib/labels'
 import type { Task } from '@/lib/types'
 import { StatusSelect, TaskCheck } from './TaskForm'
 
@@ -24,10 +24,10 @@ export function whenLabel(t: Task, tz: string, now = Date.now()) {
 export function TaskRow({ t, meta, tz }: { t: Task; meta?: TaskMeta; tz: string }) {
   const done = t.status === 'selesai'
   const when = whenLabel(t, tz)
-  const st = TASK_STATUS[t.status]!
+  const st = displayStatus(t)
   const pr = PRIORITY[t.priority]!
   return (
-    <li className={`task-row${done || t.status === 'dibatalkan' ? ' is-done' : ''}`}>
+    <li className={`task-row${done || t.status === 'dibatalkan' || st.label === 'Sudah lewat' ? ' is-done' : ''}`}>
       {t.kind === 'tugas'
         ? <TaskCheck id={t.id} done={done} title={t.title} />
         : <span className="tint-icon" style={{ width: 22, height: 22, color: 'var(--c-lilac)' }} aria-hidden="true"><CalendarClock size={18} /></span>}

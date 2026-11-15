@@ -24,7 +24,8 @@ export function mergeProgress(goals: Goal[], rows: GoalProgressRow[]): GoalWithP
     const current = Number(p?.current_value ?? g.start_value)
     const effTarget = Number(p?.effective_target ?? g.target_value)
     const effStart = Number(p?.effective_start ?? g.start_value)
-    const pct = g.status === 'tercapai' ? 100 : progressPercent(current, effStart, effTarget)
+    // Dibulatkan ke bawah agar tampilan seragam (35%, 80%, 33%) dan tidak pernah 100% sebelum benar-benar tercapai.
+    const pct = g.status === 'tercapai' ? 100 : Math.floor(progressPercent(current, effStart, effTarget))
     return { ...g, current, effTarget, effStart, percent: pct, itemTotal: Number(p?.item_total ?? 0), itemDone: Number(p?.item_done ?? 0) }
   })
 }

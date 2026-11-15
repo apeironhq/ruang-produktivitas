@@ -2,7 +2,7 @@
 
 import { Check, ListChecks, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useRunAction } from '@/components/ui/actions'
+import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Field, FormModal, errClass } from '@/components/ui/forms'
 import type { Subtask } from '@/lib/types'
 import { addSubtask, deleteSubtask, toggleSubtask } from '../actions'
@@ -37,12 +37,13 @@ export function Subtasks({ taskId, items }: { taskId: string; items: Subtask[] }
 
 function SubtaskRow({ s, taskId }: { s: Subtask; taskId: string }) {
   const { pending, run } = useRunAction()
+  const check = useOptimisticToggle(s.is_completed)
   return (
-    <li className={`item${s.is_completed ? ' is-done' : ''}`}>
-      <button type="button" className={`task-check${s.is_completed ? ' done' : ''}`} disabled={pending} aria-pressed={s.is_completed}
-        aria-label={s.is_completed ? `Buka lagi: ${s.title}` : `Tandai selesai: ${s.title}`}
-        onClick={() => run(() => toggleSubtask(s.id, taskId, !s.is_completed), { silent: true })}>
-        {s.is_completed && <Check size={14} strokeWidth={3} aria-hidden="true" />}
+    <li className={`item${check.checked ? ' is-done' : ''}`}>
+      <button type="button" className={`task-check${check.checked ? ' done' : ''}`} disabled={check.pending} aria-busy={check.pending} aria-pressed={check.checked}
+        aria-label={check.checked ? `Buka lagi: ${s.title}` : `Tandai selesai: ${s.title}`}
+        onClick={() => check.toggle((next) => toggleSubtask(s.id, taskId, next))}>
+        {check.checked && <Check size={14} strokeWidth={3} aria-hidden="true" />}
       </button>
       <span className="item-title flex-1 min-w-0">{s.title}</span>
       <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label={`Hapus subtugas ${s.title}`} disabled={pending}

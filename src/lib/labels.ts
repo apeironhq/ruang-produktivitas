@@ -10,6 +10,23 @@ export const TASK_STATUS: Record<string, { label: string; tone: Tone }> = {
   dibatalkan: { label: 'Dibatalkan', tone: 'tone-err' },
 }
 export const TASK_STATUS_ORDER = ['belum', 'dikerjakan', 'tertunda', 'selesai', 'dibatalkan'] as const
+
+/** Label status kegiatan: kegiatan tidak "dikerjakan", melainkan terjadwal lalu lewat. */
+export const EVENT_STATUS: Record<string, { label: string; tone: Tone }> = {
+  belum: { label: 'Terjadwal', tone: 'tone-info' },
+  dikerjakan: { label: 'Berlangsung', tone: 'tone-info' },
+  tertunda: { label: 'Ditunda', tone: 'tone-warn' },
+  selesai: { label: 'Selesai', tone: 'tone-brand' },
+  dibatalkan: { label: 'Dibatalkan', tone: 'tone-err' },
+}
+
+/** Status yang ditampilkan untuk tugas maupun kegiatan (kegiatan yang sudah lewat → "Sudah lewat"). */
+export function displayStatus(t: { kind: string; status: string; start_at?: string | null; end_at?: string | null }, nowIso = new Date().toISOString()) {
+  if (t.kind !== 'kegiatan') return TASK_STATUS[t.status]!
+  const until = t.end_at ?? t.start_at
+  if (t.status === 'belum' && until && until < nowIso) return { label: 'Sudah lewat', tone: 'tone-neutral' as Tone }
+  return EVENT_STATUS[t.status]!
+}
 export const OPEN_STATUSES = ['belum', 'dikerjakan', 'tertunda'] as const
 
 export const PRIORITY: Record<string, { label: string; tone: Tone; rank: number }> = {

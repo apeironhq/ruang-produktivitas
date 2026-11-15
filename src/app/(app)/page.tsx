@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, NotebookPen, Target } from 'lucide-react'
+import { BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, History, LineChart, NotebookPen, PieChart, Target } from 'lucide-react'
 import { DonutChart, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
 import { TrendChart } from '@/components/ui/charts'
 import { ParamSelect } from '@/components/ui/filters'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDayLong, formatDuration, formatNumber, formatShort, formatTime } from '@/lib/format'
-import { OPEN_STATUSES, TASK_STATUS } from '@/lib/labels'
+import { OPEN_STATUSES, displayStatus } from '@/lib/labels'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task } from '@/lib/types'
@@ -133,7 +133,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
       <div className="kpis kpis-4">
         <KpiCard label="Tugas selesai" value={kTasks.cur} icon={<CheckSquare size={20} strokeWidth={1.9} />} color={C.blue} href="/tugas?tab=selesai"
           series={kTasks.values} thisWeek={kTasks.cur} lastWeek={kTasks.prev} />
-        <KpiCard label="Waktu belajar" value={kLearn.cur} display={formatDuration(kLearn.cur)} icon={<Clock size={20} strokeWidth={1.9} />} color={C.peach} href="/belajar"
+        <KpiCard label="Waktu belajar" duration value={kLearn.cur} display={formatDuration(kLearn.cur)} icon={<Clock size={20} strokeWidth={1.9} />} color={C.peach} href="/belajar"
           series={kLearn.values} thisWeek={kLearn.cur} lastWeek={kLearn.prev} />
         <KpiCard label="Target aktif" value={goals.length} icon={<Target size={20} strokeWidth={1.9} />} color={C.lilac} href="/target"
           caption={goals.length ? `Rata-rata progres ${formatNumber(Math.round(avg))}%` : 'Belum ada target aktif'} />
@@ -145,7 +145,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
         <section className="card panel" aria-labelledby="trend-title">
           <div className="panel-head">
             <div>
-              <h2 id="trend-title">Aktivitas belajar</h2>
+              <h2 id="trend-title"><LineChart size={18} />Aktivitas belajar</h2>
               <p className="text-caption">{formatDuration(trendTotal)} belajar dalam {days} hari terakhir</p>
             </div>
             <ParamSelect param="hari" label="Rentang waktu" className="w-40" options={[{ value: '7', label: '7 hari terakhir' }, { value: '', label: '14 hari terakhir' }, { value: '30', label: '30 hari terakhir' }]} />
@@ -154,7 +154,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
         </section>
         <section className="card panel" aria-labelledby="status-title">
           <div className="panel-head">
-            <div><h2 id="status-title">Status tugas</h2><p className="text-caption">Sebaran seluruh tugas & kegiatan</p></div>
+            <div><h2 id="status-title"><PieChart size={18} />Status tugas</h2><p className="text-caption">Sebaran seluruh tugas & kegiatan</p></div>
           </div>
           <div className="panel-body center"><DonutChart segments={segments} centerLabel="Tugas" /></div>
         </section>
@@ -163,7 +163,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
       <div className="row-3">
         <section className="card panel" aria-labelledby="today-title">
           <div className="panel-head">
-            <div><h2 id="today-title">Hari ini</h2><p className="text-caption">{overdueCount ? `${overdueCount} terlambat · ` : ''}Tenggat & jadwal hari ini</p></div>
+            <div><h2 id="today-title"><CalendarClock size={18} />Hari ini</h2><p className="text-caption">{overdueCount ? `${overdueCount} terlambat · ` : ''}Tenggat & jadwal hari ini</p></div>
             <Link href="/tugas?tab=hari-ini" className="link-sm">Lihat semua</Link>
           </div>
           <div className="panel-body">
@@ -182,7 +182,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                             : t.due_at ? `${late ? 'Terlambat · ' : 'Tenggat '}${formatShort(t.due_at, tz)}` : ''}
                         </span>
                       </Link>
-                      <span className={`badge badge-dot ${TASK_STATUS[t.status]!.tone}`}>{TASK_STATUS[t.status]!.label}</span>
+                      <span className={`badge badge-dot ${displayStatus(t, nowIso).tone}`}>{displayStatus(t, nowIso).label}</span>
                     </li>
                   )
                 })}
@@ -193,7 +193,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
 
         <section className="card panel" aria-labelledby="goals-title">
           <div className="panel-head">
-            <div><h2 id="goals-title">Target aktif</h2><p className="text-caption">Progres dihitung dari data</p></div>
+            <div><h2 id="goals-title"><Target size={18} />Target aktif</h2><p className="text-caption">Progres dihitung dari data</p></div>
             <Link href="/target" className="link-sm">Lihat semua</Link>
           </div>
           <div className="panel-body">
@@ -206,7 +206,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                       <Link href={`/target/${g.id}`} className="min-w-0 flex-1">
                         <span className="item-row"><span className="item-title truncate">{g.title}</span><span className="item-meta">{formatNumber(g.percent)}%</span></span>
                         <ProgressBar percent={g.percent} label={`Progres ${g.title}`} />
-                        <span className="item-sub block truncate">{n.current} dari {n.target}</span>
+                        <span className="item-sub block truncate">{n.summary}</span>
                       </Link>
                     </li>
                   )
@@ -218,7 +218,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
 
         <section className="card panel" aria-labelledby="act-title">
           <div className="panel-head">
-            <div><h2 id="act-title">Aktivitas terbaru</h2><p className="text-caption">Sesi belajar, catatan, dan tugas selesai</p></div>
+            <div><h2 id="act-title"><History size={18} />Aktivitas terbaru</h2><p className="text-caption">Sesi belajar, catatan, dan tugas selesai</p></div>
           </div>
           <div className="panel-body">
             {activity.length === 0 ? <EmptyState title="Belum ada aktivitas" description="Aktivitas akan muncul di sini." className="fill" /> : (

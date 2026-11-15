@@ -7,7 +7,7 @@ import { BackLink, Badge, EmptyState, ProgressBar, SectionHead, tint } from '@/c
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
-import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, TASK_STATUS } from '@/lib/labels'
+import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, displayStatus } from '@/lib/labels'
 import { GOAL_COLUMNS, loadLinkOptions, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, GoalEvent, Milestone, Task } from '@/lib/types'
@@ -93,7 +93,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             <div>
               <div className="flex items-baseline justify-between gap-3 flex-wrap">
                 <span className="kpi-value text-[2.25rem]">{formatNumber(goal.percent)}%</span>
-                <span className="item-sub">{n.current} dari {n.target}</span>
+                <span className="item-sub">{n.summary}</span>
               </div>
               <ProgressBar percent={goal.percent} label="Progres target" large />
             </div>
@@ -178,7 +178,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                 <ul className="items">{linkedTasks.map((t) => (
                   <li key={t.id} className={`item${t.status === 'selesai' ? ' is-done' : ''}`}>
                     <Link href={`/tugas/${t.id}`} className="item-title flex-1 min-w-0 truncate hover:text-[var(--brand)]">{t.title}</Link>
-                    <Badge tone={TASK_STATUS[t.status]!.tone}>{TASK_STATUS[t.status]!.label}</Badge>
+                    <Badge tone={displayStatus(t).tone}>{displayStatus(t).label}</Badge>
                   </li>
                 ))}</ul>
               )}

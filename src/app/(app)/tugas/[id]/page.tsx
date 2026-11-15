@@ -6,7 +6,7 @@ import { ConfirmButton } from '@/components/ui/actions'
 import { BackLink, Badge, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
 import { isoToLocalInput } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
-import { PRIORITY, TASK_KIND, TASK_STATUS } from '@/lib/labels'
+import { PRIORITY, TASK_KIND, displayStatus } from '@/lib/labels'
 import { loadLinkOptions } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Subtask, Task } from '@/lib/types'
@@ -49,7 +49,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="badge">{TASK_KIND[t.kind]}</span>
-            <Badge tone={TASK_STATUS[t.status]!.tone}>{TASK_STATUS[t.status]!.label}</Badge>
+            <Badge tone={displayStatus(t).tone}>{displayStatus(t).label}</Badge>
           </div>
           <h1 className="break-words">{t.title}</h1>
           {when && <p className={`text-caption mt-1${when.overdue ? ' overdue' : ''}`}>{when.text}</p>}

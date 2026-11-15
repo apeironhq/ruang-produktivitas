@@ -1,6 +1,6 @@
 'use client'
 
-import { NotebookPen, Pencil, Plus } from 'lucide-react'
+import { NotebookPen, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Field, FormModal, errClass } from '@/components/ui/forms'
 import { JOURNAL_KIND, MOOD } from '@/lib/labels'
@@ -123,7 +123,7 @@ export function EditJournalButton({ initial, goals, subjects }: { initial: Journ
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}><Pencil size={16} />Ubah</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
       {open && <JournalFormModal open={open} onClose={() => setOpen(false)} initial={initial} goals={goals} subjects={subjects} />}
     </>
   )

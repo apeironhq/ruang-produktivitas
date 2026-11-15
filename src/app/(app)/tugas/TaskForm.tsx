@@ -2,9 +2,9 @@
 
 import { CalendarClock, Check, CheckSquare, MapPin, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { useRunAction } from '@/components/ui/actions'
+import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
-import { PRIORITY, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
+import { EVENT_STATUS, PRIORITY, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
 import type { LinkOptions } from '@/lib/queries'
 import { saveTask, setTaskStatus } from './actions'
 
@@ -114,7 +114,7 @@ export function TaskFormModal({ open, onClose, initial, options }: {
             </Field>
             <Field label="Status" name="status" error={errors.status}>
               <select id="status" name="status" className="select" defaultValue={initial.status}>
-                {TASK_STATUS_ORDER.filter((s) => kind === 'tugas' || s !== 'dikerjakan').map((s) => <option key={s} value={s}>{TASK_STATUS[s]!.label}</option>)}
+                {TASK_STATUS_ORDER.filter((s) => kind === 'tugas' || s !== 'dikerjakan').map((s) => <option key={s} value={s}>{(kind === 'kegiatan' ? EVENT_STATUS : TASK_STATUS)[s]!.label}</option>)}
               </select>
             </Field>
             <Field label="Kategori" name="category" error={errors.category} hint="Mis. Kuliah, Kantor, Rumah">
@@ -138,12 +138,12 @@ export function TaskFormModal({ open, onClose, initial, options }: {
 
 /** Lingkaran centang untuk menandai tugas selesai / membuka lagi. */
 export function TaskCheck({ id, done, title }: { id: string; done: boolean; title: string }) {
-  const { pending, run } = useRunAction()
+  const { checked, pending, toggle } = useOptimisticToggle(done)
   return (
-    <button type="button" className={`task-check${done ? ' done' : ''}`} disabled={pending}
-      aria-label={done ? `Buka lagi: ${title}` : `Tandai selesai: ${title}`} aria-pressed={done}
-      onClick={() => run(() => setTaskStatus(id, done ? 'belum' : 'selesai'))}>
-      {done && <Check size={14} strokeWidth={3} aria-hidden="true" />}
+    <button type="button" className={`task-check${checked ? ' done' : ''}`} disabled={pending} aria-busy={pending}
+      aria-label={checked ? `Buka lagi: ${title}` : `Tandai selesai: ${title}`} aria-pressed={checked}
+      onClick={() => toggle((next) => setTaskStatus(id, next ? 'selesai' : 'belum'))}>
+      {checked && <Check size={14} strokeWidth={3} aria-hidden="true" />}
     </button>
   )
 }

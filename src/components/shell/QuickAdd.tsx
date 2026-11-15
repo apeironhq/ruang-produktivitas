@@ -13,8 +13,9 @@ export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | '
 /** Tautan yang sudah terisi saat popup dibuka dari halaman tertentu (mis. detail target). */
 type Preset = { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }
 
-interface QuickApi { open: (kind: QuickKind, preset?: Preset) => void; pending: QuickKind | null }
-const QuickContext = createContext<QuickApi>({ open: () => {}, pending: null })
+interface QuickApi { open: (kind: QuickKind, preset?: Preset) => void; prefetch: () => void; pending: QuickKind | null }
+const QuickContext = createContext<QuickApi>({ open: () => {}, prefetch: () => {}, pending: null })
+const CACHE_MS = 60_000
 export const useQuickAdd = () => useContext(QuickContext)
 
 export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; icon: React.ReactNode; color: string }> = [
@@ -32,13 +33,24 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
   const [pending, setPending] = useState<QuickKind | null>(null)
   const [, start] = useTransition()
   const toast = useToast()
+  // Data pilihan dimuat di latar (saat menu dibuka / tombol disorot) agar popup langsung terbuka.
+  const cache = useRef<{ at: number; promise: Promise<QuickData | null> } | null>(null)
+  const fetchData = useCallback((force = false) => {
+    const c = cache.current
+    if (!force && c && Date.now() - c.at < CACHE_MS) return c.promise
+    const promise = loadQuickData().catch(() => null)
+    cache.current = { at: Date.now(), promise }
+    promise.then((d) => { if (!d && cache.current?.promise === promise) cache.current = null })
+    return promise
+  }, [])
+  const prefetch = useCallback(() => { void fetchData() }, [fetchData])
 
   const open = useCallback((kind: QuickKind, preset: Preset = {}) => {
     setPending(kind)
     start(async () => {
       try {
-        const data = await loadQuickData()
-        if (!data) { toast.error('Sesi berakhir. Silakan masuk kembali.'); return }
+        const data = await fetchData()
+        if (!data) { toast.error('Koneksi bermasalah atau sesi berakhir. Coba lagi.'); return }
         if (kind === 'sesi' && data.bundles.length === 0) {
           toast.info('Buat bidang belajar terlebih dahulu, lalu catat sesinya.')
           setActive({ kind: 'bidang', preset, key: Date.now(), data })
@@ -51,10 +63,11 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
         setPending(null)
       }
     })
-  }, [toast])
+  }, [toast, fetchData])
 
-  const api = useMemo(() => ({ open, pending }), [open, pending])
-  const close = () => setActive(null)
+  const api = useMemo(() => ({ open, prefetch, pending }), [open, prefetch, pending])
+  // Setelah popup ditutup (mungkin ada data baru), pilihan dimuat ulang pada pembukaan berikutnya.
+  const close = () => { setActive(null); cache.current = null }
   const a = active
   return (
     <QuickContext.Provider value={api}>
@@ -78,10 +91,11 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
 
 /** Tombol yang membuka popup tambah tertentu (untuk Server Component). */
 export function QuickAddButton({ kind, label, className = 'btn btn-secondary', preset }: { kind: QuickKind; label: string; className?: string; preset?: Preset }) {
-  const { open, pending } = useQuickAdd()
+  const { open, prefetch, pending } = useQuickAdd()
   const busy = pending === kind
   return (
-    <button type="button" className={className} disabled={busy} aria-busy={busy} onClick={() => open(kind, preset)}>
+    <button type="button" className={className} disabled={busy} aria-busy={busy} onClick={() => open(kind, preset)}
+      onPointerEnter={prefetch} onFocus={prefetch} onTouchStart={prefetch}>
       {busy ? <span className="spinner" aria-hidden="true" /> : <Plus size={16} />}{label}
     </button>
   )
@@ -89,7 +103,7 @@ export function QuickAddButton({ kind, label, className = 'btn btn-secondary', p
 
 /** Menu "Tambah" di topbar. */
 export function QuickAddMenu() {
-  const { open, pending } = useQuickAdd()
+  const { open, prefetch, pending } = useQuickAdd()
   const [show, setShow] = useState(false)
   const root = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -103,7 +117,8 @@ export function QuickAddMenu() {
   }, [show])
   return (
     <div ref={root} className="relative">
-      <button type="button" className="btn btn-primary btn-sm" aria-haspopup="menu" aria-expanded={show} onClick={() => setShow((v) => !v)} disabled={!!pending}>
+      <button type="button" className="btn btn-primary btn-sm" aria-haspopup="menu" aria-expanded={show} disabled={!!pending}
+        onPointerEnter={prefetch} onFocus={prefetch} onClick={() => { prefetch(); setShow((v) => !v) }}>
         {pending ? <span className="spinner" aria-hidden="true" /> : <Plus size={16} />}<span className="max-sm:sr-only">Tambah</span>
       </button>
       {show && (

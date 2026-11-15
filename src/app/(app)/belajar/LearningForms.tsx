@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, ListChecks, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useRunAction } from '@/components/ui/actions'
+import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Field, FormModal, errClass } from '@/components/ui/forms'
 import { SOURCE_TYPE } from '@/lib/labels'
 import type { Module, Option, Source } from '@/lib/types'
@@ -238,12 +238,13 @@ export function ModuleList({ subjectId, modules }: { subjectId: string; modules:
 
 function ModuleRow({ m, subjectId, index, last }: { m: Module; subjectId: string; index: number; last: boolean }) {
   const { pending, run } = useRunAction()
-  const done = !!m.completed_at
+  const check = useOptimisticToggle(!!m.completed_at)
+  const done = check.checked
   return (
     <li className={`item${done ? ' is-done' : ''}`} style={{ opacity: m.is_applicable ? 1 : 0.55 }}>
-      <button type="button" className={`task-check${done ? ' done' : ''}`} disabled={pending || !m.is_applicable} aria-pressed={done}
+      <button type="button" className={`task-check${done ? ' done' : ''}`} disabled={check.pending || !m.is_applicable} aria-busy={check.pending} aria-pressed={done}
         aria-label={done ? `Buka lagi: ${m.title}` : `Tandai selesai: ${m.title}`}
-        onClick={() => run(() => setModuleDone(m.id, subjectId, !done), { silent: true })}>
+        onClick={() => check.toggle((next) => setModuleDone(m.id, subjectId, next))}>
         {done && <Check size={14} strokeWidth={3} aria-hidden="true" />}
       </button>
       <span className="min-w-0 flex-1">

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
-import { formatNumber } from '@/lib/format'
+import { formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
 export const tint = (color: string): React.CSSProperties => ({ color, background: `color-mix(in srgb, ${color} 10%, transparent)` })
@@ -19,14 +19,16 @@ export function EmptyState({ title, description, icon, action, className = '' }:
 }
 
 /** Kartu KPI: ikon bernada, label, angka besar, perubahan vs 7 hari sebelumnya, sparkline 7 hari. */
-export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, href, display }: {
+export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, href, display, duration }: {
   label: string; value: number | null; unit?: string; icon: React.ReactNode; color: string
   series?: number[]; thisWeek?: number; lastWeek?: number; caption?: string; href?: string; display?: string
+  /** nilai berupa menit → selisih ditulis "+1 j 20 m", bukan "+80 baru" */
+  duration?: boolean
 }) {
   let delta: { up: boolean; text: string; flat: boolean } | null = null
   if (thisWeek !== undefined && lastWeek !== undefined) {
     const diff = thisWeek - lastWeek
-    if (lastWeek === 0) delta = { up: diff >= 0, text: diff > 0 ? `+${formatNumber(diff)} baru` : 'Tidak berubah', flat: diff === 0 }
+    if (lastWeek === 0) delta = { up: diff >= 0, text: diff > 0 ? (duration ? `+${formatDuration(diff)}` : `+${formatNumber(diff)} baru`) : 'Tidak berubah', flat: diff === 0 }
     else {
       const pct = Math.round((diff / lastWeek) * 100)
       delta = { up: pct >= 0, text: `${pct > 0 ? '+' : ''}${pct}%`, flat: pct === 0 }
