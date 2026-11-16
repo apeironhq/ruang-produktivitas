@@ -6,6 +6,9 @@ import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { AllocationButton } from '../../keuangan/FinanceForms'
+import { deleteAllocation } from '../../keuangan/actions'
+import { PiggyBank } from 'lucide-react'
+import type { Allocation } from '@/lib/types'
 import { loadAccounts } from '@/lib/finance'
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
@@ -35,11 +38,15 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
     supabase.from('learning_subjects').select('id, title, status').eq('goal_id', id),
     supabase.from('journal_entries').select('id, title, kind, entry_date').eq('goal_id', id).order('entry_date', { ascending: false }).limit(10),
     loadLinkOptions(supabase),
-    loadAccounts(supabase),
-    supabase.from('goal_allocations').select('account_id, amount').eq('goal_id', id),
+    loadAccounts(supabase, true),
+    supabase.from('goal_allocations').select('id, goal_id, account_id, amount, occurred_on, note, created_at').eq('goal_id', id)
+      .order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).limit(200),
   ])
+  const allocations = (allocs.data ?? []) as Allocation[]
   const held: Record<string, number> = {}
-  for (const a of allocs.data ?? []) held[a.account_id] = (held[a.account_id] ?? 0) + Number(a.amount)
+  for (const a of allocations) held[a.account_id] = (held[a.account_id] ?? 0) + Number(a.amount)
+  const activeAccounts = accounts.filter((a) => !a.is_archived)
+  const accountName = new Map(accounts.map((a) => [a.id, a.name]))
   if (!raw) notFound()
   const goal = mergeProgress([raw as Goal], progress)[0]!
   const milestones = (ms.data ?? []) as Milestone[]
@@ -68,7 +75,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           meta={[PROGRESS_SOURCE[goal.progress_source]!.label, goal.category, goal.due_date ? `Tenggat ${formatDay(goal.due_date)}` : null]} />
         <div className="control-row">
           {goal.status === 'aktif' && manual && !binary && <ContributionButton goalId={goal.id} metric={goal.metric_type} today={today} direction={goal.direction} />}
-          {goal.status === 'aktif' && alokasi && <AllocationButton goalId={goal.id} accounts={accounts} today={today} held={held} />}
+          {goal.status === 'aktif' && alokasi && <AllocationButton goalId={goal.id} accounts={activeAccounts} today={today} held={held} />}
           {goal.status === 'aktif' && manual && binary &&<ActionButton action={markBinaryDone.bind(null, goal.id)} className="btn btn-primary"><Check size={16} />Tandai tercapai</ActionButton>}
           <EditGoalButton initial={initial} />
           {goal.status === 'arsip' || goal.status === 'tercapai'
@@ -135,7 +142,43 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
       </div>
 
       <div className="row-2">
-        {manual ? (
+        {alokasi ? (
+          <section className="card" aria-labelledby="alloc-title">
+            <SectionHead id="alloc-title" icon={<PiggyBank size={18} />} title="Riwayat alokasi"
+              desc="Dana tetap di rekening, ditandai untuk target ini — bukan pemasukan baru">
+              {allocations.length > 0 && <span className="badge">{allocations.length} alokasi</span>}
+            </SectionHead>
+            {allocations.length === 0 ? (
+              <EmptyState icon={<PiggyBank size={20} strokeWidth={1.75} />} title="Belum ada alokasi"
+                description={activeAccounts.length ? 'Sisihkan dana dari rekening untuk mulai melihat progres.' : 'Tambahkan rekening di menu Keuangan terlebih dahulu.'}
+                action={activeAccounts.length ? undefined : <Link href="/keuangan/rekening" className="btn btn-secondary">Buka Keuangan</Link>} />
+            ) : (
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel alokasi">
+                <table className="table table-stack">
+                  <thead><tr><th>Tanggal</th><th>Rekening</th><th>Catatan</th><th className="num">Nilai</th><th><span className="sr-only">Aksi</span></th></tr></thead>
+                  <tbody>
+                    {allocations.map((a) => (
+                      <tr key={a.id}>
+                        <td data-label="Tanggal" className="whitespace-nowrap">{formatDay(a.occurred_on)}</td>
+                        <td data-label="Rekening" className="cell-primary">{accountName.get(a.account_id) ?? '—'}</td>
+                        <td data-label="Catatan">{a.note || <span className="text-caption">—</span>}</td>
+                        <td data-label="Nilai" className="num cell-strong" style={{ color: a.amount < 0 ? 'var(--err)' : 'var(--brand-ink)' }}>
+                          {a.amount > 0 ? '+' : '−'}{formatMetric(Math.abs(a.amount), 'rupiah')}
+                        </td>
+                        <td data-label="" className="cell-actions">
+                          <div className="flex justify-end">
+                            <ConfirmButton action={deleteAllocation.bind(null, a.id, goal.id)} title="Hapus alokasi?" message="Progres target dihitung ulang tanpa alokasi ini. Saldo rekening tidak berubah."
+                              className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus alokasi"><Trash2 size={15} /></ConfirmButton>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : manual ? (
           <section className="card" aria-labelledby="hist-title">
             <SectionHead id="hist-title" icon={<History size={18} />} title="Riwayat kontribusi" desc="Setiap perubahan nilai tercatat dan bisa ditelusuri">
               {events.length > 0 && <span className="badge">{events.length} kontribusi</span>}

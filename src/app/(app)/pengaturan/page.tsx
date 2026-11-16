@@ -27,7 +27,7 @@ export default async function Page() {
           <section className="card" aria-labelledby="exp-title">
             <SectionHead id="exp-title" icon={<Download size={18} />} title="Ekspor data" desc="Unduh seluruh data Anda (JSON)" />
             <div className="card-body">
-              <p className="text-caption mb-4">Berisi profil, target, tahapan, kontribusi, bidang belajar, modul, sumber, sesi, tugas, subtugas, dan catatan.</p>
+              <p className="text-caption mb-4">Berisi profil, target, tahapan, kontribusi, bidang belajar, modul, sumber, sesi, tugas, subtugas, catatan, serta rekening, transaksi, kategori, anggaran, dan alokasi tabungan.</p>
               <a href="/api/ekspor" className="btn btn-secondary btn-block" download><Download size={16} />Unduh data saya</a>
             </div>
           </section>

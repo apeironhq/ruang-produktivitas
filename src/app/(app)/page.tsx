@@ -1,15 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, History, LineChart, NotebookPen, PieChart, Target } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, History, LineChart, NotebookPen, PieChart, Target, Wallet } from 'lucide-react'
+import { loadAccounts, monthRange, sumFlow } from '@/lib/finance'
 import { DonutChart, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
 import { TrendChart } from '@/components/ui/charts'
 import { ParamSelect } from '@/components/ui/filters'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
-import { formatDayLong, formatDuration, formatNumber, formatShort, formatTime } from '@/lib/format'
+import { formatDayLong, formatDuration, formatNumber, formatRupiah, formatShort, formatTime } from '@/lib/format'
 import { OPEN_STATUSES, displayStatus } from '@/lib/labels'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
-import type { Goal, Task } from '@/lib/types'
+import type { Goal, Task, Transaction } from '@/lib/types'
 import { str } from '@/lib/url'
 import { QuickAddButton } from '@/components/shell/QuickAdd'
 import { SessionButton, type SubjectBundle } from './belajar/LearningForms'
@@ -34,7 +35,8 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
   const tomorrowIso = startOfDayIso(addDays(today, 1), tz)
   const nowIso = new Date().toISOString()
 
-  const [doneRes, sessRes, journRes, goalsRes, agendaRes, statusRes, recentSess, recentJ, recentT, subjectsRes, sourcesRes, modulesRes, progress] = await Promise.all([
+  const monthR = monthRange(today.slice(0, 7))
+  const [doneRes, sessRes, journRes, goalsRes, agendaRes, statusRes, recentSess, recentJ, recentT, subjectsRes, sourcesRes, modulesRes, progress, accounts, monthTx] = await Promise.all([
     supabase.from('tasks').select('completed_at').gte('completed_at', fromIso),
     supabase.from('learning_sessions').select('session_date, duration_minutes').gte('session_date', from),
     supabase.from('journal_entries').select('entry_date').gte('entry_date', from),
@@ -51,7 +53,12 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
     supabase.from('learning_sources').select('id, subject_id, title, position'),
     supabase.from('learning_modules').select('id, subject_id, title, completed_at').eq('is_applicable', true).order('sort_order'),
     loadProgress(supabase),
+    loadAccounts(supabase),
+    supabase.from('transactions').select('type, amount').gte('occurred_on', monthR.from).lt('occurred_on', monthR.to).in('type', ['pemasukan', 'pengeluaran']).limit(5000),
   ])
+  // BR-04: ringkasan keuangan bulan berjalan (transfer tidak dihitung).
+  const flow = sumFlow((monthTx.data ?? []) as Transaction[])
+  const totalBalance = accounts.reduce((n, a) => n + a.balance, 0)
 
   // ----- KPI: 7 hari terakhir vs 7 hari sebelumnya -----
   const week = dayRange(addDays(today, -6), today)
@@ -140,6 +147,23 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
         <KpiCard label="Catatan ditulis" value={kNotes.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color={C.rose} href="/jurnal"
           series={kNotes.values} thisWeek={kNotes.cur} lastWeek={kNotes.prev} />
       </div>
+
+      {accounts.length > 0 ? (
+        <div className="kpis kpis-3">
+          <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color={C.blue} href="/keuangan/rekening"
+            caption={`${accounts.length} rekening`} />
+          <KpiCard label="Pemasukan bulan ini" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color={C.lilac} href="/keuangan/transaksi?jenis=pemasukan"
+            caption="Transfer antarrekening tidak dihitung" />
+          <KpiCard label="Pengeluaran bulan ini" value={null} display={formatRupiah(flow.expense)} icon={<ArrowUpRight size={20} strokeWidth={1.9} />} color={C.rose} href="/keuangan/transaksi?jenis=pengeluaran"
+            caption={`Selisih ${flow.net < 0 ? '−' : ''}${formatRupiah(Math.abs(flow.net))}`} />
+        </div>
+      ) : (
+        <div className="alert items-center">
+          <Wallet size={16} aria-hidden="true" />
+          <span className="flex-1">Tambahkan rekening, lalu catat pemasukan dan pengeluaran untuk melihat ringkasan keuangan di sini.</span>
+          <Link href="/keuangan" className="link-sm">Buka Keuangan</Link>
+        </div>
+      )}
 
       <div className="row-2">
         <section className="card panel" aria-labelledby="trend-title">

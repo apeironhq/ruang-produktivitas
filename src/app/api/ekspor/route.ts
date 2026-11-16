@@ -5,6 +5,7 @@ const TABLES = [
   'goals', 'goal_milestones', 'goal_progress_events', 'projects',
   'learning_subjects', 'learning_sources', 'learning_modules', 'learning_sessions',
   'tasks', 'task_subtasks', 'journal_entries',
+  'financial_accounts', 'transaction_categories', 'transactions', 'budgets', 'goal_allocations',
 ] as const
 
 /** Ekspor seluruh data milik pengguna (AK-04). RLS memastikan hanya baris milik sendiri yang terbaca. */
