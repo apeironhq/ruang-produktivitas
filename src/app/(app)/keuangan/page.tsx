@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowDownLeft, ArrowUpRight, Landmark, LineChart, PieChart, PiggyBank, Receipt, Scale, Wallet } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Landmark, LineChart, PieChart, Rabbit, Receipt, Scale, Wallet } from 'lucide-react'
 import { TrendChart } from '@/components/ui/charts'
 import { DonutChart, EmptyState, KpiCard, PageHead, ProgressBar, tint } from '@/components/ui/display'
 import { dayRange, todayIn } from '@/lib/dates'
@@ -126,7 +126,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
             </section>
 
             <section className="card panel" aria-labelledby="budget-title">
-              <div className="panel-head"><div><h2 id="budget-title"><PiggyBank size={18} />Anggaran</h2><p className="text-caption">Terpakai bulan <span className="capitalize">{label}</span></p></div><Link href={`/keuangan/anggaran?bulan=${month}`} className="link-sm">Atur</Link></div>
+              <div className="panel-head"><div><h2 id="budget-title"><Rabbit size={18} />Anggaran</h2><p className="text-caption">Terpakai bulan <span className="capitalize">{label}</span></p></div><Link href={`/keuangan/anggaran?bulan=${month}`} className="link-sm">Atur</Link></div>
               <div className="panel-body">
                 {budgets.length === 0 ? <EmptyState title="Belum ada anggaran" description="Tetapkan batas pengeluaran per kategori agar mudah dikendalikan." className="fill" action={<Link href={`/keuangan/anggaran?bulan=${month}`} className="btn btn-secondary btn-sm">Atur anggaran</Link>} /> : (
                   <ul className="items">{budgets.map((b) => {

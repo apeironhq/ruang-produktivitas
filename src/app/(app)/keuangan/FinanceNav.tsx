@@ -21,7 +21,7 @@ export function FinanceTabs() {
       {TABS.map((t) => {
         const on = pathname === t.href
         return (
-          <Link key={t.href} href={bulan && t.href !== '/keuangan/rekening' ? `${t.href}?bulan=${bulan}` : t.href} className={`tab${on ? ' active' : ''}`} aria-current={on ? 'page' : undefined}>
+          <Link key={t.href} prefetch href={bulan && t.href !== '/keuangan/rekening' ? `${t.href}?bulan=${bulan}` : t.href} className={`tab${on ? ' active' : ''}`} aria-current={on ? 'page' : undefined}>
             {t.label}
           </Link>
         )

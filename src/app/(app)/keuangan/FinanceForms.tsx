@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeftRight, Landmark, Pencil, PiggyBank, Plus, Tags, Wallet } from 'lucide-react'
+import { ArrowLeftRight, Landmark, Pencil, Rabbit, Plus, Tags, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
 import { ACCOUNT_KIND } from '@/lib/labels'
@@ -13,9 +13,9 @@ const rp = (n: number) => `Rp${idNum.format(n)}`
 /** Input nominal rupiah: menerima "500.000" atau "500000". */
 function MoneyInput({ name, defaultValue, error, autoFocus }: { name: string; defaultValue?: number | null; error?: string; autoFocus?: boolean }) {
   return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[length:var(--fs-label)] pointer-events-none">Rp</span>
-      <input id={name} name={name} inputMode="decimal" autoComplete="off" autoFocus={autoFocus} className={`input pl-10${error ? ' has-error' : ''}`}
+    <div className="input-affix">
+      <span className="affix" aria-hidden="true">Rp</span>
+      <input id={name} name={name} inputMode="decimal" autoComplete="off" autoFocus={autoFocus} className={`input input-rp${error ? ' has-error' : ''}`}
         defaultValue={defaultValue ? idNum.format(defaultValue) : ''} placeholder="0" required />
     </div>
   )
@@ -140,9 +140,9 @@ export function AccountFormModal({ open, onClose, initial }: { open: boolean; on
           </Field>
           <Choices name="kind" label="Jenis" defaultValue={initial.kind} columns={2} options={Object.entries(ACCOUNT_KIND).map(([k, v]) => ({ value: k, title: v }))} />
           <Field label="Saldo awal" name="opening_balance" error={errors.opening_balance} hint="Saldo saat mulai dicatat di aplikasi. Selanjutnya saldo dihitung dari transaksi.">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[length:var(--fs-label)] pointer-events-none">Rp</span>
-              <input id="opening_balance" name="opening_balance" inputMode="decimal" className={`input pl-10${errClass(errors, 'opening_balance')}`}
+            <div className="input-affix">
+              <span className="affix" aria-hidden="true">Rp</span>
+              <input id="opening_balance" name="opening_balance" inputMode="decimal" className={`input input-rp${errClass(errors, 'opening_balance')}`}
                 defaultValue={initial.opening_balance ? idNum.format(initial.opening_balance) : '0'} />
             </div>
           </Field>
@@ -178,7 +178,7 @@ export function BudgetButton({ categories, month, monthLabel, preset, label = 'A
         ? <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label="Ubah anggaran" onClick={() => setOpen(true)}><Pencil size={15} /></button>
         : <button type="button" className={className} onClick={() => setOpen(true)}><Plus size={16} />{label}</button>}
       {open && (
-        <FormModal open onClose={() => setOpen(false)} action={saveBudget} icon={<PiggyBank size={18} />} size="sm"
+        <FormModal open onClose={() => setOpen(false)} action={saveBudget} icon={<Rabbit size={18} />} size="sm"
           title={preset ? 'Ubah anggaran' : 'Atur anggaran'} subtitle={`Batas pengeluaran per kategori untuk ${monthLabel}.`} submitLabel="Simpan">
           {(errors) => (
             <div className="form-stack">
@@ -235,7 +235,7 @@ export function AllocationButton({ goalId, accounts, today, held }: { goalId: st
         <Plus size={16} />Alokasikan dana
       </button>
       {open && (
-        <FormModal open onClose={() => setOpen(false)} action={saveAllocation} icon={<PiggyBank size={18} />}
+        <FormModal open onClose={() => setOpen(false)} action={saveAllocation} icon={<Rabbit size={18} />}
           title="Alokasi tabungan" subtitle="Dana tetap di rekening, hanya ditandai untuk target ini — bukan pemasukan baru." submitLabel="Simpan">
           {(errors) => (
             <div className="form-stack">

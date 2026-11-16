@@ -11,7 +11,7 @@ function PasswordInput({ id, name, autoComplete, error }: { id: string; name: st
   const [show, setShow] = useState(false)
   return (
     <div className="relative">
-      <input id={id} name={name} className={`input pr-11${error ? ' has-error' : ''}`} type={show ? 'text' : 'password'} autoComplete={autoComplete} required
+      <input id={id} name={name} className={`input input-pw${error ? ' has-error' : ''}`} type={show ? 'text' : 'password'} autoComplete={autoComplete} required
         aria-invalid={!!error} aria-describedby={error ? `${name}-err` : undefined} />
       <button type="button" className="pw-toggle" aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'} onClick={() => setShow((v) => !v)}>
         {show ? <EyeOff size={17} /> : <Eye size={17} />}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Copy, PiggyBank, Tags, Trash2 } from 'lucide-react'
+import { Copy, Rabbit, Tags, Trash2 } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead } from '@/components/ui/display'
 import { todayIn } from '@/lib/dates'
@@ -47,20 +47,20 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
       <FinanceTabs />
 
       <div className="kpis kpis-3">
-        <KpiCard label="Total anggaran" value={null} display={formatRupiah(totalLimit)} icon={<PiggyBank size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${budgets.length} kategori`} />
-        <KpiCard label="Terpakai" value={null} display={formatRupiah(totalSpent)} icon={<PiggyBank size={20} strokeWidth={1.9} />} color="var(--c-rose)"
+        <KpiCard label="Total anggaran" value={null} display={formatRupiah(totalLimit)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${budgets.length} kategori`} />
+        <KpiCard label="Terpakai" value={null} display={formatRupiah(totalSpent)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-rose)"
           caption={totalLimit ? `${formatNumber(Math.floor((totalSpent / totalLimit) * 100))}% dari total anggaran` : 'Belum ada anggaran'} />
-        <KpiCard label="Sisa" value={null} display={`${totalLimit - totalSpent < 0 ? '−' : ''}${formatRupiah(Math.abs(totalLimit - totalSpent))}`} icon={<PiggyBank size={20} strokeWidth={1.9} />} color="var(--c-peach)"
+        <KpiCard label="Sisa" value={null} display={`${totalLimit - totalSpent < 0 ? '−' : ''}${formatRupiah(Math.abs(totalLimit - totalSpent))}`} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-peach)"
           caption={over ? `${over} kategori melewati batas` : 'Semua kategori masih di bawah batas'} />
       </div>
 
       <section className="card" aria-labelledby="bud-title">
-        <SectionHead id="bud-title" icon={<PiggyBank size={18} />} title="Anggaran per kategori" desc={<>Batas pengeluaran bulan <span className="capitalize">{label}</span></>}>
+        <SectionHead id="bud-title" icon={<Rabbit size={18} />} title="Anggaran per kategori" desc={<>Batas pengeluaran bulan <span className="capitalize">{label}</span></>}>
           <MonthNav base="/keuangan/anggaran" label={label} prev={r.prev} next={r.next} isCurrent={month === today.slice(0, 7)} />
           <BudgetButton categories={categories} month={month} monthLabel={label} className="btn btn-primary btn-sm" />
         </SectionHead>
         {budgets.length === 0 ? (
-          <EmptyState icon={<PiggyBank size={20} strokeWidth={1.75} />} title="Belum ada anggaran bulan ini"
+          <EmptyState icon={<Rabbit size={20} strokeWidth={1.75} />} title="Belum ada anggaran bulan ini"
             description="Tetapkan batas pengeluaran per kategori, mis. Makan & minum Rp1.500.000."
             action={<div className="flex gap-2 flex-wrap justify-center">
               <BudgetButton categories={categories} month={month} monthLabel={label} />

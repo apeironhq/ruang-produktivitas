@@ -7,7 +7,7 @@ import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tin
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { AllocationButton } from '../../keuangan/FinanceForms'
 import { deleteAllocation } from '../../keuangan/actions'
-import { PiggyBank } from 'lucide-react'
+import { Rabbit } from 'lucide-react'
 import type { Allocation } from '@/lib/types'
 import { loadAccounts } from '@/lib/finance'
 import { todayIn } from '@/lib/dates'
@@ -144,12 +144,12 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
       <div className="row-2">
         {alokasi ? (
           <section className="card" aria-labelledby="alloc-title">
-            <SectionHead id="alloc-title" icon={<PiggyBank size={18} />} title="Riwayat alokasi"
+            <SectionHead id="alloc-title" icon={<Rabbit size={18} />} title="Riwayat alokasi"
               desc="Dana tetap di rekening, ditandai untuk target ini — bukan pemasukan baru">
               {allocations.length > 0 && <span className="badge">{allocations.length} alokasi</span>}
             </SectionHead>
             {allocations.length === 0 ? (
-              <EmptyState icon={<PiggyBank size={20} strokeWidth={1.75} />} title="Belum ada alokasi"
+              <EmptyState icon={<Rabbit size={20} strokeWidth={1.75} />} title="Belum ada alokasi"
                 description={activeAccounts.length ? 'Sisihkan dana dari rekening untuk mulai melihat progres.' : 'Tambahkan rekening di menu Keuangan terlebih dahulu.'}
                 action={activeAccounts.length ? undefined : <Link href="/keuangan/rekening" className="btn btn-secondary">Buka Keuangan</Link>} />
             ) : (

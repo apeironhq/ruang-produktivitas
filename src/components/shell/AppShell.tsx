@@ -66,7 +66,7 @@ function Sidebar({ open, onClose, pathname }: { open: boolean; onClose: () => vo
                   const Icon = item.icon
                   return (
                     <li key={item.href}>
-                      <Link href={item.href} className={`nav-item${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined}>
+                      <Link href={item.href} prefetch className={`nav-item${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined}>
                         <Icon size={17} strokeWidth={1.9} /><span>{item.label}</span>
                       </Link>
                     </li>
@@ -152,7 +152,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
         {items.map((it, i) => {
           const Icon = it.icon
           return (
-            <Link key={it.href} href={it.href} className={`bnav-item${i === active ? ' active' : ''}`} aria-current={i === active ? 'page' : undefined}>
+            <Link key={it.href} href={it.href} prefetch className={`bnav-item${i === active ? ' active' : ''}`} aria-current={i === active ? 'page' : undefined}>
               <span className="bnav-icon"><Icon size={21} strokeWidth={1.9} aria-hidden="true" /></span>
               <span className="bnav-label">{it.short ?? it.label}</span>
             </Link>
@@ -186,7 +186,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
                       const Icon = m.icon
                       return (
                         <li key={m.href}>
-                          <Link href={m.href} className={`sheet-item${on ? ' current' : ''}`} aria-current={on ? 'page' : undefined}>
+                          <Link href={m.href} prefetch className={`sheet-item${on ? ' current' : ''}`} aria-current={on ? 'page' : undefined}>
                             <span className="sheet-icon" aria-hidden="true"><Icon size={18} /></span>
                             <span className="min-w-0 flex-1">
                               <span className="sheet-label">{m.label}{on && <span className="badge sheet-now">Sedang dibuka</span>}</span>
