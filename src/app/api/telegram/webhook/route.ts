@@ -1,7 +1,7 @@
 import '@/lib/http-agent'
 import { after, NextResponse, type NextRequest } from 'next/server'
 import { handleUpdate, type BotUser, type TgUpdate } from '@/lib/bot'
-import { runTimed, serverTiming, timed } from '@/lib/bot/timing'
+import { runTimed, serverTiming, takeWebhookReply, timed } from '@/lib/bot/timing'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { secretMatches } from '@/lib/telegram'
 
@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
       console.error('telegram webhook', update.update_id, e)
     }
     after(async () => { await db.from('telegram_updates').update({ status }).eq('update_id', update.update_id) })
-    return NextResponse.json({ ok: true }, { headers: { 'Server-Timing': serverTiming(performance.now() - t0) } })
+    // Balasan webhook boleh berisi satu panggilan Bot API (mis. ganti isi pesan) → dijalankan Telegram langsung.
+    const reply = takeWebhookReply()
+    return NextResponse.json(reply ?? { ok: true }, { headers: { 'Server-Timing': serverTiming(performance.now() - t0) } })
   })
 }
 

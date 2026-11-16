@@ -1,6 +1,6 @@
 import 'server-only'
 import { timingSafeEqual } from 'node:crypto'
-import { timed } from './bot/timing'
+import { setWebhookReply, timed } from './bot/timing'
 
 /** Bot Telegram (BT-01 … BT-09). Token & rahasia hanya dari environment server. */
 export const telegramConfigured = () => !!process.env.TELEGRAM_BOT_TOKEN
@@ -65,6 +65,16 @@ export function sendPhoto(chatId: number | string, photo: string | Buffer, capti
 /** Ganti keterangan foto + tombolnya (pesan beranda berbanner). */
 export function editMessageCaption(chatId: number | string, messageId: number, caption: string, keyboard: Keyboard) {
   return call('editMessageCaption', { chat_id: chatId, message_id: messageId, caption: caption.slice(0, 1024), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
+}
+
+/**
+ * Ganti isi pesan lewat BALASAN webhook (lebih cepat: tanpa panggilan keluar ke api.telegram.org).
+ * Mengembalikan false bila tidak bisa dititipkan — pemanggil lalu memakai panggilan biasa.
+ */
+export function editViaWebhookReply(chatId: number | string, messageId: number, html: string, keyboard: Keyboard, photo: boolean) {
+  return photo
+    ? setWebhookReply('editMessageCaption', { chat_id: chatId, message_id: messageId, caption: html.slice(0, 1024), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
+    : setWebhookReply('editMessageText', { chat_id: chatId, message_id: messageId, text: html.slice(0, 4000), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: keyboard } })
 }
 
 /** Ganti/hapus tombol saja (mis. menonaktifkan tombol formulir lama). */

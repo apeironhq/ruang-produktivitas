@@ -2,7 +2,7 @@ import 'server-only'
 import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '../dates'
-import { answerCallback, editMessageCaption, editMessageKb, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
+import { answerCallback, editMessageCaption, editMessageKb, editViaWebhookReply, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
 import { clearFlow, continueFlow, loadPending, startFlow, type FlowState } from './flows'
 import {
   badgesPanel, calendarPanel, catatPanel, financePanel, goalDetailPanel, goalsPanel, habitsPanel, helpPanel, homePanel, journalDetailPanel,
@@ -42,6 +42,9 @@ async function sendPanel(chatId: number, p: Panel) {
 /** Ganti isi pesan yang tombolnya ditekan (foto → keterangan maks. 1024, teks → teks). Gagal → pesan baru. */
 async function showPanel(ctx: Ctx, p: Panel, msg?: TgMessage) {
   if (msg) {
+    // Jalur cepat: titipkan perubahan pesan sebagai balasan webhook (tanpa bolak-balik ke Telegram).
+    const html = msg.photo ? renderPanel(p, 1024) : renderPanel(p, 4000)
+    if (editViaWebhookReply(ctx.chatId, msg.message_id, html, p.kb, !!msg.photo)) return
     const r = msg.photo
       ? await editMessageCaption(ctx.chatId, msg.message_id, renderPanel(p, 1024), p.kb)
       : await editMessageKb(ctx.chatId, msg.message_id, renderPanel(p, 4000), p.kb)
@@ -196,7 +199,9 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback, user?: BotUser
     return await callbackInner(db, cb, user, answerNow)
   } finally {
     answerNow()
-    await ack
+    // Jangan menahan balasan webhook: selesaikan jawaban tombol di belakang layar.
+    const pending = ack
+    after(async () => { await pending })
   }
 }
 
