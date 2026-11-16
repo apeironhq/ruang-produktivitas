@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, Trophy } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint, InfoList, StatTile } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { AllocationButton } from '../../keuangan/FinanceForms'
 import { deleteAllocation } from '../../keuangan/actions'
@@ -106,14 +106,16 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
               </div>
               <ProgressBar percent={goal.percent} label="Progres target" large />
             </div>
-            <dl className="dl">
-              {valued && !binary && <div><dt>Nilai awal</dt><dd>{formatMetric(goal.effStart, goal.metric_type, goal.unit_label)}</dd></div>}
-              <div><dt>Nilai saat ini</dt><dd>{n.current}</dd></div>
-              <div><dt>Nilai target</dt><dd>{n.target}</dd></div>
-              <div><dt>Sisa</dt><dd>{n.remaining}</dd></div>
-              <div><dt>Periode</dt><dd>{formatDay(goal.start_date)} – {goal.due_date ? formatDay(goal.due_date) : 'tanpa tenggat'}</dd></div>
-              <div><dt>Prioritas</dt><dd>{PRIORITY[goal.priority]?.label}</dd></div>
-            </dl>
+            <div className="stat-tiles auto">
+              {valued && !binary && <StatTile label="Nilai awal" value={formatMetric(goal.effStart, goal.metric_type, goal.unit_label)} />}
+              <StatTile label="Saat ini" value={n.current} />
+              <StatTile label="Target" value={n.target} />
+              <StatTile label="Sisa" value={n.remaining} tone={goal.percent >= 100 ? 'ok' : undefined} />
+            </div>
+            <InfoList items={[
+              ['Periode', `${formatDay(goal.start_date)} – ${goal.due_date ? formatDay(goal.due_date) : 'tanpa tenggat'}`],
+              ['Prioritas', PRIORITY[goal.priority]?.label ?? '—'],
+            ]} />
           </div>
         </section>
 

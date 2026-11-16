@@ -152,11 +152,11 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
                       {s.position && <span>Posisi: {s.position}</span>}
                     </div>
                     {(s.summary || s.obstacles || s.next_steps) && (
-                      <dl className="dl mt-3">
-                        {s.summary && <div className="col-span-full"><dt>Ringkasan</dt><dd className="prose-plain font-normal">{s.summary}</dd></div>}
-                        {s.obstacles && <div><dt>Kendala</dt><dd className="prose-plain font-normal">{s.obstacles}</dd></div>}
-                        {s.next_steps && <div><dt>Langkah berikutnya</dt><dd className="prose-plain font-normal">{s.next_steps}</dd></div>}
-                      </dl>
+                      <div className="session-notes">
+                        {s.summary && <div className="note-quote ok wide"><span>Ringkasan</span><p>{s.summary}</p></div>}
+                        {s.obstacles && <div className="note-quote"><span>Kendala</span><p>{s.obstacles}</p></div>}
+                        {s.next_steps && <div className="note-quote"><span>Langkah berikutnya</span><p>{s.next_steps}</p></div>}
+                      </div>
                     )}
                   </div>
                   <ConfirmButton action={deleteSession.bind(null, s.id, subject.id)} title="Hapus sesi?" message="Sesi ini akan dihapus dari riwayat dan total durasi."

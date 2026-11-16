@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AlignLeft, Info, ListChecks, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, DetailTitle, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
+import { BackLink, DetailTitle, EmptyState, InfoList, ProgressBar, SectionHead } from '@/components/ui/display'
 import { formatDateTime } from '@/lib/format'
 import { PRIORITY, RECURRENCE, TASK_KIND, displayStatus, remindLabel } from '@/lib/labels'
 import { loadLinkOptions } from '@/lib/queries'
@@ -50,7 +50,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
         </div>
       </div>
 
-      <div className="row-2">
+      <div className="row-2" style={{ alignItems: 'start' }}>
         <div className="flex flex-col gap-4 min-w-0">
           <section className="card" aria-labelledby="desc-title">
             <SectionHead id="desc-title" icon={<AlignLeft size={18} />} title="Deskripsi" />
@@ -74,28 +74,30 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
           )}
         </div>
 
-        <section className="card h-fit" aria-labelledby="info-title">
+        <section className="card h-fit detail-aside" aria-labelledby="info-title">
           <SectionHead id="info-title" icon={<Info size={18} />} title="Informasi" />
           <div className="card-body flex flex-col gap-5">
             <div className="field">
               <span className="field-label">Status</span>
               <StatusSelect id={t.id} status={t.status} />
             </div>
-            <dl className="dl">
-              <div><dt>Prioritas</dt><dd>{PRIORITY[t.priority]!.label}</dd></div>
-              <div><dt>Kategori</dt><dd>{t.category || '—'}</dd></div>
-              {t.kind === 'tugas'
-                ? <div><dt>Tenggat</dt><dd>{formatDateTime(t.due_at, tz)}</dd></div>
-                : <div><dt>Jadwal</dt><dd>{formatDateTime(t.start_at, tz)}{t.end_at ? ` – ${formatDateTime(t.end_at, tz)}` : ''}</dd></div>}
-              {t.kind === 'kegiatan' && <div><dt>Lokasi</dt><dd>{t.location || '—'}</dd></div>}
-              <div><dt>Ulangi</dt><dd>{RECURRENCE[t.recurrence]?.label ?? '—'}</dd></div>
-              <div><dt>Pengingat</dt><dd>{remindLabel(t.remind_before_minutes) ?? '—'}{t.reminded_at ? ` · terkirim ${formatDateTime(t.reminded_at, tz)}` : ''}</dd></div>
-              <div><dt>Selesai pada</dt><dd>{formatDateTime(t.completed_at, tz)}</dd></div>
-              <div><dt>Dibuat</dt><dd>{formatDateTime(t.created_at, tz)}</dd></div>
-              <div><dt>Target</dt><dd>{goal ? <Link className="link" href={`/target/${goal.id}`}>{goal.title}</Link> : '—'}</dd></div>
-              <div><dt>Bidang belajar</dt><dd>{subject ? <Link className="link" href={`/belajar/${subject.id}`}>{subject.title}</Link> : '—'}</dd></div>
-              {project && <div><dt>Proyek</dt><dd><Link className="link" href={`/proyek/${project.id}`}>{project.title}</Link></dd></div>}
-            </dl>
+            <InfoList items={[
+              t.kind === 'tugas' ? ['Prioritas', PRIORITY[t.priority]!.label] : null,
+              ['Kategori', t.category || '—'],
+              t.kind === 'tugas'
+                ? ['Tenggat', t.due_at ? formatDateTime(t.due_at, tz) : '—']
+                : ['Mulai', formatDateTime(t.start_at, tz)],
+              t.kind === 'kegiatan' && t.end_at ? ['Selesai', formatDateTime(t.end_at, tz)] : null,
+              t.kind === 'kegiatan' ? ['Lokasi', t.location || '—'] : null,
+              ['Ulangi', RECURRENCE[t.recurrence]?.label ?? '—'],
+              ['Pengingat', remindLabel(t.remind_before_minutes) ?? '—'],
+              t.reminded_at ? ['Pengingat terkirim', formatDateTime(t.reminded_at, tz)] : null,
+              t.completed_at ? ['Selesai pada', formatDateTime(t.completed_at, tz)] : null,
+              goal ? ['Target', <Link key="g" href={`/target/${goal.id}`}>{goal.title}</Link>] : null,
+              subject ? ['Bidang belajar', <Link key="s" href={`/belajar/${subject.id}`}>{subject.title}</Link>] : null,
+              project ? ['Proyek', <Link key="p" href={`/proyek/${project.id}`}>{project.title}</Link>] : null,
+              ['Dibuat', formatDateTime(t.created_at, tz)],
+            ]} />
           </div>
         </section>
       </div>

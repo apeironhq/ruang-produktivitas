@@ -204,3 +204,29 @@ export function CountFoot({ shown, total, noun = 'item' }: { shown: number; tota
     </div>
   )
 }
+
+/**
+ * Daftar informasi untuk panel samping halaman detail: label di kiri, nilai di kanan, dipisah garis tipis.
+ * Baris dengan nilai kosong (null/undefined/false/'') tidak ditampilkan; '—' tetap tampil sebagai penanda.
+ */
+export function InfoList({ items }: { items: Array<[string, React.ReactNode] | null | false> }) {
+  const rows = items.filter((r): r is [string, React.ReactNode] => !!r && r[1] !== null && r[1] !== undefined && r[1] !== false && r[1] !== '')
+  return (
+    <dl className="info-list">
+      {rows.map(([label, value]) => (
+        <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+      ))}
+    </dl>
+  )
+}
+
+/** Kotak angka kecil (ringkasan di dalam kartu), mis. harga masuk/keluar jurnal trading. */
+export function StatTile({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: 'ok' | 'err' }) {
+  return (
+    <div className={`stat-tile${tone ? ` ${tone}` : ''}`}>
+      <span className="stat-label">{label}</span>
+      <span className="stat-value">{value}</span>
+      {sub && <span className="stat-sub">{sub}</span>}
+    </div>
+  )
+}

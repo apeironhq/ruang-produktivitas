@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, ArchiveRestore, BookOpen, FolderKanban, Info, LineChart, NotebookPen, Target, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Info, LineChart, NotebookPen, Trash2 } from 'lucide-react'
 import { EditJournalButton } from '../JournalForm'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, DetailTitle, SectionHead } from '@/components/ui/display'
-import { formatDateTime, formatDayLong, formatNumber } from '@/lib/format'
+import { BackLink, DetailTitle, InfoList, SectionHead, StatTile } from '@/components/ui/display'
+import { formatDateTime, formatDay, formatDayLong, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND, MOOD } from '@/lib/labels'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { JournalEntry } from '@/lib/types'
@@ -33,6 +33,9 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
   const k = JOURNAL_KIND[e.kind]!
   const t = e.kind === 'trading' ? e.trading : null
   const num = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatNumber(v))
+  // Perubahan harga sesuai arah posisi (jual/short untung saat harga turun).
+  const move = t && t.entry_price && t.exit_price ? ((t.exit_price - t.entry_price) / t.entry_price) * 100 * (t.side === 'jual' ? -1 : 1) : null
+  const pctFmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 })
 
   return (
     <div className="page">
@@ -40,7 +43,7 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
       <div className="page-head">
         <div className="min-w-0" style={{ '--tone-fg': k.color } as React.CSSProperties}>
           <DetailTitle title={e.title || 'Tanpa judul'} status={{ label: k.label, tone: '' }}
-            meta={[formatDayLong(e.entry_date), e.mood ? `Suasana ${MOOD[e.mood]!.toLowerCase()}` : null, e.is_archived ? 'Diarsipkan' : null, `Diperbarui ${formatDateTime(e.updated_at, user.timezone)}`]} />
+            meta={[formatDayLong(e.entry_date), e.is_archived ? 'Diarsipkan' : null]} />
         </div>
         <div className="control-row">
           <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []} projects={projects.data ?? []}
@@ -53,45 +56,54 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
 
       <div className="row-2" style={{ alignItems: 'start' }}>
         <div className="flex flex-col gap-4 min-w-0">
-        <article className="card" aria-labelledby="isi-title">
-          <SectionHead id="isi-title" icon={<NotebookPen size={18} />} title="Isi catatan" />
-          <div className="card-body">
-            {e.content ? <div className="prose-plain text-[1rem]">{e.content}</div> : <p className="text-caption">Belum ada isi.</p>}
-          </div>
-        </article>
           {t && (
             <section className="card" aria-labelledby="trade-title">
               <SectionHead id="trade-title" icon={<LineChart size={18} />} title="Detail trading" desc="Catatan analisis — tidak dihitung sebagai transaksi keuangan" />
               <div className="card-body">
-              <dl className="dl">
-                <div><dt>Instrumen</dt><dd>{t.instrument || '—'}</dd></div>
-                <div><dt>Posisi</dt><dd>{t.side === 'beli' ? 'Beli / long' : t.side === 'jual' ? 'Jual / short' : '—'}</dd></div>
-                <div className="col-span-full"><dt>Strategi</dt><dd>{t.strategy || '—'}</dd></div>
-                <div><dt>Harga masuk</dt><dd>{num(t.entry_price)}</dd></div>
-                <div><dt>Harga keluar</dt><dd>{num(t.exit_price)}</dd></div>
-                <div><dt>Biaya</dt><dd>{num(t.fee)}</dd></div>
-                <div><dt>Hasil</dt><dd style={{ color: (t.result ?? 0) < 0 ? 'var(--err)' : undefined }}>{num(t.result)}</dd></div>
-                {t.evaluation && <div className="col-span-full"><dt>Evaluasi</dt><dd className="prose-plain font-normal">{t.evaluation}</dd></div>}
-              </dl>
+                <div className="trade-head">
+                  <strong>{t.instrument || 'Tanpa instrumen'}</strong>
+                  <div className="chips">
+                    {t.side && <span className={`chip ${t.side === 'beli' ? 'ok' : 'err'}`}>{t.side === 'beli' ? 'Beli / long' : 'Jual / short'}</span>}
+                    {t.strategy && <span className="chip">{t.strategy}</span>}
+                  </div>
+                </div>
+                <div className="stat-tiles">
+                  <StatTile label="Harga masuk" value={num(t.entry_price)} />
+                  <StatTile label="Harga keluar" value={num(t.exit_price)}
+                    sub={move === null ? undefined : <span className={move >= 0 ? 'up-text' : 'down-text'}>{move >= 0 ? '+' : '−'}{pctFmt.format(Math.abs(move))}%</span>} />
+                  <StatTile label="Biaya" value={num(t.fee)} />
+                  <StatTile label="Hasil" value={t.result === null || t.result === undefined ? '—' : `${t.result > 0 ? '+' : t.result < 0 ? '−' : ''}${formatNumber(Math.abs(t.result))}`}
+                    tone={t.result === null || t.result === undefined || t.result === 0 ? undefined : t.result > 0 ? 'ok' : 'err'} />
+                </div>
+                {t.evaluation && (
+                  <div className="note-quote mt-4"><span>Evaluasi</span><p>{t.evaluation}</p></div>
+                )}
               </div>
             </section>
           )}
+          <article className="card" aria-labelledby="isi-title">
+            <SectionHead id="isi-title" icon={<NotebookPen size={18} />} title="Isi catatan" />
+            <div className="card-body">
+              {e.content ? <div className="prose-plain text-[1rem]">{e.content}</div> : <p className="text-caption">Belum ada isi.</p>}
+            </div>
+          </article>
         </div>
-        <aside className="card h-fit" aria-labelledby="info-title">
+
+        <aside className="card detail-aside" aria-labelledby="info-title">
           <SectionHead id="info-title" icon={<Info size={18} />} title="Informasi" />
-          <div className="card-body flex flex-col gap-4">
-            <div>
-              <p className="text-overline mb-2">Tag</p>
-              {e.tags.length ? <div className="flex gap-1.5 flex-wrap">{e.tags.map((tag) => <Link key={tag} href={`/jurnal?tag=${encodeURIComponent(tag)}`} className="tag hover:bg-[var(--brand-soft)]">#{tag}</Link>)}</div> : <p className="text-caption">—</p>}
-            </div>
-            <div>
-              <p className="text-overline mb-2">Terkait</p>
-              {!goal.data && !subject.data && !project && <p className="text-caption">Tidak ada.</p>}
-              {project && <Link href={`/proyek/${project.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><FolderKanban size={15} aria-hidden="true" />{project.title}</Link>}
-              {goal.data && <Link href={`/target/${goal.data.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><Target size={15} aria-hidden="true" />{goal.data.title}</Link>}
-              {subject.data && <Link href={`/belajar/${subject.data.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><BookOpen size={15} aria-hidden="true" />{subject.data.title}</Link>}
-            </div>
-            <p className="text-caption">Dibuat {formatDateTime(e.created_at, user.timezone)}</p>
+          <div className="card-body">
+            <InfoList items={[
+              ['Jenis', <span key="k" className="inline-flex items-center gap-1.5"><span className="log-dot" style={{ background: k.color }} aria-hidden="true" />{k.label}</span>],
+              ['Tanggal', formatDay(e.entry_date)],
+              e.mood ? ['Suasana', MOOD[e.mood]] : null,
+              e.is_archived ? ['Status', 'Diarsipkan'] : null,
+              ['Tag', e.tags.length ? <span key="t" className="tags">{e.tags.map((tag) => <Link key={tag} href={`/jurnal?tag=${encodeURIComponent(tag)}`} className="tag hover:bg-[var(--brand-soft)]">#{tag}</Link>)}</span> : '—'],
+              project ? ['Proyek', <Link key="p" href={`/proyek/${project.id}`}>{project.title}</Link>] : null,
+              goal.data ? ['Target', <Link key="g" href={`/target/${goal.data.id}`}>{goal.data.title}</Link>] : null,
+              subject.data ? ['Bidang belajar', <Link key="s" href={`/belajar/${subject.data.id}`}>{subject.data.title}</Link>] : null,
+              ['Diperbarui', formatDateTime(e.updated_at, user.timezone)],
+              ['Dibuat', formatDateTime(e.created_at, user.timezone)],
+            ]} />
           </div>
         </aside>
       </div>
