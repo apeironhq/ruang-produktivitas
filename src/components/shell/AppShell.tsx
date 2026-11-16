@@ -6,7 +6,8 @@ import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, Settings, X } from
 import { useEffect, useId, useRef, useState } from 'react'
 import { signOut } from '@/app/auth-actions'
 import { AppLogo, APP_NAME, APP_TAGLINE } from './AppLogo'
-import { QuickAddMenu, QuickAddProvider } from './QuickAdd'
+import { NotificationBell, SearchBox } from './HeaderTools'
+import { QuickAddProvider } from './QuickAdd'
 import { ALL_ITEMS, BOTTOM_ITEMS, NAV_GROUPS, isActivePath } from './nav'
 
 interface ShellUser { name: string; email: string }
@@ -92,8 +93,9 @@ function TopBar({ user, onToggle }: { user: ShellUser; onToggle: () => void }) {
     <header className="topbar">
       <button className="topbar-burger" type="button" aria-label="Buka menu" onClick={onToggle}><Menu size={20} /></button>
       <AppLogo size={32} className="topbar-logo" />
+      <SearchBox />
       <div className="topbar-actions">
-        <QuickAddMenu />
+        <NotificationBell />
       </div>
       <UserMenu user={user} initial={initial} />
     </header>
@@ -210,7 +212,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
             <div className="sheet-head">
               <div>
                 <h2 id={titleId} className="sheet-title">Menu lainnya</h2>
-                <p className="text-caption">Kalender, catatan, pencapaian & akun</p>
+                <p className="text-caption">Kalender, proyek, catatan & pencapaian</p>
               </div>
               <button className="sheet-close" type="button" aria-label="Tutup menu lainnya" onClick={() => setSheetOpen(false)}><X size={18} /></button>
             </div>
@@ -235,16 +237,6 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
                         </li>
                       )
                     })}
-                    {g.title === 'Akun' && (
-                      <li>
-                        <form action={signOut}>
-                          <button className="sheet-item sheet-logout" type="submit">
-                            <span className="sheet-icon" aria-hidden="true"><LogOut size={18} /></span>
-                            <span className="min-w-0 flex-1"><span className="sheet-label">Keluar</span><span className="sheet-desc">Akhiri sesi di perangkat ini</span></span>
-                          </button>
-                        </form>
-                      </li>
-                    )}
                   </ul>
                 </section>
               ))}

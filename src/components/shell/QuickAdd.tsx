@@ -4,13 +4,12 @@ import { BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen,
 import { HabitFormModal, emptyHabit } from '@/app/(app)/kebiasaan/HabitForms'
 import { ProjectFormModal, emptyProject } from '@/app/(app)/proyek/ProjectForms'
 import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keuangan/FinanceForms'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useTransition } from 'react'
 import { loadQuickData, type QuickData } from '@/app/(app)/quick-data'
 import { SessionFormModal, SubjectFormModal } from '@/app/(app)/belajar/LearningForms'
 import { JournalFormModal, emptyJournal, type JournalValues } from '@/app/(app)/jurnal/JournalForm'
 import { GoalFormModal, blankGoal } from '@/app/(app)/target/GoalForm'
 import { TaskFormModal, emptyTask, type TaskFormValues } from '@/app/(app)/tugas/TaskForm'
-import { tint } from '@/components/ui/display'
 import { useToast } from '@/components/ui/Toast'
 
 export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening' | 'proyek' | 'kebiasaan'
@@ -133,39 +132,5 @@ export function QuickAddButton({ kind, label, className = 'btn btn-secondary', p
       onPointerEnter={prefetch} onFocus={prefetch} onTouchStart={prefetch}>
       {busy ? <span className="spinner" aria-hidden="true" /> : <Plus size={16} />}{label}
     </button>
-  )
-}
-
-/** Menu "Tambah" di topbar. */
-export function QuickAddMenu() {
-  const { open, prefetch, pending } = useQuickAdd()
-  const [show, setShow] = useState(false)
-  const root = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!show) return
-    const onDown = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setShow(false) }
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShow(false) }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    requestAnimationFrame(() => root.current?.querySelector<HTMLElement>('.menu-item')?.focus())
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
-  }, [show])
-  return (
-    <div ref={root} className="relative">
-      <button type="button" className="btn btn-primary btn-sm" aria-haspopup="menu" aria-expanded={show} disabled={!!pending}
-        onPointerEnter={prefetch} onFocus={prefetch} onClick={() => { prefetch(); setShow((v) => !v) }}>
-        {pending ? <span className="spinner" aria-hidden="true" /> : <Plus size={16} />}<span className="max-sm:sr-only">Tambah</span>
-      </button>
-      {show && (
-        <div className="menu" role="menu" aria-label="Tambah baru">
-          {QUICK_ITEMS.map((it) => (
-            <button key={it.kind} type="button" role="menuitem" className="menu-item" onClick={() => { setShow(false); open(it.kind) }}>
-              <span className="menu-icon" style={tint(it.color)} aria-hidden="true">{it.icon}</span>
-              <span className="min-w-0"><span className="menu-label">{it.label}</span><span className="menu-desc">{it.desc}</span></span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   )
 }
