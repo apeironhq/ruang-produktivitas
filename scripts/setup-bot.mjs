@@ -54,6 +54,13 @@ const { rows } = await db.query(
   [`${url}/api/cron/pengingat`, `Bearer ${cronSecret}`],
 )
 console.log(`✓ pg_cron dijadwalkan (job ${rows[0].id}): setiap 5 menit → ${url}/api/cron/pengingat`)
+// Ping ringan ke webhook setiap 2 menit agar fungsinya tetap hangat (tombol bot tanpa cold start).
+await db.query(`select cron.unschedule(jobid) from cron.job where jobname = 'ruang-bot-hangat'`)
+await db.query(
+  `select cron.schedule('ruang-bot-hangat', '*/2 * * * *', format($f$select net.http_get(url := %L, timeout_milliseconds := 10000)$f$, $1::text))`,
+  [`${url}/api/telegram/webhook`],
+)
+console.log(`✓ pg_cron: ping hangat setiap 2 menit → ${url}/api/telegram/webhook`)
 await db.end()
 
 /* ---- 3. Telegram ---- */

@@ -1,5 +1,6 @@
 import 'server-only'
 import { timingSafeEqual } from 'node:crypto'
+import { timed } from './bot/timing'
 
 /** Bot Telegram (BT-01 … BT-09). Token & rahasia hanya dari environment server. */
 export const telegramConfigured = () => !!process.env.TELEGRAM_BOT_TOKEN
@@ -17,13 +18,13 @@ async function call<T = unknown>(method: string, body: Record<string, unknown> |
   if (!token) return { ok: false, error: 'TELEGRAM_BOT_TOKEN belum diatur', retryable: false }
   const form = body instanceof FormData
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    const res = await timed(`tg.${method}`, fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: 'POST',
       ...(form ? {} : { headers: { 'content-type': 'application/json' } }),
       body: form ? body : JSON.stringify(body),
       signal: AbortSignal.timeout(form ? 15000 : 8000),
       cache: 'no-store',
-    })
+    }))
     const json = (await res.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null
     if (res.ok && json?.ok) return { ok: true, result: json.result as T }
     // 403: pengguna memblokir bot / chat tidak ada → tidak perlu dicoba ulang

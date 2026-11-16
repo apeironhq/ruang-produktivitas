@@ -1,3 +1,4 @@
+import '@/lib/http-agent'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reminderKeyboard, reminderText, sendDashboard } from '@/lib/bot'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
