@@ -67,7 +67,7 @@ const textStep = (key: string, label: string, q: string, hint: string, opts: { o
   },
 })
 const remindStep = (): Step => ({
-  key: 'remind', label: '🔔 Pengingat', when: (st) => !!st.d.due || !!st.d.start,
+  key: 'remind', label: 'Pengingat', when: (st) => !!st.d.due || !!st.d.start,
   ask: () => ({ q: 'Ingatkan kapan?', choices: [{ text: 'Tanpa', v: '-' }, { text: 'Tepat waktu', v: '0' }, { text: '10 menit', v: '10' }, { text: '30 menit', v: '30' }, { text: '1 jam', v: '60' }, { text: '1 hari', v: '1440' }], perRow: 3 }),
   accept: (_c, _s, { choice }) => {
     if (!choice) return { error: 'Pilih salah satu tombol.' }
@@ -94,7 +94,7 @@ const whenAccept = (tz: string, input: { text?: string; choice?: string }, allow
 /* ---------- Definisi alur ---------- */
 export const FLOWS: Record<string, Flow> = {
   tugas: {
-    title: '✅ Tugas baru',
+    title: 'Tugas baru',
     init: async (ctx, arg) => {
       // arg: "tp:<projectId>" dari halaman proyek, atau teks "judul [besok] [09.00]" dari /tambah.
       if (arg.startsWith('tp:')) {
@@ -110,20 +110,20 @@ export const FLOWS: Record<string, Flow> = {
       return { d, l }
     },
     steps: [
-      textStep('title', '📌 Judul', 'Apa judul tugasnya?', 'Ketik judulnya, mis. <i>Kirim laporan mingguan</i>'),
+      textStep('title', 'Judul', 'Apa judul tugasnya?', 'Ketik judulnya, mis. <i>Kirim laporan mingguan</i>'),
       {
-        key: 'due', label: '⏰ Tenggat',
+        key: 'due', label: 'Tenggat',
         ask: () => ({ q: 'Kapan tenggatnya?', hint: 'Pilih tombol, atau ketik mis. <code>20/11 14.30</code>', choices: [{ text: 'Hari ini 17.00', v: 'h17' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Lusa 09.00', v: 'l09' }, { text: 'Tanpa tenggat', v: 'none' }], perRow: 2, typing: true }),
         accept: (ctx, _s, input) => whenAccept(ctx.tz, input, true, '23:59'),
       },
       remindStep(),
       {
-        key: 'priority', label: '🚩 Prioritas',
+        key: 'priority', label: 'Prioritas',
         ask: () => ({ q: 'Seberapa penting?', choices: [{ text: '🟢 Rendah', v: 'rendah' }, { text: '🔵 Sedang', v: 'sedang' }, { text: '🟠 Tinggi', v: 'tinggi' }, { text: '🔴 Mendesak', v: 'mendesak' }], perRow: 2 }),
         accept: (_c, _s, { choice }) => (choice && ['rendah', 'sedang', 'tinggi', 'mendesak'].includes(choice) ? { value: choice, label: choice[0]!.toUpperCase() + choice.slice(1) } : { error: 'Pilih salah satu tombol.' }),
       },
       {
-        key: 'project', label: '📁 Proyek',
+        key: 'project', label: 'Proyek',
         ask: async (ctx) => {
           const { data } = await ctx.db.from('projects').select('id, title').eq('user_id', ctx.userId).in('status', ['aktif', 'rencana']).order('title').limit(8)
           if (!(data ?? []).length) return { q: '', autoSkip: { value: null } }
@@ -144,25 +144,25 @@ export const FLOWS: Record<string, Flow> = {
         remind_before_minutes: d.due ? (d.remind ?? null) : null, project_id: d.project ?? null,
       })
       if (error) throw error
-      return { lines: ['✅ <b>Tugas ditambahkan!</b>'], kb: NAV_AFTER('p:tugas', '✅ Lihat tugas') }
+      return { lines: ['<b>Tugas ditambahkan!</b>'], kb: NAV_AFTER('p:tugas', '✅ Lihat tugas') }
     },
   },
 
   kegiatan: {
-    title: '📅 Kegiatan baru',
+    title: 'Kegiatan baru',
     steps: [
-      textStep('title', '📌 Nama kegiatan', 'Apa nama kegiatannya?', 'Mis. <i>Kajian rutin</i>, <i>Rapat tim</i>'),
+      textStep('title', 'Nama kegiatan', 'Apa nama kegiatannya?', 'Mis. <i>Kajian rutin</i>, <i>Rapat tim</i>'),
       {
-        key: 'start', label: '🕘 Mulai',
+        key: 'start', label: 'Mulai',
         ask: () => ({ q: 'Kapan mulainya?', hint: 'Pilih tombol, atau ketik mis. <code>besok 19.30</code>', choices: [{ text: 'Hari ini 19.00', v: 'h19' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Besok 19.00', v: 'b19' }], perRow: 3, typing: true }),
         accept: (ctx, _s, input) => whenAccept(ctx.tz, input, false, '09:00'),
       },
       {
-        key: 'dur', label: '⏱ Durasi',
+        key: 'dur', label: 'Durasi',
         ask: () => ({ q: 'Berapa lama?', choices: [{ text: '30 menit', v: '30' }, { text: '1 jam', v: '60' }, { text: '2 jam', v: '120' }, { text: '3 jam', v: '180' }, { text: 'Tidak ditentukan', v: '-' }], perRow: 2 }),
         accept: (_c, _s, { choice }) => (choice === '-' ? { value: null, label: 'Tidak ditentukan' } : choice && /^\d+$/.test(choice) ? { value: Number(choice), label: formatDuration(Number(choice)) } : { error: 'Pilih salah satu tombol.' }),
       },
-      textStep('location', '📍 Lokasi', 'Di mana lokasinya?', 'Ketik lokasinya, atau tekan Lewati.', { optional: true }),
+      textStep('location', 'Lokasi', 'Di mana lokasinya?', 'Ketik lokasinya, atau tekan Lewati.', { optional: true }),
       remindStep(),
     ],
     commit: async (ctx, st) => {
@@ -172,22 +172,22 @@ export const FLOWS: Record<string, Flow> = {
         user_id: ctx.userId, kind: 'kegiatan', title: d.title, start_at: d.start, end_at: end, location: d.location ?? '', remind_before_minutes: d.remind ?? null,
       })
       if (error) throw error
-      return { lines: ['📅 <b>Kegiatan dijadwalkan!</b>'], kb: NAV_AFTER('p:kal', '📅 Lihat kalender') }
+      return { lines: ['<b>Kegiatan dijadwalkan!</b>'], kb: NAV_AFTER('p:kal', '📅 Lihat kalender') }
     },
   },
 
   catatan: {
-    title: '🗒 Catatan baru',
+    title: 'Catatan baru',
     init: async (_ctx, arg) => (arg ? { d: { kind: 'catatan', body: arg.slice(0, 50000) }, l: { kind: 'Catatan', body: cut(arg, 80) } } : {}),
     steps: [
       {
-        key: 'kind', label: '🏷 Jenis',
+        key: 'kind', label: 'Jenis',
         ask: () => ({ q: 'Jenis catatannya?', choices: ['catatan', 'harian', 'ide', 'pekerjaan', 'belajar'].map((k) => ({ text: JOURNAL_KIND[k]!.label, v: k })), perRow: 2 }),
         accept: (_c, _s, { choice }) => (choice && JOURNAL_KIND[choice] ? { value: choice, label: JOURNAL_KIND[choice]!.label } : { error: 'Pilih salah satu tombol.' }),
       },
-      textStep('body', '📝 Isi', 'Tulis catatannya', 'Baris pertama menjadi judul. Boleh beberapa baris.', { max: 50000 }),
+      textStep('body', 'Isi', 'Tulis catatannya', 'Baris pertama menjadi judul. Boleh beberapa baris.', { max: 50000 }),
       {
-        key: 'mood', label: '😊 Suasana hati', when: (st) => st.d.kind === 'harian',
+        key: 'mood', label: 'Suasana hati', when: (st) => st.d.kind === 'harian',
         ask: () => ({ q: 'Bagaimana suasana hatimu hari ini?', choices: [['1', '😞'], ['2', '🙁'], ['3', '😐'], ['4', '🙂'], ['5', '😄']].map(([v, e]) => ({ text: e!, v: v! })), perRow: 5, optional: true }),
         accept: (_c, _s, { choice }) => (choice && /^[1-5]$/.test(choice) ? { value: Number(choice), label: MOOD[Number(choice)]! } : { error: 'Pilih salah satu tombol.' }),
       },
@@ -202,12 +202,12 @@ export const FLOWS: Record<string, Flow> = {
       })
       if (error) throw error
       await ctx.db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
-      return { lines: ['🗒 <b>Catatan tersimpan!</b>'], kb: NAV_AFTER('p:jurnal', '🗒 Lihat jurnal') }
+      return { lines: ['<b>Catatan tersimpan!</b>'], kb: NAV_AFTER('p:jurnal', '🗒 Lihat jurnal') }
     },
   },
 
   sesi: {
-    title: '📚 Sesi belajar',
+    title: 'Sesi belajar',
     init: async (ctx, arg) => {
       const { data: subs } = await ctx.db.from('learning_subjects').select('id, title').eq('user_id', ctx.userId).eq('status', 'aktif').limit(100)
       if (!(subs ?? []).length) return { error: 'Belum ada bidang belajar aktif. Tambahkan bidang di Ruang Belajar (web) dulu.' }
@@ -228,7 +228,7 @@ export const FLOWS: Record<string, Flow> = {
     },
     steps: [
       {
-        key: 'subject', label: '🎓 Bidang',
+        key: 'subject', label: 'Bidang',
         ask: async (ctx) => {
           const { data } = await ctx.db.from('learning_subjects').select('id, title').eq('user_id', ctx.userId).eq('status', 'aktif').order('title').limit(10)
           return { q: 'Bidang apa yang dipelajari?', choices: (data ?? []).map((s) => ({ text: s.title.length > 28 ? `${s.title.slice(0, 27)}…` : s.title, v: s.id })), perRow: 2 }
@@ -240,14 +240,14 @@ export const FLOWS: Record<string, Flow> = {
         },
       },
       {
-        key: 'minutes', label: '⏱ Durasi',
+        key: 'minutes', label: 'Durasi',
         ask: () => ({ q: 'Berapa lama belajarnya?', hint: 'Pilih tombol, atau ketik jumlah menit.', choices: ['15', '25', '30', '45', '60', '90'].map((v) => ({ text: formatDuration(Number(v)), v })), perRow: 3, typing: true }),
         accept: (_c, _s, { text, choice }) => {
           const n = Number(choice ?? (text ?? '').replace(/\D/g, ''))
           return Number.isInteger(n) && n >= 1 && n <= 1440 ? { value: n, label: formatDuration(n) } : { error: 'Durasi harus 1–1440 menit.' }
         },
       },
-      textStep('material', '📝 Materi', 'Materi apa yang dipelajari?', 'Mis. <i>Middleware & proxy</i>. Atau tekan Lewati.', { optional: true }),
+      textStep('material', 'Materi', 'Materi apa yang dipelajari?', 'Mis. <i>Middleware & proxy</i>. Atau tekan Lewati.', { optional: true }),
     ],
     commit: async (ctx, st) => {
       const { error } = await ctx.db.from('learning_sessions').insert({
@@ -255,7 +255,7 @@ export const FLOWS: Record<string, Flow> = {
       })
       if (error) throw error
       await ctx.db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
-      return { lines: ['📚 <b>Sesi belajar tercatat!</b> Terus semangat 💪'], kb: NAV_AFTER('p:belajar', '📚 Lihat belajar') }
+      return { lines: ['<b>Sesi belajar tercatat!</b> Terus semangat'], kb: NAV_AFTER('p:belajar', '📚 Lihat belajar') }
     },
   },
 
@@ -263,7 +263,7 @@ export const FLOWS: Record<string, Flow> = {
   masuk: moneyFlow('pemasukan'),
 
   prog: {
-    title: '🎯 Tambah progres',
+    title: 'Tambah progres',
     init: async (ctx, arg) => {
       const { data: g } = await ctx.db.from('goals').select('id, title, metric_type, unit_label, progress_source, status').eq('id', arg).eq('user_id', ctx.userId).maybeSingle()
       if (!g) return { error: 'Target tidak ditemukan.' }
@@ -272,7 +272,7 @@ export const FLOWS: Record<string, Flow> = {
     },
     steps: [
       {
-        key: 'value', label: '➕ Jumlah',
+        key: 'value', label: 'Jumlah',
         ask: (_c, st) => st.d.metric === 'biner'
           ? { q: 'Tandai target ini tercapai?', choices: [{ text: '✅ Ya, sudah tercapai', v: '1' }], perRow: 1 }
           : { q: `Berapa tambahannya${st.d.unit ? ` (${esc(String(st.d.unit))})` : st.d.metric === 'rupiah' ? ' (Rp)' : st.d.metric === 'durasi' ? ' (menit)' : ''}?`, hint: 'Ketik angkanya, mis. <code>250000</code>. Pakai minus untuk mengurangi.', typing: true },
@@ -282,7 +282,7 @@ export const FLOWS: Record<string, Flow> = {
           return { value: n, label: st.d.metric === 'rupiah' ? formatRupiah(n) : st.d.metric === 'durasi' ? formatDuration(n) : formatNumber(n) }
         },
       },
-      textStep('note', '📝 Catatan', 'Ada catatan?', 'Ketik keterangan singkat, atau tekan Lewati.', { optional: true, max: 500 }),
+      textStep('note', 'Catatan', 'Ada catatan?', 'Ketik keterangan singkat, atau tekan Lewati.', { optional: true, max: 500 }),
     ],
     commit: async (ctx, st) => {
       const { error } = await ctx.db.from('goal_progress_events').insert({
@@ -290,23 +290,23 @@ export const FLOWS: Record<string, Flow> = {
       })
       if (error) throw error
       await ctx.db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
-      return { lines: ['🎯 <b>Progres ditambahkan!</b>'], kb: [[btn('🎯 Lihat target', `gl:${st.d.goal}`), btn('🏠 Menu', 'p:home')]] }
+      return { lines: ['<b>Progres ditambahkan!</b>'], kb: [[btn('🎯 Lihat target', `gl:${st.d.goal}`), btn('🏠 Menu', 'p:home')]] }
     },
   },
 
   sub: {
-    title: '☑️ Subtugas baru',
+    title: 'Subtugas baru',
     init: async (ctx, arg) => {
       const { data: t } = await ctx.db.from('tasks').select('id, title').eq('id', arg).eq('user_id', ctx.userId).eq('kind', 'tugas').maybeSingle()
       return t ? { d: { task: t.id }, l: { task: cut(t.title, 40) } } : { error: 'Tugas tidak ditemukan.' }
     },
-    steps: [textStep('titles', '☑️ Subtugas', 'Apa subtugasnya?', 'Satu per baris untuk menambah beberapa sekaligus.', { max: 8000 })],
+    steps: [textStep('titles', 'Subtugas', 'Apa subtugasnya?', 'Satu per baris untuk menambah beberapa sekaligus.', { max: 8000 })],
     commit: async (ctx, st) => {
       const titles = String(st.d.titles).split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 30).map((s) => s.slice(0, 200))
       const { count } = await ctx.db.from('task_subtasks').select('id', { count: 'exact', head: true }).eq('task_id', st.d.task).eq('user_id', ctx.userId)
       const { error } = await ctx.db.from('task_subtasks').insert(titles.map((title, i) => ({ user_id: ctx.userId, task_id: st.d.task, title, sort_order: (count ?? 0) + i })))
       if (error) throw error
-      return { lines: [`☑️ <b>${titles.length} subtugas ditambahkan!</b>`], kb: [[btn('📄 Buka tugas', `td:${st.d.task}`), btn('🏠 Menu', 'p:home')]] }
+      return { lines: [`<b>${titles.length} subtugas ditambahkan!</b>`], kb: [[btn('📄 Buka tugas', `td:${st.d.task}`), btn('🏠 Menu', 'p:home')]] }
     },
   },
 }
@@ -314,7 +314,7 @@ export const FLOWS: Record<string, Flow> = {
 function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
   const out = type === 'pengeluaran'
   return {
-    title: out ? '💸 Catat pengeluaran' : '💵 Catat pemasukan',
+    title: out ? 'Catat pengeluaran' : 'Catat pemasukan',
     init: async (ctx, arg) => {
       const { data: accts } = await ctx.db.from('financial_accounts').select('id, name').eq('user_id', ctx.userId).eq('is_archived', false).order('name').limit(20)
       if (!(accts ?? []).length) return { error: 'Belum ada rekening. Tambahkan rekening di menu Keuangan (web) dulu.' }
@@ -331,7 +331,7 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
     },
     steps: [
       {
-        key: 'amount', label: '💰 Jumlah',
+        key: 'amount', label: 'Jumlah',
         ask: () => ({ q: `Berapa jumlah ${type}nya?`, hint: 'Ketik angkanya, mis. <code>25000</code>, <code>25rb</code>, atau <code>1,5jt</code>.', typing: true }),
         accept: (_c, _s, { text }) => {
           const n = parseMoney(text ?? '')
@@ -339,7 +339,7 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
         },
       },
       {
-        key: 'category', label: '🏷 Kategori',
+        key: 'category', label: 'Kategori',
         ask: async (ctx) => {
           const { data } = await ctx.db.from('transaction_categories').select('id, name').eq('user_id', ctx.userId).eq('type', type).order('name').limit(12)
           if (!(data ?? []).length) return { q: '', autoSkip: { value: null } }
@@ -352,7 +352,7 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
         },
       },
       {
-        key: 'account', label: '🏦 Rekening',
+        key: 'account', label: 'Rekening',
         ask: async (ctx) => {
           const { data } = await ctx.db.from('financial_accounts').select('id, name').eq('user_id', ctx.userId).eq('is_archived', false).order('name').limit(12)
           return { q: out ? 'Dibayar dari rekening mana?' : 'Masuk ke rekening mana?', choices: (data ?? []).map((a) => ({ text: a.name, v: a.id })), perRow: 2 }
@@ -363,14 +363,14 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
           return a ? { value: choice, label: a.name } : { error: 'Rekening tidak ditemukan.' }
         },
       },
-      textStep('note', '📝 Keterangan', 'Keterangannya?', 'Mis. <i>makan siang</i>. Atau tekan Lewati.', { optional: true, max: 500 }),
+      textStep('note', 'Keterangan', 'Keterangannya?', 'Mis. <i>makan siang</i>. Atau tekan Lewati.', { optional: true, max: 500 }),
     ],
     commit: async (ctx, st) => {
       const { error } = await ctx.db.from('transactions').insert({
         user_id: ctx.userId, account_id: st.d.account, type, amount: st.d.amount, category_id: st.d.category ?? null, occurred_on: todayIn(ctx.tz), note: st.d.note ?? '',
       })
       if (error) throw error
-      return { lines: [`${out ? '💸' : '💵'} <b>${out ? 'Pengeluaran' : 'Pemasukan'} ${formatRupiah(Number(st.d.amount))} tercatat!</b>`], kb: NAV_AFTER('p:uang', '💰 Lihat keuangan') }
+      return { lines: [`<b>${out ? 'Pengeluaran' : 'Pemasukan'} ${formatRupiah(Number(st.d.amount))} tercatat!</b>`], kb: NAV_AFTER('p:uang', '💰 Lihat keuangan') }
     },
   }
 }
@@ -425,7 +425,7 @@ async function advance(ctx: Ctx, flow: Flow, st: FlowState, from: number) {
 function summary(flow: Flow, st: FlowState) {
   const order = [...flow.steps.map((s) => s.key), ...Object.keys(st.l)]
   const seen = new Set<string>()
-  const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ project: '📁 Proyek', goal: '🎯 Target', task: '✅ Tugas', account: '🏦 Rekening', amount: '💰 Jumlah', note: '📝 Keterangan', kind: '🏷 Jenis', body: '📝 Isi' } as Record<string, string>)[k] ?? k
+  const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ project: 'Proyek', goal: 'Target', task: 'Tugas', account: 'Rekening', amount: 'Jumlah', note: 'Keterangan', kind: 'Jenis', body: 'Isi' } as Record<string, string>)[k] ?? k
   // Tabel monospace: label tanpa ikon, titik dua sejajar. Nilai disimpan ter-escape → kembalikan ke teks polos.
   const unesc = (v: string) => v.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
   const rows_ = order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined))
@@ -438,7 +438,7 @@ async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
   const head = [`${flow.title}`, ...filled]
   if (st.s >= flow.steps.length) {
     return {
-      html: [...head.map((h, i) => (i === 0 ? `<b>${h}</b>` : h)), '', '✅ <b>Sudah benar?</b> Tekan <b>Simpan</b> untuk menyimpan.'].join('\n'),
+      html: [...head.map((h, i) => (i === 0 ? `<b>${h}</b>` : h)), '', '<b>Sudah benar?</b> Tekan <b>Simpan</b> untuk menyimpan.'].join('\n'),
       kb: [[btn('✅ Simpan', 'w:ok', 'success'), btn('✖️ Batal', 'w:x')]] as Keyboard,
     }
   }
@@ -448,9 +448,9 @@ async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
   const n = flow.steps.slice(0, st.s + 1).filter((s) => !(s.key in st.d) || s.key === step.key).length
   const html = [
     `<b>${head[0]}</b>`, ...head.slice(1), '',
-    ...(error ? [`⚠️ ${error}`, ''] : []),
+    ...(error ? [`${error}`, ''] : []),
     `<i>Langkah ${Math.min(n, total)}</i>`,
-    `❓ <b>${a.q}</b>`,
+    `<b>${a.q}</b>`,
     ...(a.hint ? [`<i>${a.hint}</i>`] : a.typing ? ['<i>Ketik jawabanmu di kolom pesan.</i>'] : []),
   ].join('\n')
   const kb: Keyboard = [
@@ -477,7 +477,7 @@ export async function startFlow(ctx: Ctx, name: string, arg: string, edit: { id:
   if (!flow) return
   const init = flow.init ? await flow.init(ctx, arg) : {}
   if ('error' in init) {
-    const msg = `⚠️ ${init.error}`
+    const msg = `${init.error}`
     if (edit) await (edit.photo ? editMessageCaption(ctx.chatId, edit.id, msg, [[btn('🏠 Menu', 'p:home')]]) : editMessageKb(ctx.chatId, edit.id, msg, [[btn('🏠 Menu', 'p:home')]]))
     else await sendMessageKb(ctx.chatId, msg, [[btn('🏠 Menu', 'p:home')]])
     return
@@ -494,7 +494,7 @@ export async function continueFlow(ctx: Ctx, st: FlowState, input: { text?: stri
   if (!flow) return false
   if (input.choice === 'x') {
     await clearFlow(ctx)
-    const html = `<b>${flow.title}</b>\n\n✖️ <i>Dibatalkan — tidak ada yang disimpan.</i>`
+    const html = `<b>${flow.title}</b>\n\n<i>Dibatalkan — tidak ada yang disimpan.</i>`
     const kb: Keyboard = [[btn('🏠 Menu', 'p:home')]]
     if (edit) await (edit.photo ? editMessageCaption(ctx.chatId, edit.id, html, kb) : editMessageKb(ctx.chatId, edit.id, html, kb))
     else { if (st.m) await editMessageReplyMarkup(ctx.chatId, st.m, []); await sendMessageKb(ctx.chatId, html, kb) }

@@ -56,18 +56,18 @@ export async function sendDashboard(ctx: Pick<Ctx, 'db' | 'chatId' | 'userId' | 
 
 /* ---------- Selamat datang ---------- */
 const FEATURES = [
-  '✅ Tugas & kegiatan + pengingat otomatis',
-  '📅 Agenda & ringkasan setiap pagi',
-  '💰 Catat pemasukan & pengeluaran',
-  '📚 Sesi belajar · 🗒 catatan & jurnal',
-  '🎯 Target · 🔁 kebiasaan · 🏆 lencana',
+  '• Tugas & kegiatan + pengingat otomatis',
+  '• Agenda & ringkasan setiap pagi',
+  '• Catat pemasukan & pengeluaran',
+  '• Sesi belajar, catatan & jurnal',
+  '• Target, kebiasaan & lencana',
 ]
 async function sendWelcome(chatId: number) {
   const p: Panel = {
-    head: ['🐰 <b>Selamat datang di Rupi!</b>', '<i>Asisten Produktivitas Pribadimu dari Ruang Produktivitas.</i>'],
+    head: ['<b>Selamat datang di Rupi!</b>', '<i>Asisten Produktivitas Pribadimu dari Ruang Produktivitas.</i>'],
     sections: [
-      { title: '✨ Yang bisa Rupi bantu', quote: true, lines: FEATURES },
-      { title: '🔗 Tautkan akunmu dulu', quote: true, lines: ['1. Buka <b>Pengaturan → Bot Telegram</b> di aplikasi', '2. Tekan <b>Buat kode tautan</b>', '3. Tekan <b>Buka di Telegram</b>, atau kirim <code>/mulai KODE</code> ke sini'] },
+      { title: 'Yang bisa Rupi bantu', quote: true, lines: FEATURES },
+      { title: 'Tautkan akunmu dulu', quote: true, lines: ['1. Buka <b>Pengaturan → Bot Telegram</b> di aplikasi', '2. Tekan <b>Buat kode tautan</b>', '3. Tekan <b>Buka di Telegram</b>, atau kirim <code>/mulai KODE</code> ke sini'] },
     ],
     foot: ['<i>Data hanya bisa diakses dari akun yang sudah ditautkan.</i>'],
     kb: [[link('🌐 Buka Pengaturan', '/pengaturan', 'primary')]],
@@ -79,13 +79,13 @@ async function sendWelcome(chatId: number) {
 /* ---------- Penautan (BT-01) ---------- */
 async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw: string) {
   const code = raw.trim().toUpperCase()
-  if (!/^[A-Z0-9]{6}$/.test(code)) { await sendMessage(chatId, '⚠️ Kode tautan terdiri dari <b>6 huruf/angka</b>. Buat kode baru di <b>Pengaturan → Bot Telegram</b>.'); return 'selesai' as const }
+  if (!/^[A-Z0-9]{6}$/.test(code)) { await sendMessage(chatId, 'Kode tautan terdiri dari <b>6 huruf/angka</b>. Buat kode baru di <b>Pengaturan → Bot Telegram</b>.'); return 'selesai' as const }
   // Klaim kode secara atomik: hanya berhasil sekali & selama belum kedaluwarsa.
   const { data: claimed } = await db.from('telegram_link_codes').update({ used_at: new Date().toISOString() })
     .eq('code', code).is('used_at', null).gt('expires_at', new Date().toISOString()).select('user_id').maybeSingle()
-  if (!claimed) { await sendMessage(chatId, '❌ <b>Kode tidak valid</b>, sudah dipakai, atau kedaluwarsa (berlaku 10 menit). Buat kode baru di Pengaturan.'); return 'selesai' as const }
+  if (!claimed) { await sendMessage(chatId, '<b>Kode tidak valid</b>, sudah dipakai, atau kedaluwarsa (berlaku 10 menit). Buat kode baru di Pengaturan.'); return 'selesai' as const }
   const { data: other } = await db.from('telegram_connections').select('user_id').eq('telegram_user_id', from.id).maybeSingle()
-  if (other && other.user_id !== claimed.user_id) { await sendMessage(chatId, '⚠️ Akun Telegram ini sudah tertaut ke akun Ruang Produktivitas lain. Kirim /putus dulu dari akun tersebut.'); return 'selesai' as const }
+  if (other && other.user_id !== claimed.user_id) { await sendMessage(chatId, 'Akun Telegram ini sudah tertaut ke akun Ruang Produktivitas lain. Kirim /putus dulu dari akun tersebut.'); return 'selesai' as const }
   const { error } = await db.from('telegram_connections').upsert(
     { user_id: claimed.user_id, telegram_user_id: from.id, chat_id: chatId, username: (from.username ?? from.first_name ?? '').slice(0, 64), linked_at: new Date().toISOString() },
     { onConflict: 'user_id' },
@@ -94,7 +94,7 @@ async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw
   const ctx = await loadCtx(db, from.id, chatId)
   if (!ctx) return 'selesai' as const
   // Langsung ke ringkasan dashboard, dengan satu baris sambutan.
-  await sendDashboard(ctx, '🎉 <b>Akun berhasil ditautkan!</b> <i>Pengingat & ringkasan harian akan dikirim ke sini.</i>')
+  await sendDashboard(ctx, '<b>Akun berhasil ditautkan!</b> <i>Pengingat & ringkasan harian akan dikirim ke sini.</i>')
   return 'selesai' as const
 }
 
@@ -147,7 +147,7 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate): Promise<'se
     case 'masuk': await startFlow(ctx, 'masuk', arg, null); break
     case 'batal': await sendMessageKb(chatId, pend ? '✖️ <i>Isian dibatalkan.</i>' : '<i>Tidak ada isian yang sedang berjalan.</i>', [[btn('🏠 Menu', 'p:home')]]); break
     case 'putus': await sendPanel(chatId, unlinkConfirm()); break
-    default: await sendPanel(chatId, { ...helpPanel(), head: ['⚠️ <b>Perintah tidak dikenal.</b>', '<i>Ini daftar perintah yang tersedia:</i>'] })
+    default: await sendPanel(chatId, { ...helpPanel(), head: ['<b>Perintah tidak dikenal.</b>', '<i>Ini daftar perintah yang tersedia:</i>'] })
   }
   return 'selesai'
 }
@@ -158,7 +158,7 @@ async function offerFreeText(ctx: Ctx, text: string) {
   await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'teks', payload: { text: body }, created_at: new Date().toISOString() })
   const looksMoney = /^\s*(rp\s*)?[\d.,]+\s*(rb|ribu|k|jt|juta)?\b/i.test(text)
   await sendMessageKb(ctx.chatId, [
-    '💬 <b>Pesan diterima</b>',
+    '<b>Pesan diterima</b>',
     `<blockquote expandable>${esc(body.length > 700 ? `${body.slice(0, 700)}…` : body)}</blockquote>`,
     '<i>Mau disimpan sebagai apa?</i>',
   ].join('\n'), [
@@ -170,7 +170,7 @@ async function offerFreeText(ctx: Ctx, text: string) {
 
 function unlinkConfirm(): Panel {
   return {
-    head: ['🔌 <b>Putuskan bot dari akun?</b>'],
+    head: ['<b>Putuskan bot dari akun?</b>'],
     sections: [{ quote: true, lines: ['Rupi tidak bisa lagi membaca atau menambah datamu, dan pengingat berhenti dikirim.', '<i>Kamu bisa menautkan lagi kapan saja dari Pengaturan.</i>'] }],
     kb: [[btn('🔌 Ya, putuskan', 'set:putus:ya', 'danger'), btn('Batal', 'p:atur')]],
   }
@@ -242,7 +242,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
       const { data: t } = await db.from('tasks').update({ status }).eq('id', id).eq('user_id', ctx.userId).select('recurrence').maybeSingle()
       if (!t) { toast = 'Tugas tidak ditemukan.'; break }
       if (status === 'selesai') await db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
-      toast = status === 'selesai' ? (t.recurrence !== 'tidak' ? '✅ Selesai! Jadwal berikutnya sudah dibuat.' : '✅ Selesai! Kerja bagus 🎉') : `Status: ${status}`
+      toast = status === 'selesai' ? (t.recurrence !== 'tidak' ? 'Selesai! Jadwal berikutnya sudah dibuat.' : 'Selesai! Kerja bagus') : `Status: ${status}`
       const p = await taskDetailPanel(ctx, id)
       await answerCallback(cb.id, toast)
       if (p) await showPanel(ctx, p, msg)
@@ -253,7 +253,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
       const { data: s } = await db.from('task_subtasks').select('task_id, is_completed').eq('id', rest).eq('user_id', ctx.userId).maybeSingle()
       if (!s) { toast = 'Subtugas tidak ditemukan.'; break }
       await db.from('task_subtasks').update({ is_completed: !s.is_completed }).eq('id', rest).eq('user_id', ctx.userId)
-      await answerCallback(cb.id, s.is_completed ? 'Subtugas dibuka lagi' : '☑️ Subtugas selesai')
+      await answerCallback(cb.id, s.is_completed ? 'Subtugas dibuka lagi' : 'Subtugas selesai')
       const p = await taskDetailPanel(ctx, s.task_id)
       if (p) await showPanel(ctx, p, msg)
       return 'selesai'
@@ -263,7 +263,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
       const { data: m } = await db.from('project_milestones').select('project_id, completed_at').eq('id', rest).eq('user_id', ctx.userId).maybeSingle()
       if (!m) { toast = 'Tahapan tidak ditemukan.'; break }
       await db.from('project_milestones').update({ completed_at: m.completed_at ? null : new Date().toISOString() }).eq('id', rest).eq('user_id', ctx.userId)
-      await answerCallback(cb.id, m.completed_at ? 'Tahapan dibuka lagi' : '🏁 Tahapan selesai')
+      await answerCallback(cb.id, m.completed_at ? 'Tahapan dibuka lagi' : 'Tahapan selesai')
       const p = await projectDetailPanel(ctx, m.project_id)
       if (p) await showPanel(ctx, p, msg)
       return 'selesai'
@@ -280,7 +280,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
         const { data: n } = await db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
         badges = Number(n ?? 0)
       }
-      await answerCallback(cb.id, removed?.length ? `Check-in ${h.name} dibatalkan` : badges ? `🏆 Check-in tercatat + ${badges} lencana baru!` : `✅ Check-in ${h.name} tercatat`)
+      await answerCallback(cb.id, removed?.length ? `Check-in ${h.name} dibatalkan` : badges ? `Check-in tercatat + ${badges} lencana baru!` : `Check-in ${h.name} tercatat`)
       await showPanel(ctx, await habitsPanel(ctx), msg)
       return 'selesai'
     }
@@ -289,7 +289,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
       const { data: t } = await db.from('tasks').update({ status: 'selesai' }).eq('id', rest).eq('user_id', ctx.userId).eq('kind', 'tugas').select('title').maybeSingle()
       if (!t) { toast = 'Tugas tidak ditemukan.'; break }
       await db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
-      await answerCallback(cb.id, '✅ Ditandai selesai')
+      await answerCallback(cb.id, 'Ditandai selesai')
       await editMessageKb(ctx.chatId, msg.message_id, `✅ <b>Selesai!</b>\n<blockquote><s>${cut(t.title, 80)}</s></blockquote>\n<i>Kerja bagus! 🎉</i>`, [[btn('🏠 Menu', 'p:home'), btn('✅ Tugas lain', 'p:tugas')]])
       return 'selesai'
     }
@@ -301,7 +301,7 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
         return 'selesai'
       }
       if (ok === 'konfirmasi') { await answerCallback(cb.id); await showPanel(ctx, unlinkConfirm(), msg); return 'selesai' }
-      await answerCallback(cb.id, ok ? 'Pengaturan disimpan ✅' : undefined)
+      await answerCallback(cb.id, ok ? 'Pengaturan disimpan' : undefined)
       await showPanel(ctx, await settingsPanel(ctx), msg)
       return 'selesai'
     }
