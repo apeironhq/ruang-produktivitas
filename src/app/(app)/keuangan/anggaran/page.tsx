@@ -49,8 +49,10 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
       <div className="kpis kpis-3">
         <KpiCard label="Total anggaran" value={null} display={formatRupiah(totalLimit)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${budgets.length} kategori`} />
         <KpiCard label="Terpakai" value={null} display={formatRupiah(totalSpent)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-rose)"
+          progress={totalLimit ? (totalSpent / totalLimit) * 100 : undefined} progressColor={totalSpent > totalLimit ? 'var(--err)' : totalSpent >= totalLimit * 0.8 ? 'var(--p-amber)' : 'var(--ok)'}
           caption={totalLimit ? `${formatNumber(Math.floor((totalSpent / totalLimit) * 100))}% dari total anggaran` : 'Belum ada anggaran'} />
         <KpiCard label="Sisa" value={null} display={`${totalLimit - totalSpent < 0 ? '−' : ''}${formatRupiah(Math.abs(totalLimit - totalSpent))}`} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-peach)"
+          progress={totalLimit ? Math.max(0, ((totalLimit - totalSpent) / totalLimit) * 100) : undefined}
           caption={over ? `${over} kategori melewati batas` : 'Semua kategori masih di bawah batas'} />
       </div>
 

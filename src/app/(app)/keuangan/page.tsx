@@ -4,7 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, Landmark, LineChart, PieChart, Rabbit, Rec
 import { TrendChart } from '@/components/ui/charts'
 import { DonutChart, EmptyState, KpiCard, PageHead, ProgressBar, tint } from '@/components/ui/display'
 import { dayRange, todayIn } from '@/lib/dates'
-import { TX_COLS, loadAccounts, loadCategories, monthLabel, monthRange, sumFlow, toRows } from '@/lib/finance'
+import { TX_COLS, loadAccounts, loadCategories, loadFinanceTrends, monthLabel, monthRange, sumFlow, toRows } from '@/lib/finance'
 import { formatDay, formatNumber, formatRupiah } from '@/lib/format'
 import { ACCOUNT_KIND } from '@/lib/labels'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -39,6 +39,8 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
   const txs = (txRes.data ?? []) as Transaction[]
   const flow = sumFlow(txs)
   const prev = sumFlow((prevRes.data ?? []) as Transaction[])
+  const fin = accounts.length ? await loadFinanceTrends(supabase, accounts, month, today) : null
+  const cmp: [string, string] = ['bulan lalu', 'bulan lalu']
   const totalBalance = accounts.reduce((n, a) => n + a.balance, 0)
   const totalAllocated = accounts.reduce((n, a) => n + a.allocated, 0)
   const catName = new Map(categories.map((c) => [c.id, c.name]))
@@ -63,7 +65,6 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
     .sort((a, b) => b.spent / b.limit - a.spent / a.limit)
   const recent = toRows((recentRes.data ?? []) as Transaction[]).slice(0, 8)
   const label = monthLabel(month)
-  const caption = (now: number, before: number) => before ? `Bulan lalu ${formatRupiah(before)}` : 'Bulan lalu belum ada data'
 
   return (
     <div className="page">
@@ -86,13 +87,14 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
 
           <div className="kpis kpis-4">
             <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color="var(--c-blue)" href="/keuangan/rekening"
-              caption={`${accounts.length} rekening${totalAllocated ? ` · ${formatRupiah(totalAllocated)} teralokasi` : ''}`} />
+              series={fin?.balanceSeries} thisWeek={totalBalance} lastWeek={fin?.balanceBefore} money compare={['30 hari lalu', '30 hari lalu']}
+              note={totalAllocated ? `${formatRupiah(totalAllocated)} teralokasi · vs 30 hari lalu` : undefined} />
             <KpiCard label="Pemasukan" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color="var(--ok)" href={`/keuangan/transaksi?bulan=${month}&jenis=pemasukan`}
-              caption={caption(flow.income, prev.income)} />
+              series={fin?.incomeDaily} thisWeek={flow.income} lastWeek={prev.income} money compare={cmp} />
             <KpiCard label="Pengeluaran" value={null} display={formatRupiah(flow.expense)} icon={<ArrowUpRight size={20} strokeWidth={1.9} />} color="var(--c-peach)" href={`/keuangan/transaksi?bulan=${month}&jenis=pengeluaran`}
-              caption={caption(flow.expense, prev.expense)} />
+              series={fin?.expenseDaily} thisWeek={flow.expense} lastWeek={prev.expense} money invert compare={cmp} />
             <KpiCard label="Selisih (arus kas)" value={null} display={`${flow.net < 0 ? '−' : ''}${formatRupiah(Math.abs(flow.net))}`} icon={<Scale size={20} strokeWidth={1.9} />} color="var(--c-peach)"
-              caption={flow.net >= 0 ? 'Pemasukan lebih besar' : 'Pengeluaran lebih besar'} />
+              thisWeek={flow.net} lastWeek={prev.net} money compare={cmp} note={flow.net >= 0 ? 'Pemasukan lebih besar' : 'Pengeluaran lebih besar'} />
           </div>
 
           <div className="row-2">

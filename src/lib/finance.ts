@@ -1,6 +1,6 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { addDays } from './dates'
+import { addDays, dayRange } from './dates'
 import type { AccountWithBalance, Account, Category, Transaction } from './types'
 
 /** Rekening + saldo (view account_balances) dalam satu putaran paralel. */
@@ -86,3 +86,62 @@ export function sumFlow(txs: Pick<Transaction, 'type' | 'amount'>[]) {
 }
 
 export const TX_COLS = 'id, account_id, type, amount, category_id, occurred_on, note, transfer_group_id, created_at'
+
+export interface FinanceTrends {
+  /** saldo total per hari, 30 hari terakhir (hari ini paling kanan) */
+  balanceSeries: number[]
+  /** saldo total 30 hari lalu (pembanding pill) */
+  balanceBefore: number
+  /** pemasukan & pengeluaran harian bulan yang dilihat (s.d. hari ini bila bulan berjalan) */
+  incomeDaily: number[]
+  expenseDaily: number[]
+  /** total bulan sebelumnya (pembanding pill) */
+  prev: { income: number; expense: number; net: number }
+}
+
+/**
+ * Data tren untuk kartu keuangan: saldo 30 hari (dihitung mundur dari saldo sekarang memakai mutasi harian;
+ * transfer antarrekening saling meniadakan) dan arus kas harian bulan ini vs total bulan lalu.
+ */
+export async function loadFinanceTrends(supabase: SupabaseClient, accounts: AccountWithBalance[], month: string, today: string): Promise<FinanceTrends> {
+  const r = monthRange(month)
+  const prevR = monthRange(r.prev)
+  const since = addDays(today, -29)
+  const ids = accounts.map((a) => a.id)
+  const [recent, months] = await Promise.all([
+    ids.length ? supabase.from('transactions').select('type, amount, occurred_on').in('account_id', ids).gt('occurred_on', since).lte('occurred_on', today).limit(10000) : Promise.resolve({ data: [] }),
+    supabase.from('transactions').select('type, amount, occurred_on').gte('occurred_on', prevR.from).lt('occurred_on', r.to).in('type', ['pemasukan', 'pengeluaran']).limit(10000),
+  ])
+
+  // Saldo harian: mulai dari saldo sekarang, mundur hari demi hari mengurangi mutasi hari itu.
+  const total = accounts.reduce((n, a) => n + a.balance, 0)
+  const netByDay = new Map<string, number>()
+  for (const t of (recent.data ?? []) as Pick<Transaction, 'type' | 'amount' | 'occurred_on'>[]) {
+    const sign = t.type === 'pemasukan' || t.type === 'transfer_masuk' ? 1 : -1
+    netByDay.set(t.occurred_on, (netByDay.get(t.occurred_on) ?? 0) + sign * Number(t.amount))
+  }
+  const days = dayRange(addDays(today, -29), today)
+  const balanceSeries: number[] = new Array(days.length)
+  let running = total
+  for (let i = days.length - 1; i >= 0; i--) {
+    balanceSeries[i] = running
+    running -= netByDay.get(days[i]!) ?? 0
+  }
+
+  const monthDays = dayRange(r.from, month === today.slice(0, 7) ? today : r.last)
+  const income = new Map(monthDays.map((d) => [d, 0]))
+  const expense = new Map(monthDays.map((d) => [d, 0]))
+  const prevRows: Pick<Transaction, 'type' | 'amount'>[] = []
+  for (const t of (months.data ?? []) as Pick<Transaction, 'type' | 'amount' | 'occurred_on'>[]) {
+    if (t.occurred_on < r.from) { prevRows.push(t); continue }
+    const m = t.type === 'pemasukan' ? income : expense
+    if (m.has(t.occurred_on)) m.set(t.occurred_on, m.get(t.occurred_on)! + Number(t.amount))
+  }
+  return {
+    balanceSeries,
+    balanceBefore: running,
+    incomeDaily: monthDays.map((d) => income.get(d) ?? 0),
+    expenseDaily: monthDays.map((d) => expense.get(d) ?? 0),
+    prev: sumFlow(prevRows),
+  }
+}

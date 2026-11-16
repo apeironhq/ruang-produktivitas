@@ -76,11 +76,11 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
 
       <div className="kpis kpis-3">
         <KpiCard label="Progres" value={null} display={`${formatNumber(Math.floor(prog.pct))}%`} icon={<Gauge size={20} strokeWidth={1.9} />} color="var(--c-blue)"
-          caption={prog.source ? `Dihitung dari ${prog.source}` : 'Tambahkan tugas atau tahapan'} />
+          caption={prog.source ? `Dihitung dari ${prog.source}` : 'Tambahkan tugas atau tahapan'} progress={prog.source ? prog.pct : undefined} />
         <KpiCard label="Tugas selesai" value={null} display={`${t.done}/${t.total}`} icon={<CheckSquare size={20} strokeWidth={1.9} />} color="var(--c-lilac)"
-          caption={t.total ? `${t.total - t.done} tugas tersisa` : 'Belum ada tugas proyek'} />
+          caption={t.total ? `${t.total - t.done} tugas tersisa` : 'Belum ada tugas proyek'} progress={t.total ? (t.done / t.total) * 100 : undefined} />
         <KpiCard label="Tahapan" value={null} display={`${m.done}/${m.total}`} icon={<Milestone size={20} strokeWidth={1.9} />} color="var(--c-peach)"
-          caption={m.total ? `${m.total - m.done} tahapan tersisa` : 'Belum ada tahapan'} />
+          caption={m.total ? `${m.total - m.done} tahapan tersisa` : 'Belum ada tahapan'} progress={m.total ? (m.done / m.total) * 100 : undefined} />
       </div>
 
       <div className="row-2" style={{ alignItems: 'start' }}>

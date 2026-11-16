@@ -34,6 +34,9 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
   const doneTodayDaily = daily.filter((h) => stats.get(h.id)!.doneToday).length
   const bestStreak = Math.max(0, ...active.map((h) => stats.get(h.id)!.best))
   const currentBest = Math.max(0, ...active.map((h) => stats.get(h.id)!.current))
+  // Jumlah check-in per hari, 7 hari terakhir (semua kebiasaan aktif) untuk grafik kecil
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6))
+  const checksPerDay = last7.map((d) => active.filter((h) => (byHabit.get(h.id) ?? []).includes(d)).length)
   const dayLabel = (d: string) => `${DOW_SHORT[weekdayMon0(d)]} ${formatDay(d, { day: 'numeric', month: 'short' })}`
 
   return (
@@ -42,8 +45,9 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
 
       <div className="kpis kpis-3">
         <KpiCard label="Check-in hari ini" value={null} display={`${doneTodayDaily}/${daily.length}`} icon={<CalendarCheck size={20} strokeWidth={1.9} />} color="var(--c-blue)"
-          caption={daily.length ? (doneTodayDaily === daily.length ? 'Semua kebiasaan harian tuntas' : `${daily.length - doneTodayDaily} kebiasaan harian tersisa`) : 'Belum ada kebiasaan harian'} />
-        <KpiCard label="Streak berjalan" value={null} display={`${currentBest} hari`} icon={<Flame size={20} strokeWidth={1.9} />} color="var(--c-peach)" caption="Streak aktif terpanjang" />
+          caption={daily.length ? (doneTodayDaily === daily.length ? 'Semua kebiasaan harian tuntas' : `${daily.length - doneTodayDaily} kebiasaan harian tersisa`) : 'Belum ada kebiasaan harian'}
+          progress={daily.length ? (doneTodayDaily / daily.length) * 100 : undefined} />
+        <KpiCard label="Streak berjalan" value={null} display={`${currentBest} hari`} icon={<Flame size={20} strokeWidth={1.9} />} color="var(--c-peach)" caption="Check-in 7 hari terakhir" series={checksPerDay} />
         <KpiCard label="Streak terbaik" value={null} display={`${bestStreak} hari`} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" href="/pencapaian" caption="Rekor sepanjang waktu · lihat lencana" />
       </div>
 

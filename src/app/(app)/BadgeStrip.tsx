@@ -16,7 +16,8 @@ const GAP = 12
  */
 export function BadgeStrip({ badges }: { badges: StripBadge[] }) {
   const ref = useRef<HTMLDivElement | null>(null)
-  const [cap, setCap] = useState({ cols: 5, slots: 5 })
+  // null = belum diukur: kolom diatur CSS (2 kolom di ponsel) dan cukup 4 kotak, agar tidak berkedip saat dimuat.
+  const [cap, setCap] = useState<{ cols: number; slots: number } | null>(null)
 
   useEffect(() => {
     const el = ref.current
@@ -34,10 +35,11 @@ export function BadgeStrip({ badges }: { badges: StripBadge[] }) {
     return () => ro.disconnect()
   }, [])
 
-  const shown = badges.length > cap.slots ? cap.slots - 1 : badges.length
+  const slots = cap?.slots ?? 4
+  const shown = badges.length > slots ? slots - 1 : badges.length
   const rest = badges.length - shown
   return (
-    <div ref={ref} className="badge-strip" style={{ gridTemplateColumns: `repeat(${cap.cols}, minmax(0, 1fr))` }}>
+    <div ref={ref} className="badge-strip" style={cap ? { gridTemplateColumns: `repeat(${cap.cols}, minmax(0, 1fr))` } : undefined}>
       {badges.slice(0, shown).map((b) => (
         <Link key={b.id} href="/pencapaian" className="badge-chip" title={b.description}>
           <span className="badge-medal" style={tint(b.color)} aria-hidden="true">{b.icon}</span>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
-import { formatByUnit, formatDuration, formatNumber } from '@/lib/format'
+import { formatByUnit, formatCompact, formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
 /** Ikon bernada lembut: warna modul (dari palet) di atas latar 14% warna yang sama. */
@@ -25,21 +25,37 @@ export function EmptyState({ title, description, icon, action, className = '' }:
   )
 }
 
-/** Kartu KPI: ikon bernada, label, angka besar, perubahan vs 7 hari sebelumnya, sparkline 7 hari. */
-export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, href, display, duration, compare = ['7 hari sebelumnya', '7 hari lalu'] }: {
+/**
+ * Kartu KPI: ikon bernada, label, angka besar, pill perubahan vs periode sebelumnya, lalu SALAH SATU pelengkap:
+ * sparkline (angka harian) atau progress bar (persen / x dari y). Kartu tanpa pembanding cukup keterangan.
+ */
+export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, note, href, display, duration, money, invert, progress, progressColor, compare = ['7 hari sebelumnya', '7 hari lalu'] }: {
   label: string; value: number | null; unit?: string; icon: React.ReactNode; color: string
   series?: number[]; thisWeek?: number; lastWeek?: number; caption?: string; href?: string; display?: string
   /** label pembanding [panjang, pendek] */
   compare?: [string, string]
   /** nilai berupa menit → selisih ditulis "+1 j 20 m", bukan "+80 baru" */
   duration?: boolean
+  /** nilai rupiah → selisih ditulis "+Rp1,5 jt" bila periode lalu nol */
+  money?: boolean
+  /** naik itu buruk (mis. pengeluaran): pill naik berwarna merah, turun hijau */
+  invert?: boolean
+  /** 0–100: tampilkan progress bar (untuk persen / x dari y) */
+  progress?: number
+  progressColor?: string
+  /** keterangan di bawah angka saat ada pill (menggantikan "Dibanding …") */
+  note?: string
 }) {
   let delta: { up: boolean; text: string; flat: boolean } | null = null
   if (thisWeek !== undefined && lastWeek !== undefined) {
     const diff = thisWeek - lastWeek
-    if (lastWeek === 0) delta = { up: diff >= 0, text: diff > 0 ? (duration ? `+${formatDuration(diff)}` : `+${formatNumber(diff)} baru`) : 'Tidak berubah', flat: diff === 0 }
+    if (lastWeek === 0) {
+      const abs = Math.abs(diff)
+      const amt = duration ? formatDuration(abs) : money ? `Rp${formatCompact(abs)}` : formatNumber(abs)
+      delta = { up: diff >= 0, text: diff > 0 ? (duration || money ? `+${amt}` : `+${amt} baru`) : diff < 0 ? `−${amt}` : 'Tidak berubah', flat: diff === 0 }
+    }
     else {
-      const pct = Math.round((diff / lastWeek) * 100)
+      const pct = Math.round((diff / Math.abs(lastWeek)) * 100)
       delta = { up: pct >= 0, text: `${pct > 0 ? '+' : ''}${pct}%`, flat: pct === 0 }
     }
   }
@@ -49,7 +65,7 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
         <span className="kpi-icon" style={solid(color)} aria-hidden="true">{icon}</span>
         <span className="kpi-label">{label}</span>
         {delta && (
-          <span className={`kpi-pill${delta.flat ? '' : delta.up ? ' up' : ' down'}`}>
+          <span className={`kpi-pill${delta.flat ? '' : delta.up !== !!invert ? ' up' : ' down'}`}>
             {!delta.flat && (delta.up ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />)}{delta.text}
           </span>
         )}
@@ -57,11 +73,16 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
       <div className="kpi-body">
         <div className="min-w-0">
           <span className="kpi-value" style={{ '--chars': (display ?? (value === null ? '—' : formatNumber(value))).length + (unit ? unit.length + 1 : 0) } as React.CSSProperties}>{display ?? (value === null ? '—' : formatNumber(value))}{unit && <span className="kpi-unit">{unit}</span>}</span>
-          {delta ? <p className="kpi-delta muted"><span className="long">Dibanding {compare[0]}</span><span className="short">vs {compare[1]}</span></p>
+          {delta ? (note ? <p className="kpi-delta muted">{note}</p> : <p className="kpi-delta muted"><span className="long">Dibanding {compare[0]}</span><span className="short">vs {compare[1]}</span></p>)
             : caption ? <p className="kpi-delta muted">{caption}</p> : null}
         </div>
-        {series.length > 0 && <Sparkline values={series} color={color} />}
+        {series.length > 0 && progress === undefined && <Sparkline values={series} color={color} />}
       </div>
+      {progress !== undefined && (
+        <div className="kpi-progress">
+          <ProgressBar percent={progress} color={progressColor ?? color} label={`Progres ${label}`} />
+        </div>
+      )}
     </>
   )
   return href

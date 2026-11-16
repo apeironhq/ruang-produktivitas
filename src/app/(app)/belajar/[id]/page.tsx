@@ -39,7 +39,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
     supabase.from('learning_sources').select('*').eq('subject_id', id).order('updated_at', { ascending: false }),
     sessionsQ.limit(200),
     supabase.from('goals').select('id, title').neq('status', 'arsip').order('created_at', { ascending: false }),
-    supabase.from('learning_sessions').select('duration_minutes').eq('subject_id', id),
+    supabase.from('learning_sessions').select('duration_minutes, session_date').eq('subject_id', id),
   ])
   if (!subjectRow) notFound()
   const subject = subjectRow as Subject
@@ -52,6 +52,13 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
   const pct = applicable.length ? (done / applicable.length) * 100 : 0
   const rangeMinutes = sessions.reduce((n, s) => n + s.duration_minutes, 0)
   const totalMinutes = (allMin.data ?? []).reduce((n, s) => n + s.duration_minutes, 0)
+  // 14 hari terakhir untuk grafik kecil; pill = 7 hari ini vs 7 hari sebelumnya
+  const last14 = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
+  const minByDay = new Map(last14.map((d) => [d, 0]))
+  for (const s of allMin.data ?? []) if (minByDay.has(s.session_date)) minByDay.set(s.session_date, minByDay.get(s.session_date)! + s.duration_minutes)
+  const series14 = last14.map((d) => minByDay.get(d) ?? 0)
+  const wkNow = series14.slice(7).reduce((a, b) => a + b, 0)
+  const wkPrev = series14.slice(0, 7).reduce((a, b) => a + b, 0)
   const goal = goalOptions.find((g) => g.id === subject.goal_id)
   const sourceTitle = new Map(sources.map((s) => [s.id, s.title]))
   const moduleTitle = new Map(modules.map((m) => [m.id, m.title]))
@@ -77,8 +84,8 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
       </div>
 
       <div className="kpis kpis-3">
-        <KpiCard label="Progres modul" value={null} display={`${Math.round(pct)}%`} icon={<ListChecks size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${done} dari ${applicable.length} modul selesai`} />
-        <KpiCard label="Total waktu belajar" value={totalMinutes} display={formatDuration(totalMinutes)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" caption={`${formatNumber((allMin.data ?? []).length)} sesi sejak awal`} />
+        <KpiCard label="Progres modul" value={null} display={`${Math.round(pct)}%`} icon={<ListChecks size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${done} dari ${applicable.length} modul selesai`} progress={applicable.length ? pct : undefined} />
+        <KpiCard label="Total waktu belajar" value={totalMinutes} display={formatDuration(totalMinutes)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={series14} thisWeek={wkNow} lastWeek={wkPrev} duration note={`${formatNumber((allMin.data ?? []).length)} sesi sejak awal · 7 hari vs sebelumnya`} />
         <KpiCard label="Sumber belajar" value={sources.length} icon={<Library size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption={sources[0]?.position ? `Posisi terakhir: ${sources[0].position}` : 'Tautan, buku, video, kursus'} />
       </div>
 

@@ -42,7 +42,7 @@ export default async function Page({ searchParams }: PageProps<'/target'>) {
 
       <div className="kpis kpis-3">
         <KpiCard label="Target aktif" value={counts.aktif} icon={<Target size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption="Sedang diperjuangkan" />
-        <KpiCard label="Rata-rata progres" value={null} display={`${formatNumber(Math.round(avg))}%`} icon={<Gauge size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption="Dari seluruh target aktif" />
+        <KpiCard label="Rata-rata progres" value={null} display={`${formatNumber(Math.round(avg))}%`} icon={<Gauge size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption="Dari seluruh target aktif" progress={counts.aktif ? avg : undefined} />
         <KpiCard label="Target tercapai" value={counts.tercapai} icon={<Trophy size={20} strokeWidth={1.9} />} color="var(--c-peach)" href="/pencapaian" caption="Lihat riwayat pencapaian" />
       </div>
 

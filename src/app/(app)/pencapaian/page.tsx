@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint } from '@/components/ui/display'
-import { addDays, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
+import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -49,10 +49,15 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
   const earnedCount = badges.filter((b) => earnedAt.has(b.id)).length
 
   // Statistik periode berjalan vs periode sebelumnya (PC-05)
+  const curDays = dayRange(curFrom, today)
   const split = <T,>(rows: T[], day: (r: T) => string, weight: (r: T) => number = () => 1) => {
     let cur = 0, prev = 0
-    for (const r of rows) { const d = day(r); if (d >= curFrom) cur += weight(r); else if (d >= prevFrom) prev += weight(r) }
-    return { cur, prev }
+    const byDay = new Map(curDays.map((d) => [d, 0]))
+    for (const r of rows) {
+      const d = day(r)
+      if (d >= curFrom) { cur += weight(r); if (byDay.has(d)) byDay.set(d, byDay.get(d)! + weight(r)) } else if (d >= prevFrom) prev += weight(r)
+    }
+    return { cur, prev, series: curDays.map((d) => byDay.get(d) ?? 0) }
   }
   const sDone = split(doneRes.data ?? [], (r) => isoToDay(r.completed_at!, tz))
   const sMin = split(sessRes.data ?? [], (r) => r.session_date, (r) => r.duration_minutes)
@@ -72,10 +77,10 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
         </SectionHead>
         <div className="card-body">
           <div className="kpis kpis-4">
-            <KpiCard label="Tugas selesai" value={sDone.cur} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" thisWeek={sDone.cur} lastWeek={sDone.prev} compare={cmp} />
-            <KpiCard label="Waktu belajar" value={sMin.cur} display={formatDuration(sMin.cur)} duration icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" thisWeek={sMin.cur} lastWeek={sMin.prev} compare={cmp} />
-            <KpiCard label="Catatan ditulis" value={sNote.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color="var(--c-rose)" thisWeek={sNote.cur} lastWeek={sNote.prev} compare={cmp} />
-            <KpiCard label="Check-in kebiasaan" value={sCheck.cur} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" thisWeek={sCheck.cur} lastWeek={sCheck.prev} compare={cmp} />
+            <KpiCard label="Tugas selesai" value={sDone.cur} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" series={sDone.series} thisWeek={sDone.cur} lastWeek={sDone.prev} compare={cmp} />
+            <KpiCard label="Waktu belajar" value={sMin.cur} display={formatDuration(sMin.cur)} duration icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={sMin.series} thisWeek={sMin.cur} lastWeek={sMin.prev} compare={cmp} />
+            <KpiCard label="Catatan ditulis" value={sNote.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color="var(--c-rose)" series={sNote.series} thisWeek={sNote.cur} lastWeek={sNote.prev} compare={cmp} />
+            <KpiCard label="Check-in kebiasaan" value={sCheck.cur} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" series={sCheck.series} thisWeek={sCheck.cur} lastWeek={sCheck.prev} compare={cmp} />
           </div>
         </div>
       </section>

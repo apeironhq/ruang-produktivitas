@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, Award, BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, History, LineChart, NotebookPen, PieChart, Target, Wallet } from 'lucide-react'
-import { loadAccounts, monthRange, sumFlow } from '@/lib/finance'
+import { loadAccounts, loadFinanceTrends, monthRange, sumFlow } from '@/lib/finance'
 import { DonutChart, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
 import { TrendChart } from '@/components/ui/charts'
 import { ParamSelect } from '@/components/ui/filters'
@@ -59,6 +59,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
   // BR-04: ringkasan keuangan bulan berjalan (transfer tidak dihitung).
   const flow = sumFlow((monthTx.data ?? []) as Transaction[])
   const totalBalance = accounts.reduce((n, a) => n + a.balance, 0)
+  const fin = accounts.length ? await loadFinanceTrends(supabase, accounts, today.slice(0, 7), today) : null
 
   // ----- KPI: 7 hari terakhir vs 7 hari sebelumnya -----
   const week = dayRange(addDays(today, -6), today)
@@ -144,7 +145,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
         <KpiCard label="Waktu belajar" duration value={kLearn.cur} display={formatDuration(kLearn.cur)} icon={<Clock size={20} strokeWidth={1.9} />} color={C.peach} href="/belajar"
           series={kLearn.values} thisWeek={kLearn.cur} lastWeek={kLearn.prev} />
         <KpiCard label="Target aktif" value={goals.length} icon={<Target size={20} strokeWidth={1.9} />} color={C.lilac} href="/target"
-          caption={goals.length ? `Rata-rata progres ${formatNumber(Math.round(avg))}%` : 'Belum ada target aktif'} />
+          caption={goals.length ? `Rata-rata progres ${formatNumber(Math.round(avg))}%` : 'Belum ada target aktif'} progress={goals.length ? avg : undefined} />
         <KpiCard label="Catatan ditulis" value={kNotes.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color={C.rose} href="/jurnal"
           series={kNotes.values} thisWeek={kNotes.cur} lastWeek={kNotes.prev} />
       </div>
@@ -162,11 +163,11 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
       {accounts.length > 0 ? (
         <div className="kpis kpis-3">
           <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color={C.blue} href="/keuangan/rekening"
-            caption={`${accounts.length} rekening`} />
+            series={fin?.balanceSeries} thisWeek={totalBalance} lastWeek={fin?.balanceBefore} money compare={['30 hari lalu', '30 hari lalu']} />
           <KpiCard label="Pemasukan bulan ini" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color="var(--ok)" href="/keuangan/transaksi?jenis=pemasukan"
-            caption="Transfer antarrekening tidak dihitung" />
+            series={fin?.incomeDaily} thisWeek={flow.income} lastWeek={fin?.prev.income} money compare={['bulan lalu', 'bulan lalu']} />
           <KpiCard label="Pengeluaran bulan ini" value={null} display={formatRupiah(flow.expense)} icon={<ArrowUpRight size={20} strokeWidth={1.9} />} color={C.peach} href="/keuangan/transaksi?jenis=pengeluaran"
-            caption={`Selisih ${flow.net < 0 ? '−' : ''}${formatRupiah(Math.abs(flow.net))}`} />
+            series={fin?.expenseDaily} thisWeek={flow.expense} lastWeek={fin?.prev.expense} money invert compare={['bulan lalu', 'bulan lalu']} />
         </div>
       ) : (
         <div className="alert items-center">
