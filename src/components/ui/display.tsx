@@ -3,7 +3,11 @@ import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
-export const tint = (color: string): React.CSSProperties => ({ color, background: `color-mix(in srgb, ${color} 10%, transparent)` })
+/** Ikon bernada lembut: warna modul (dari palet) di atas latar 14% warna yang sama. */
+export const tint = (color = 'var(--brand)'): React.CSSProperties => ({ color: `color-mix(in srgb, ${color} 82%, #000)`, background: `color-mix(in srgb, ${color} 14%, transparent)` })
+/** Ikon solid untuk kartu KPI: lingkaran warna palet, simbol putih (navy di atas kuning agar terbaca). */
+const LIGHT = /rose|amber|sky/
+export const solid = (color = 'var(--brand)'): React.CSSProperties => ({ background: color, color: LIGHT.test(color) ? 'var(--p-navy)' : '#fff' })
 
 export function EmptyState({ title, description, icon, action, className = '' }: {
   title: string; description?: string; icon?: React.ReactNode; action?: React.ReactNode; className?: string
@@ -39,18 +43,19 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
   const body = (
     <>
       <div className="kpi-top">
-        <span className="kpi-icon" style={tint(color)} aria-hidden="true">{icon}</span>
+        <span className="kpi-icon" style={solid(color)} aria-hidden="true">{icon}</span>
         <span className="kpi-label">{label}</span>
+        {delta && (
+          <span className={`kpi-pill${delta.flat ? '' : delta.up ? ' up' : ' down'}`}>
+            {!delta.flat && (delta.up ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />)}{delta.text}
+          </span>
+        )}
       </div>
       <div className="kpi-body">
         <div className="min-w-0">
           <span className="kpi-value">{display ?? (value === null ? '—' : formatNumber(value))}{unit && <span className="kpi-unit">{unit}</span>}</span>
-          {delta ? (
-            <p className={`kpi-delta${delta.up && !delta.flat ? ' up' : ''}`}>
-              {!delta.flat && (delta.up ? <TrendingUp size={14} aria-hidden="true" /> : <TrendingDown size={14} aria-hidden="true" />)}
-              <span>{delta.text}</span> <span className="muted long">vs {compare[0]}</span><span className="muted short">vs {compare[1]}</span>
-            </p>
-          ) : caption ? <p className="kpi-delta muted">{caption}</p> : null}
+          {delta ? <p className="kpi-delta muted"><span className="long">Dibanding {compare[0]}</span><span className="short">vs {compare[1]}</span></p>
+            : caption ? <p className="kpi-delta muted">{caption}</p> : null}
         </div>
         {series.length > 0 && <Sparkline values={series} color={color} />}
       </div>

@@ -3,6 +3,7 @@
 import { CalendarClock, Check, CheckSquare, MapPin, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
 import { EVENT_STATUS, PRIORITY, RECURRENCE, REMIND_OPTIONS, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
 import type { LinkOptions } from '@/lib/queries'
@@ -89,19 +90,19 @@ export function TaskFormModal({ open, onClose, initial, options }: {
             {kind === 'tugas' ? (
               <>
                 <Field label="Tenggat" name="due_at" error={errors.due_at} hint="Opsional">
-                  <input id="due_at" name="due_at" type="datetime-local" className={`input${errClass(errors, 'due_at')}`} defaultValue={initial.due_local} />
+                  <DateTimePicker id="due_at" name="due_at" defaultValue={initial.due_local} defaultTime="17:00" invalid={!!errors.due_at} />
                 </Field>
                 <Field label="Mulai dikerjakan" name="start_at" error={errors.start_at} hint="Opsional — tampil di kalender">
-                  <input id="start_at" name="start_at" type="datetime-local" className={`input${errClass(errors, 'start_at')}`} defaultValue={initial.start_local} />
+                  <DateTimePicker id="start_at" name="start_at" defaultValue={initial.start_local} invalid={!!errors.start_at} />
                 </Field>
               </>
             ) : (
               <>
                 <Field label="Mulai" name="start_at" error={errors.start_at}>
-                  <input id="start_at" name="start_at" type="datetime-local" className={`input${errClass(errors, 'start_at')}`} defaultValue={initial.start_local} required />
+                  <DateTimePicker id="start_at" name="start_at" defaultValue={initial.start_local} invalid={!!errors.start_at} required />
                 </Field>
                 <Field label="Selesai" name="end_at" error={errors.end_at} hint="Opsional">
-                  <input id="end_at" name="end_at" type="datetime-local" className={`input${errClass(errors, 'end_at')}`} defaultValue={initial.end_local} />
+                  <DateTimePicker id="end_at" name="end_at" defaultValue={initial.end_local} defaultTime="10:00" invalid={!!errors.end_at} />
                 </Field>
                 <Field label="Lokasi" name="location" error={errors.location} className="col-span-full">
                   <div className="relative">

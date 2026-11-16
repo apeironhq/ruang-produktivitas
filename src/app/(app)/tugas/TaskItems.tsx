@@ -2,10 +2,21 @@ import Link from 'next/link'
 import { Bell, CalendarClock, Clock, Flag, ListChecks, MapPin, Repeat, Target } from 'lucide-react'
 import { Badge } from '@/components/ui/display'
 import { formatShort, formatTime } from '@/lib/format'
-import { isoToDay } from '@/lib/dates'
+import { isoToDay, isoToLocalInput } from '@/lib/dates'
+import { RemovableRow, TaskRowActions } from '@/components/ui/RowActions'
 import { PRIORITY, RECURRENCE, displayStatus, remindLabel } from '@/lib/labels'
 import type { Task } from '@/lib/types'
-import { StatusSelect, TaskCheck } from './TaskForm'
+import { StatusSelect, TaskCheck, type TaskFormValues } from './TaskForm'
+
+/** Nilai form "Ubah" dari baris tugas (waktu dikonversi ke zona waktu pengguna). */
+export function taskFormValues(t: Task, tz: string): TaskFormValues {
+  return {
+    id: t.id, kind: t.kind, title: t.title, description: t.description, category: t.category, priority: t.priority, status: t.status,
+    due_local: isoToLocalInput(t.due_at, tz), start_local: isoToLocalInput(t.start_at, tz), end_local: isoToLocalInput(t.end_at, tz),
+    location: t.location, goal_id: t.goal_id, project_id: t.project_id, subject_id: t.subject_id,
+    recurrence: t.recurrence, remind: t.remind_before_minutes === null || t.remind_before_minutes === undefined ? '' : String(t.remind_before_minutes),
+  }
+}
 
 export interface TaskMeta { subDone: number; subTotal: number; goalTitle?: string }
 
@@ -27,7 +38,7 @@ export function TaskRow({ t, meta, tz }: { t: Task; meta?: TaskMeta; tz: string 
   const st = displayStatus(t)
   const pr = PRIORITY[t.priority]!
   return (
-    <li className={`task-row${done || t.status === 'dibatalkan' || st.label === 'Sudah lewat' ? ' is-done' : ''}`}>
+    <RemovableRow className={`task-row${done || t.status === 'dibatalkan' || st.label === 'Sudah lewat' ? ' is-done' : ''}`}>
       {t.kind === 'tugas'
         ? <TaskCheck id={t.id} done={done} title={t.title} />
         : <span className="tint-icon" style={{ width: 22, height: 22, color: 'var(--c-lilac)' }} aria-hidden="true"><CalendarClock size={18} /></span>}
@@ -48,7 +59,8 @@ export function TaskRow({ t, meta, tz }: { t: Task; meta?: TaskMeta; tz: string 
       <div className="hidden sm:block shrink-0">
         {t.kind === 'tugas' ? <div className="w-40"><StatusSelect id={t.id} status={t.status} compact /></div> : <Badge tone={st.tone}>{st.label}</Badge>}
       </div>
-    </li>
+      <TaskRowActions id={t.id} title={t.title} values={taskFormValues(t, tz)} />
+    </RemovableRow>
   )
 }
 

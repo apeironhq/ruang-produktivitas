@@ -4,15 +4,14 @@ import { notFound } from 'next/navigation'
 import { AlignLeft, Info, ListChecks, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
 import { BackLink, DetailTitle, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
-import { isoToLocalInput } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
 import { PRIORITY, RECURRENCE, TASK_KIND, displayStatus, remindLabel } from '@/lib/labels'
 import { loadLinkOptions } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Subtask, Task } from '@/lib/types'
 import { deleteTask } from '../actions'
-import { EditTaskButton, StatusSelect, type TaskFormValues } from '../TaskForm'
-import { whenLabel } from '../TaskItems'
+import { EditTaskButton, StatusSelect } from '../TaskForm'
+import { taskFormValues, whenLabel } from '../TaskItems'
 import { AddSubtaskButton, Subtasks } from './Subtasks'
 
 export const metadata: Metadata = { title: 'Detail tugas' }
@@ -36,12 +35,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
   const subject = options.subjects.find((s) => s.id === t.subject_id)
   const project = options.projects.find((p) => p.id === t.project_id)
   const when = whenLabel(t, tz)
-  const initial: TaskFormValues = {
-    id: t.id, kind: t.kind, title: t.title, description: t.description, category: t.category, priority: t.priority, status: t.status,
-    due_local: isoToLocalInput(t.due_at, tz), start_local: isoToLocalInput(t.start_at, tz), end_local: isoToLocalInput(t.end_at, tz),
-    location: t.location, goal_id: t.goal_id, project_id: t.project_id, subject_id: t.subject_id,
-    recurrence: t.recurrence, remind: t.remind_before_minutes === null ? '' : String(t.remind_before_minutes),
-  }
+  const initial = taskFormValues(t, tz)
 
   return (
     <div className="page">

@@ -16,7 +16,8 @@ import { TxAmount, txTitle } from './TxList'
 
 export const metadata: Metadata = { title: 'Keuangan' }
 
-const PALETTE = ['#d4547e', '#b85c22', '#6a53b8', '#2563eb', '#0e9384', '#98a2b3']
+// Satu keluarga warna (biru brand → muda) agar grafik kategori tetap tenang.
+const PALETTE = ['#219ebc', '#023047', '#8ecae6', '#ffb703', '#fb8500', '#98a2b3']
 
 export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
   const sp = await searchParams
@@ -86,9 +87,9 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
           <div className="kpis kpis-4">
             <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color="var(--c-blue)" href="/keuangan/rekening"
               caption={`${accounts.length} rekening${totalAllocated ? ` · ${formatRupiah(totalAllocated)} teralokasi` : ''}`} />
-            <KpiCard label="Pemasukan" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color="var(--c-lilac)" href={`/keuangan/transaksi?bulan=${month}&jenis=pemasukan`}
+            <KpiCard label="Pemasukan" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color="var(--ok)" href={`/keuangan/transaksi?bulan=${month}&jenis=pemasukan`}
               caption={caption(flow.income, prev.income)} />
-            <KpiCard label="Pengeluaran" value={null} display={formatRupiah(flow.expense)} icon={<ArrowUpRight size={20} strokeWidth={1.9} />} color="var(--c-rose)" href={`/keuangan/transaksi?bulan=${month}&jenis=pengeluaran`}
+            <KpiCard label="Pengeluaran" value={null} display={formatRupiah(flow.expense)} icon={<ArrowUpRight size={20} strokeWidth={1.9} />} color="var(--c-peach)" href={`/keuangan/transaksi?bulan=${month}&jenis=pengeluaran`}
               caption={caption(flow.expense, prev.expense)} />
             <KpiCard label="Selisih (arus kas)" value={null} display={`${flow.net < 0 ? '−' : ''}${formatRupiah(Math.abs(flow.net))}`} icon={<Scale size={20} strokeWidth={1.9} />} color="var(--c-peach)"
               caption={flow.net >= 0 ? 'Pemasukan lebih besar' : 'Pengeluaran lebih besar'} />
@@ -97,7 +98,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
           <div className="row-2">
             <section className="card panel" aria-labelledby="trend-title">
               <div className="panel-head"><div><h2 id="trend-title"><LineChart size={18} />Pengeluaran harian</h2><p className="text-caption">Total {formatRupiah(flow.expense)} di bulan <span className="capitalize">{label}</span></p></div></div>
-              <div className="panel-body"><TrendChart points={trend} label="Pengeluaran" unit="rupiah" color="#d4547e" /></div>
+              <div className="panel-body"><TrendChart points={trend} label="Pengeluaran" unit="rupiah" color="var(--p-blue)" /></div>
             </section>
             <section className="card panel" aria-labelledby="cat-title">
               <div className="panel-head"><div><h2 id="cat-title"><PieChart size={18} />Pengeluaran per kategori</h2><p className="text-caption">Lima kategori terbesar</p></div></div>

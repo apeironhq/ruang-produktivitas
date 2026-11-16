@@ -10,6 +10,7 @@ import { loadLinkOptions } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { JournalEntry } from '@/lib/types'
 import { hrefWith, pageHref, str } from '@/lib/url'
+import { NoteRowActions, RemovableRow } from '@/components/ui/RowActions'
 import { NewJournalButton } from './JournalForm'
 
 export const metadata: Metadata = { title: 'Catatan & Jurnal' }
@@ -26,7 +27,7 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
   const archived = str(sp.arsip) === '1'
   const page = Math.max(1, Number.parseInt(str(sp.hal) || '1', 10) || 1)
 
-  let query = supabase.from('journal_entries').select('id, kind, title, content, entry_date, tags, mood, is_archived, created_at', { count: 'exact' }).eq('is_archived', archived)
+  let query = supabase.from('journal_entries').select('id, kind, title, content, entry_date, tags, mood, is_archived, created_at, goal_id, subject_id, project_id, trading', { count: 'exact' }).eq('is_archived', archived)
   if (kind) query = query.eq('kind', kind)
   if (tag) query = query.contains('tags', [tag])
   if (q) {
@@ -90,8 +91,8 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
               {entries.map((e) => {
                 const k = JOURNAL_KIND[e.kind]!
                 return (
-                  <li key={e.id} className="border-b border-[var(--border)] last:border-0">
-                    <Link href={`/jurnal/${e.id}`} className="flex gap-4 px-5 py-4 hover:bg-[var(--bg-subtle)]">
+                  <RemovableRow key={e.id} className="note-row">
+                    <Link href={`/jurnal/${e.id}`} className="flex flex-1 min-w-0 gap-4 py-4 pl-5">
                       <span className="hidden sm:flex flex-col items-center w-12 shrink-0 text-center">
                         <span className="text-[1.25rem] leading-none font-medium text-[var(--text-heading)]">{formatDay(e.entry_date, { day: 'numeric' })}</span>
                         <span className="text-caption">{formatDay(e.entry_date, { month: 'short' })}</span>
@@ -106,7 +107,9 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
                         {e.tags.length > 0 && <span className="flex gap-1.5 flex-wrap mt-2">{e.tags.slice(0, 6).map((t) => <span key={t} className="tag">#{t}</span>)}</span>}
                       </span>
                     </Link>
-                  </li>
+                    <NoteRowActions id={e.id} title={e.title || 'Tanpa judul'} archived={e.is_archived}
+                      values={{ id: e.id, kind: e.kind, title: e.title, content: e.content, entry_date: e.entry_date, tags: e.tags.join(', '), mood: e.mood, goal_id: e.goal_id, subject_id: e.subject_id, project_id: e.project_id, trading: e.trading }} />
+                  </RemovableRow>
                 )
               })}
             </ul>

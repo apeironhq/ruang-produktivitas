@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, LayoutGrid, LogOut, Menu, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, Settings, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { signOut } from '@/app/auth-actions'
 import { AppLogo, APP_NAME, APP_TAGLINE } from './AppLogo'
@@ -95,14 +95,52 @@ function TopBar({ user, onToggle }: { user: ShellUser; onToggle: () => void }) {
       <div className="topbar-actions">
         <QuickAddMenu />
       </div>
-      <div className="topbar-user">
+      <UserMenu user={user} initial={initial} />
+    </header>
+  )
+}
+
+/** Profil di topbar: desktop menampilkan nama & email; ponsel cukup avatar. Ketuk → menu akun. */
+function UserMenu({ user, initial }: { user: ShellUser; initial: string }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement | null>(null)
+  const pathname = usePathname()
+  const [at, setAt] = useState(pathname)
+  if (at !== pathname) { setAt(pathname); setOpen(false) }
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
+  return (
+    <div ref={root} className="topbar-user">
+      <button type="button" className="user-btn" aria-haspopup="menu" aria-expanded={open} aria-label={`Akun: ${user.name}`} onClick={() => setOpen((v) => !v)}>
         <span className="avatar" aria-hidden="true">{initial}</span>
         <span className="user-meta">
           <span className="user-name">{user.name}</span>
           <span className="user-role">{user.email || 'Pengguna pribadi'}</span>
         </span>
-      </div>
-    </header>
+        <ChevronDown size={16} className="user-chev" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="menu user-menu" role="menu" aria-label="Akun">
+          <div className="user-menu-head">
+            <span className="avatar" aria-hidden="true">{initial}</span>
+            <span className="min-w-0">
+              <span className="user-name block">{user.name}</span>
+              <span className="user-role block truncate">{user.email || 'Pengguna pribadi'}</span>
+            </span>
+          </div>
+          <Link href="/pengaturan" role="menuitem" className="menu-item"><Settings size={16} aria-hidden="true" /><span className="menu-label">Pengaturan akun</span></Link>
+          <form action={signOut}>
+            <button type="submit" role="menuitem" className="menu-item menu-item-danger"><LogOut size={16} aria-hidden="true" /><span className="menu-label">Keluar</span></button>
+          </form>
+        </div>
+      )}
+    </div>
   )
 }
 

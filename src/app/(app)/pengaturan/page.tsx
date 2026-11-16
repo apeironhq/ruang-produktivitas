@@ -11,8 +11,8 @@ import { NotificationForm, TelegramLink } from './TelegramCard'
 export const metadata: Metadata = { title: 'Pengaturan' }
 
 const LOG_STATUS: Record<string, { label: string; color: string }> = {
-  terkirim: { label: 'Terkirim', color: 'var(--brand)' },
-  gagal: { label: 'Gagal', color: 'var(--c-rose)' },
+  terkirim: { label: 'Terkirim', color: 'var(--ok)' },
+  gagal: { label: 'Gagal', color: 'var(--err)' },
   dilewati: { label: 'Dilewati', color: 'var(--n-400)' },
 }
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Award, BarChart3, BookOpen, Check, CheckCircle2, Clock, Flag, Flame, FolderKanban, NotebookPen, Repeat, Target, Trophy } from 'lucide-react'
+import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { addDays, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
@@ -8,18 +8,11 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Achievement, Goal } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
+import { BADGE_ICON } from '@/lib/badges'
 import { goalNumbers } from '../target/GoalCard'
 
 export const metadata: Metadata = { title: 'Pencapaian' }
 
-const BADGE_ICON: Record<string, React.ReactNode> = {
-  check: <Check size={20} />, book: <BookOpen size={20} />, clock: <Clock size={20} />, target: <Target size={20} />,
-  folder: <FolderKanban size={20} />, note: <NotebookPen size={20} />, flame: <Flame size={20} />, repeat: <Repeat size={20} />,
-}
-const BADGE_COLOR: Record<string, string> = {
-  check: 'var(--c-blue)', book: 'var(--c-lilac)', clock: 'var(--c-peach)', target: 'var(--c-rose)',
-  folder: 'var(--c-peach)', note: 'var(--c-rose)', flame: 'var(--c-peach)', repeat: 'var(--c-lilac)',
-}
 const PERIODS = [{ key: '7', days: 7 }, { key: '30', days: 30 }, { key: '90', days: 90 }] as const
 
 export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
@@ -96,15 +89,14 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
             {badges.map((b) => {
               const at = earnedAt.get(b.id)
               const val = Math.min(metrics.get(b.metric) ?? 0, b.min_value)
-              const color = BADGE_COLOR[b.icon] ?? 'var(--brand)'
               return (
                 <div key={b.id} className={`badge-card${at ? '' : ' locked'}`}>
-                  <span className="badge-medal" style={at ? tint(color) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                  <span className="badge-medal" style={at ? tint('var(--accent)') : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
                   <span className="min-w-0 flex-1">
                     <span className="badge-name">{b.name}</span>
                     <span className="item-sub block">{b.description}</span>
                     {at ? (
-                      <span className="item-meta block mt-1" style={{ color: 'var(--brand-ink)' }}>Diraih {formatDay(isoToDay(at, tz))}</span>
+                      <span className="item-meta block mt-1" style={{ color: 'var(--ok)' }}>Diraih {formatDay(isoToDay(at, tz))}</span>
                     ) : (
                       <span className="block mt-1">
                         <ProgressBar percent={(val / b.min_value) * 100} label={`Progres lencana ${b.name}`} color="var(--n-400)" />

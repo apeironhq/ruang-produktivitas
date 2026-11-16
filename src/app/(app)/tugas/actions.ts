@@ -130,6 +130,18 @@ export async function toggleSubtask(id: string, taskId: string, done: boolean): 
   const supabase = await createClient()
   const { error } = await supabase.from('task_subtasks').update({ is_completed: done }).eq('id', id)
   if (error) return dbError(error)
+  // Semua subtugas sudah dicentang → tugasnya otomatis ditandai selesai (bisa dibuka lagi kapan saja).
+  if (done && zUuid.safeParse(taskId).success) {
+    const { data: subs } = await supabase.from('task_subtasks').select('is_completed').eq('task_id', taskId)
+    if (subs && subs.length > 0 && subs.every((x) => x.is_completed)) {
+      const { data: closed } = await supabase.from('tasks').update({ status: 'selesai' }).eq('id', taskId).eq('kind', 'tugas')
+        .in('status', ['belum', 'dikerjakan', 'tertunda']).select('id').maybeSingle()
+      if (closed) {
+        revalidateTasks(taskId)
+        return { ...ok('Semua subtugas selesai — tugas otomatis ditandai selesai.'), notify: true }
+      }
+    }
+  }
   revalidateTasks(taskId)
   return ok(done ? 'Subtugas selesai.' : 'Subtugas dibuka lagi.')
 }

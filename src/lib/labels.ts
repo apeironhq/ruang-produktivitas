@@ -1,12 +1,12 @@
 // Label & nada (tone) bahasa Indonesia untuk nilai enum di database.
 
-export type Tone = 'tone-neutral' | 'tone-brand' | 'tone-warn' | 'tone-err' | 'tone-info'
+export type Tone = 'tone-neutral' | 'tone-brand' | 'tone-ok' | 'tone-accent' | 'tone-warn' | 'tone-err' | 'tone-info'
 
 export const TASK_STATUS: Record<string, { label: string; tone: Tone }> = {
   belum: { label: 'Belum Dimulai', tone: 'tone-neutral' },
   dikerjakan: { label: 'Dikerjakan', tone: 'tone-info' },
   tertunda: { label: 'Tertunda', tone: 'tone-warn' },
-  selesai: { label: 'Selesai', tone: 'tone-brand' },
+  selesai: { label: 'Selesai', tone: 'tone-ok' },
   dibatalkan: { label: 'Dibatalkan', tone: 'tone-err' },
 }
 export const TASK_STATUS_ORDER = ['belum', 'dikerjakan', 'tertunda', 'selesai', 'dibatalkan'] as const
@@ -16,7 +16,7 @@ export const EVENT_STATUS: Record<string, { label: string; tone: Tone }> = {
   belum: { label: 'Terjadwal', tone: 'tone-info' },
   dikerjakan: { label: 'Berlangsung', tone: 'tone-info' },
   tertunda: { label: 'Ditunda', tone: 'tone-warn' },
-  selesai: { label: 'Selesai', tone: 'tone-brand' },
+  selesai: { label: 'Selesai', tone: 'tone-ok' },
   dibatalkan: { label: 'Dibatalkan', tone: 'tone-err' },
 }
 
@@ -40,7 +40,7 @@ export const TASK_KIND: Record<string, string> = { tugas: 'Tugas', kegiatan: 'Ke
 
 export const GOAL_STATUS: Record<string, { label: string; tone: Tone }> = {
   aktif: { label: 'Aktif', tone: 'tone-info' },
-  tercapai: { label: 'Tercapai', tone: 'tone-brand' },
+  tercapai: { label: 'Tercapai', tone: 'tone-ok' },
   arsip: { label: 'Diarsipkan', tone: 'tone-neutral' },
 }
 
@@ -65,7 +65,7 @@ export const SOURCE_TYPE: Record<string, string> = {
 
 export const SUBJECT_STATUS: Record<string, { label: string; tone: Tone }> = {
   aktif: { label: 'Aktif', tone: 'tone-info' },
-  selesai: { label: 'Selesai', tone: 'tone-brand' },
+  selesai: { label: 'Selesai', tone: 'tone-ok' },
   arsip: { label: 'Diarsipkan', tone: 'tone-neutral' },
 }
 
@@ -83,7 +83,7 @@ export const PROJECT_STATUS: Record<string, { label: string; tone: Tone; desc: s
   rencana: { label: 'Rencana', tone: 'tone-neutral', desc: 'Belum dimulai' },
   aktif: { label: 'Berjalan', tone: 'tone-info', desc: 'Sedang dikerjakan' },
   ditunda: { label: 'Ditunda', tone: 'tone-warn', desc: 'Dihentikan sementara' },
-  selesai: { label: 'Selesai', tone: 'tone-brand', desc: 'Sudah rampung' },
+  selesai: { label: 'Selesai', tone: 'tone-ok', desc: 'Sudah rampung' },
   arsip: { label: 'Diarsipkan', tone: 'tone-neutral', desc: 'Disimpan tanpa dipantau' },
 }
 

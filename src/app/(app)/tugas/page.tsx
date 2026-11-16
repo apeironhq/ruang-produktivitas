@@ -138,7 +138,7 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
           <div className="card-body">
             <div className="board" aria-label="Papan tugas">
               {columns.map((c) => (
-                <section key={c.status} className="board-col" aria-label={TASK_STATUS[c.status]!.label}>
+                <section key={c.status} className={`board-col st-${c.status}`} aria-label={TASK_STATUS[c.status]!.label}>
                   <div className="board-head">
                     <span className={`badge badge-dot ${TASK_STATUS[c.status]!.tone}`}>{TASK_STATUS[c.status]!.label}</span>
                     <span className="text-caption">{c.items.length}</span>

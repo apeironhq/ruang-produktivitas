@@ -35,7 +35,7 @@ export function Sparkline({ values, color, height = 40 }: { values: number[]; co
 interface Point { date: string; value: number; extra?: string }
 
 /** Grafik garis+area satu seri; hover/keyboard menampilkan tooltip; tabel tersembunyi untuk pembaca layar. */
-export function TrendChart({ points, color = '#2563eb', label, unit = '', height = 220 }: { points: Point[]; color?: string; label: string; unit?: string; height?: number }) {
+export function TrendChart({ points, color = 'var(--p-blue)', label, unit = '', height = 220 }: { points: Point[]; color?: string; label: string; unit?: string; height?: number }) {
   const wrap = useRef<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(600)
   const [active, setActive] = useState<number | null>(null)

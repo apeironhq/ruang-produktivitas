@@ -1,6 +1,5 @@
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { tint } from '@/components/ui/display'
 import { formatDay, formatRupiah } from '@/lib/format'
 import type { TxRow } from '@/lib/finance'
 import type { AccountWithBalance, Category } from '@/lib/types'
@@ -8,8 +7,8 @@ import { deleteTransaction } from './actions'
 import { EditTransactionButton } from './FinanceForms'
 
 const ICON = {
-  pemasukan: { icon: <ArrowDownLeft size={16} />, color: 'var(--c-blue)' },
-  pengeluaran: { icon: <ArrowUpRight size={16} />, color: 'var(--c-rose)' },
+  pemasukan: { icon: <ArrowDownLeft size={16} />, color: 'var(--ok)' },
+  pengeluaran: { icon: <ArrowUpRight size={16} />, color: 'var(--err)' },
   transfer: { icon: <ArrowLeftRight size={16} />, color: '#475467' },
 }
 
@@ -42,7 +41,7 @@ export function TxTable({ rows, accounts, categories, allAccounts }: { rows: TxR
             <tr key={r.id}>
               <td className="cell-primary">
                 <span className="flex items-center gap-3 min-w-0">
-                  <span className="act-icon hidden sm:grid" style={tint(ICON[r.kind].color)} aria-hidden="true">{ICON[r.kind].icon}</span>
+                  <span className="act-icon hidden sm:grid" style={{ color: ICON[r.kind].color, background: `color-mix(in srgb, ${ICON[r.kind].color} 10%, transparent)` }} aria-hidden="true">{ICON[r.kind].icon}</span>
                   <span className="min-w-0">
                     <span className="cell-strong block truncate">{txTitle(r, cat, acc)}</span>
                     {r.note && r.kind !== 'transfer' && r.category_id && <span className="item-sub block truncate">{cat.get(r.category_id)}</span>}

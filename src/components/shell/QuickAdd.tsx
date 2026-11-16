@@ -7,17 +7,20 @@ import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keu
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { loadQuickData, type QuickData } from '@/app/(app)/quick-data'
 import { SessionFormModal, SubjectFormModal } from '@/app/(app)/belajar/LearningForms'
-import { JournalFormModal, emptyJournal } from '@/app/(app)/jurnal/JournalForm'
+import { JournalFormModal, emptyJournal, type JournalValues } from '@/app/(app)/jurnal/JournalForm'
 import { GoalFormModal, blankGoal } from '@/app/(app)/target/GoalForm'
-import { TaskFormModal, emptyTask } from '@/app/(app)/tugas/TaskForm'
+import { TaskFormModal, emptyTask, type TaskFormValues } from '@/app/(app)/tugas/TaskForm'
+import { tint } from '@/components/ui/display'
 import { useToast } from '@/components/ui/Toast'
 
 export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening' | 'proyek' | 'kebiasaan'
 /** Tautan yang sudah terisi saat popup dibuka dari halaman tertentu (mis. detail target). */
 type Preset = { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }
 
-interface QuickApi { open: (kind: QuickKind, preset?: Preset) => void; prefetch: () => void; pending: QuickKind | null }
-const QuickContext = createContext<QuickApi>({ open: () => {}, prefetch: () => {}, pending: null })
+/** Ubah data yang sudah ada dari daftar (tanpa membuka halaman detail). */
+export type EditTarget = { kind: 'tugas'; values: TaskFormValues } | { kind: 'catatan'; values: JournalValues }
+interface QuickApi { open: (kind: QuickKind, preset?: Preset) => void; edit: (t: EditTarget) => void; prefetch: () => void; pending: QuickKind | null }
+const QuickContext = createContext<QuickApi>({ open: () => {}, edit: () => {}, prefetch: () => {}, pending: null })
 const CACHE_MS = 60_000
 export const useQuickAdd = () => useContext(QuickContext)
 
@@ -35,7 +38,7 @@ export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; 
 
 /** Satu tempat untuk semua popup "tambah": dipakai menu topbar dan tombol cepat di halaman. */
 export function QuickAddProvider({ children }: { children: React.ReactNode }) {
-  const [active, setActive] = useState<{ kind: QuickKind; preset: Preset; key: number; data: QuickData } | null>(null)
+  const [active, setActive] = useState<{ kind: QuickKind; preset: Preset; key: number; data: QuickData; editing?: EditTarget } | null>(null)
   const [pending, setPending] = useState<QuickKind | null>(null)
   const [, start] = useTransition()
   const toast = useToast()
@@ -76,7 +79,22 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
     })
   }, [toast, fetchData])
 
-  const api = useMemo(() => ({ open, prefetch, pending }), [open, prefetch, pending])
+  const edit = useCallback((target: EditTarget) => {
+    setPending(target.kind)
+    start(async () => {
+      try {
+        const data = await fetchData()
+        if (!data) { toast.error('Koneksi bermasalah atau sesi berakhir. Coba lagi.'); return }
+        setActive({ kind: target.kind, preset: {}, key: Date.now(), data, editing: target })
+      } catch {
+        toast.error('Koneksi bermasalah. Coba lagi.')
+      } finally {
+        setPending(null)
+      }
+    })
+  }, [toast, fetchData])
+
+  const api = useMemo(() => ({ open, edit, prefetch, pending }), [open, edit, prefetch, pending])
   // Setelah popup ditutup (mungkin ada data baru), pilihan dimuat ulang pada pembukaan berikutnya.
   const close = () => { setActive(null); cache.current = null }
   const a = active
@@ -84,10 +102,10 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
     <QuickContext.Provider value={api}>
       {children}
       {a && (a.kind === 'tugas' || a.kind === 'kegiatan') && (
-        <TaskFormModal key={a.key} open onClose={close} options={a.data.options} initial={emptyTask(a.kind, a.preset)} />
+        <TaskFormModal key={a.key} open onClose={close} options={a.data.options} initial={a.editing?.kind === 'tugas' ? a.editing.values : emptyTask(a.kind, a.preset)} />
       )}
       {a?.kind === 'catatan' && (
-        <JournalFormModal key={a.key} open onClose={close} goals={a.data.options.goals} subjects={a.data.options.subjects} projects={a.data.options.projects} initial={emptyJournal(a.data.today, a.preset)} />
+        <JournalFormModal key={a.key} open onClose={close} goals={a.data.options.goals} subjects={a.data.options.subjects} projects={a.data.options.projects} initial={a.editing?.kind === 'catatan' ? a.editing.values : emptyJournal(a.data.today, a.preset)} />
       )}
       {a?.kind === 'target' && <GoalFormModal key={a.key} open onClose={close} initial={blankGoal(a.data.today)} />}
       {a?.kind === 'proyek' && <ProjectFormModal key={a.key} open onClose={close} initial={emptyProject(a.data.today)} goals={a.data.options.goals} />}
@@ -142,7 +160,7 @@ export function QuickAddMenu() {
         <div className="menu" role="menu" aria-label="Tambah baru">
           {QUICK_ITEMS.map((it) => (
             <button key={it.kind} type="button" role="menuitem" className="menu-item" onClick={() => { setShow(false); open(it.kind) }}>
-              <span className="menu-icon" style={{ color: it.color, background: `color-mix(in srgb, ${it.color} 10%, transparent)` }} aria-hidden="true">{it.icon}</span>
+              <span className="menu-icon" style={tint(it.color)} aria-hidden="true">{it.icon}</span>
               <span className="min-w-0"><span className="menu-label">{it.label}</span><span className="menu-desc">{it.desc}</span></span>
             </button>
           ))}
