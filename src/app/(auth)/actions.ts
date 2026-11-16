@@ -7,6 +7,9 @@ import { fail, ok, parseForm, type ActionState } from '@/lib/action'
 import { createClient } from '@/lib/supabase/server'
 
 const emailSchema = z.email('Format email tidak valid.').trim().toLowerCase().max(254)
+/** Teks galat field email bila sudah terdaftar — dipakai form untuk menampilkan tautan Masuk / Lupa password. */
+const EMAIL_TERDAFTAR = 'Email ini sudah terdaftar.'
+const EMAIL_TERDAFTAR_PESAN = 'Email ini sudah terdaftar. Silakan masuk, atau atur ulang password bila lupa.'
 const passwordSchema = z.string().min(8, 'Password minimal 8 karakter.').max(72, 'Password maksimal 72 karakter.')
 
 async function siteUrl() {
@@ -51,11 +54,14 @@ export async function signUp(_: ActionState, formData: FormData): Promise<Action
     },
   })
   if (error) {
-    if (error.code === 'user_already_exists') return fail('Email ini sudah terdaftar. Silakan masuk.')
+    if (error.code === 'user_already_exists') return fail(EMAIL_TERDAFTAR_PESAN, { email: EMAIL_TERDAFTAR })
     if (error.code === 'weak_password') return fail('Password terlalu lemah. Gunakan kombinasi huruf dan angka.')
     console.error('[auth] signUp', error.code)
     return fail('Pendaftaran gagal. Coba lagi beberapa saat lagi.')
   }
+  // Saat konfirmasi email aktif, Supabase TIDAK mengembalikan error untuk email yang sudah terdaftar
+  // (mencegah penebakan email); tanda khasnya: user tanpa identitas. Diminta eksplisit agar pengguna diberi tahu.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) return fail(EMAIL_TERDAFTAR_PESAN, { email: EMAIL_TERDAFTAR })
   // Konfirmasi email nonaktif di proyek → sesi langsung aktif.
   if (data.session) redirect('/')
   return ok('Akun dibuat. Cek email Anda untuk tautan konfirmasi, lalu masuk.')

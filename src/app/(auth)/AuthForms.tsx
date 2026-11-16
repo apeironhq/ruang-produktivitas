@@ -76,6 +76,15 @@ export function SignUpForm() {
           <PasswordInput id="password" name="password" autoComplete="new-password" error={errors.password} />
         </Field>
         {state && !state.ok && !state.errors && <p className="alert tone-err" role="alert">{state.message}</p>}
+        {errors.email === 'Email ini sudah terdaftar.' && (
+          <div className="alert tone-warn" role="alert">
+            <p><strong>Email ini sudah terdaftar.</strong> Silakan masuk dengan akun tersebut.</p>
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/masuk" className="link">Masuk</Link>
+              <Link href="/lupa-password" className="link">Lupa password?</Link>
+            </p>
+          </div>
+        )}
         <SubmitButton pending={pending} size="lg" block>Buat akun</SubmitButton>
       </form>
       <p className="mt-6 text-center text-caption">Sudah punya akun? <Link href="/masuk" className="link">Masuk</Link></p>

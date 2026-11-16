@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "node scripts/migrate.mjs",
-    "setup:bot": "node scripts/setup-bot.mjs"
+    "setup:bot": "node scripts/setup-bot.mjs",
+    "email:build": "node scripts/email-templates.mjs",
+    "email:apply": "node scripts/email-templates.mjs --apply"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
