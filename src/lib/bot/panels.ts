@@ -60,11 +60,11 @@ export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>,
   const expense = (spend.data ?? []).reduce((n, r) => n + Number(r.amount), 0)
   const first = ctx.name.split(' ')[0] || ctx.name
   return {
-    head: [`🐰 <b>${greetingFor(ctx.tz)}, ${esc(first)}!</b>`, `<i>${longDay(today)}</i>`],
+    head: [`<b>${greetingFor(ctx.tz)}, ${esc(first)}!</b> 👋`, `<i>${longDay(today)}</i>`],
     sections: [
-      { title: '📅 Agenda hari ini', lines: agenda.length ? agenda : ['Tidak ada tugas atau kegiatan hari ini 🎉'], quote: true },
+      { title: '📅 Agenda Hari Ini', lines: agenda.length ? agenda : ['Tidak ada tugas atau kegiatan hari ini 🎉'], quote: true },
       {
-        title: '📌 Ringkasan', quote: true,
+        title: '📊 Ringkasan', quote: true,
         lines: [
           `✅ Tugas aktif: <b>${tasks.count ?? 0}</b>`,
           `📚 Belajar hari ini: <b>${(sess.data ?? []).length} sesi</b>${minutes ? ` · ${formatDuration(minutes)}` : ''}`,
@@ -84,7 +84,7 @@ export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>,
 export function catatPanel(): Panel {
   return {
     head: ['📝 <b>Catat Cepat</b>', '<i>Mau mencatat apa?</i>'],
-    sections: [{ title: '💡 Tips', quote: true, lines: ['Kirim pesan apa saja ke Rupi — nanti kamu bisa pilih menyimpannya sebagai <b>catatan</b> atau <b>tugas</b>.'] }],
+    sections: [{ title: '💡 Tips', lines: ['Kirim pesan apa saja ke Rupi — nanti kamu bisa pilih menyimpannya sebagai <b>catatan</b> atau <b>tugas</b>.'] }],
     kb: [
       [btn('✅ Tugas', 'f:tugas'), btn('📅 Kegiatan', 'f:kegiatan')],
       [btn('🗒 Catatan / Jurnal', 'f:catatan'), btn('📚 Sesi belajar', 'f:sesi')],
@@ -167,7 +167,7 @@ export async function taskDetailPanel(ctx: Ctx, id: string): Promise<Panel | nul
   const done = sub.filter((s) => s.is_completed).length
   const statusBtns: Keyboard = isTask
     ? [[
-      ...(t.status !== 'selesai' ? [btn('✅ Selesai', `ts:s:${id}`)] : [btn('↩️ Buka lagi', `ts:b:${id}`)]),
+      ...(t.status !== 'selesai' ? [btn('✅ Selesai', `ts:s:${id}`, 'success')] : [btn('↩️ Buka lagi', `ts:b:${id}`)]),
       ...(t.status !== 'dikerjakan' && t.status !== 'selesai' ? [btn('▶️ Kerjakan', `ts:k:${id}`)] : []),
       ...(t.status !== 'tertunda' && t.status !== 'selesai' ? [btn('⏸ Tunda', `ts:t:${id}`)] : []),
     ]]
@@ -176,7 +176,7 @@ export async function taskDetailPanel(ctx: Ctx, id: string): Promise<Panel | nul
     head: [`${isTask ? '✅' : '📅'} <b>${esc(t.title)}</b>`, `<i>${isTask ? 'Tugas' : 'Kegiatan'}</i>`],
     sections: [
       { lines: info, quote: true },
-      ...(isTask ? [{ title: `☑️ Subtugas (${done}/${sub.length})`, lines: sub.length ? sub.map((s, i) => `${s.is_completed ? '✅' : '⬜'} ${i + 1}. ${s.is_completed ? `<s>${cut(s.title, 50)}</s>` : cut(s.title, 50)}`) : ['<i>Belum ada subtugas.</i>'], quote: sub.length > 6 ? 'expand' as const : true }] : []),
+      ...(isTask ? [{ title: `☑️ Subtugas (${done}/${sub.length})`, lines: sub.length ? sub.map((s, i) => `${s.is_completed ? '✅' : '⬜'} ${i + 1}. ${s.is_completed ? `<s>${cut(s.title, 50)}</s>` : cut(s.title, 50)}`) : ['<i>Belum ada subtugas.</i>'], quote: sub.length > 6 ? 'expand' as const : false }] : []),
       ...(t.description ? [{ title: '📝 Deskripsi', lines: [cut(t.description, 600)], quote: 'expand' as const }] : []),
     ],
     kb: [
@@ -204,11 +204,10 @@ export async function calendarPanel(ctx: Ctx): Promise<Panel> {
   const sections = days.filter((d) => byDay.has(d)).map((d) => ({
     title: `${d === today ? '📍 Hari ini' : d === addDays(today, 1) ? '➡️ Besok' : '🗓'} · ${shortDay(d)}`,
     lines: byDay.get(d)!.sort((a, b) => a.at.localeCompare(b.at)).map((x) => x.line),
-    quote: true as const,
   }))
   return {
     head: ['📅 <b>Kalender</b>', `<i>7 hari ke depan · ${shortDay(today)} – ${shortDay(addDays(today, 6))}</i>`],
-    sections: sections.length ? sections : [{ lines: ['Tidak ada tenggat atau kegiatan dalam 7 hari ke depan.'], quote: true }],
+    sections: sections.length ? sections : [{ lines: ['<i>Tidak ada tenggat atau kegiatan dalam 7 hari ke depan.</i>'] }],
     kb: [[btn('➕ Kegiatan', 'f:kegiatan'), btn('➕ Tugas', 'f:tugas')], navRow('p:home', '/kalender')],
   }
 }
@@ -230,10 +229,10 @@ export async function projectsPanel(ctx: Ctx): Promise<Panel> {
     sections: list.length ? list.map((p, i) => {
       const g = prog(p.id)
       return {
-        title: `${NUM[i]} ${cut(p.title, 40)}`, quote: true as const,
+        title: `${NUM[i]} ${cut(p.title, 40)}`,
         lines: [`${bar(g.pct)} <b>${Math.floor(g.pct)}%</b>`, `<i>${PROJECT_STATUS[p.status]?.label ?? p.status} · ${g.label}${p.due_date ? ` · tenggat ${formatDay(p.due_date)}` : ''}</i>`],
       }
-    }) : [{ lines: ['Belum ada proyek aktif.'], quote: true }],
+    }) : [{ lines: ['<i>Belum ada proyek aktif.</i>'] }],
     kb: [...rows(list.map((p, i) => btn(NUM[i]!, `pj:${p.id}`)), 5), navRow('p:home', '/proyek')],
   }
 }
@@ -252,8 +251,8 @@ export async function projectDetailPanel(ctx: Ctx, id: string): Promise<Panel | 
     head: [`📁 <b>${esc(p.title)}</b>`, `<i>${PROJECT_STATUS[p.status]?.label ?? p.status}${p.due_date ? ` · tenggat ${formatDay(p.due_date)}` : ''}</i>`],
     sections: [
       { title: '📈 Progres', lines: [`${bar(g.pct)} <b>${Math.floor(g.pct)}%</b>`, `<i>${g.label}</i>`], quote: true },
-      { title: `🏁 Tahapan (${m.filter((x) => x.completed_at).length}/${m.length})`, lines: m.length ? m.map((x, i) => `${x.completed_at ? '✅' : '⬜'} ${i + 1}. ${cut(x.title, 44)}${x.due_date ? ` <i>· ${formatDay(x.due_date)}</i>` : ''}`) : ['<i>Belum ada tahapan.</i>'], quote: true },
-      { title: `☐ Tugas terbuka (${open.length})`, lines: open.length ? open.map((x) => `• ${cut(x.title, 44)}${x.due_at ? ` — <i>${formatShort(x.due_at, ctx.tz)}</i>` : ''}`) : ['<i>Tidak ada tugas terbuka.</i>'], quote: open.length > 5 ? 'expand' : true },
+      { title: `🏁 Tahapan (${m.filter((x) => x.completed_at).length}/${m.length})`, lines: m.length ? m.map((x, i) => `${x.completed_at ? '✅' : '⬜'} ${i + 1}. ${cut(x.title, 44)}${x.due_date ? ` <i>· ${formatDay(x.due_date)}</i>` : ''}`) : ['<i>Belum ada tahapan.</i>'] },
+      { title: `☐ Tugas terbuka (${open.length})`, lines: open.length ? open.map((x) => `• ${cut(x.title, 44)}${x.due_at ? ` — <i>${formatShort(x.due_at, ctx.tz)}</i>` : ''}`) : ['<i>Tidak ada tugas terbuka.</i>'], quote: open.length > 5 ? 'expand' : false },
       ...(p.description ? [{ title: '📝 Deskripsi', lines: [cut(p.description, 500)], quote: 'expand' as const }] : []),
     ],
     kb: [
@@ -281,9 +280,9 @@ export async function goalsPanel(ctx: Ctx): Promise<Panel> {
   return {
     head: ['🎯 <b>Target Saya</b>', `<i>${goals.length} target berjalan · ketuk nomor untuk membuka</i>`],
     sections: goals.length ? goals.map((g, i) => ({
-      title: `${NUM[i]} ${cut(g.title, 40)}`, quote: true as const,
+      title: `${NUM[i]} ${cut(g.title, 40)}`,
       lines: [`${bar(g.percent)} <b>${g.percent}%</b>`, `<i>${goalNumbers(g).summary}${g.due_date ? ` · tenggat ${formatDay(g.due_date)}` : ''}</i>`],
-    })) : [{ lines: ['Belum ada target aktif.'], quote: true }],
+    })) : [{ lines: ['<i>Belum ada target aktif.</i>'] }],
     kb: [...rows(goals.map((g, i) => btn(NUM[i]!, `gl:${g.id}`)), 5), navRow('p:home', '/target')],
   }
 }
@@ -301,7 +300,7 @@ export async function goalDetailPanel(ctx: Ctx, id: string): Promise<Panel | nul
     head: [`🎯 <b>${esc(g.title)}</b>`, `<i>${g.status === 'tercapai' ? '🏆 Tercapai' : 'Sedang berjalan'}${g.due_date ? ` · tenggat ${formatDay(g.due_date)}` : ''}</i>`],
     sections: [
       { title: '📈 Progres', quote: true, lines: [`${bar(g.percent)} <b>${g.percent}%</b>`, `Saat ini: <b>${n.current}</b>`, `Target: <b>${n.target}</b>`, `Sisa: <b>${n.remaining}</b>`] },
-      ...((ms ?? []).length ? [{ title: '🏁 Tahapan', quote: true as const, lines: (ms ?? []).map((m) => `${m.reached_at ? '✅' : '⬜'} ${esc(m.title || `Ambang ${formatNumber(m.threshold)}`)}`) }] : []),
+      ...((ms ?? []).length ? [{ title: '🏁 Tahapan', lines: (ms ?? []).map((m) => `${m.reached_at ? '✅' : '⬜'} ${esc(m.title || `Ambang ${formatNumber(m.threshold)}`)}`) }] : []),
       ...(manual && (ev ?? []).length ? [{ title: '🧾 Kontribusi terakhir', quote: 'expand' as const, lines: (ev ?? []).map((e) => `• ${formatDay(e.occurred_on)} — <b>${Number(e.value) > 0 ? '+' : ''}${formatNumber(e.value)}</b>${e.note ? ` <i>${cut(e.note, 30)}</i>` : ''}`) }] : []),
       ...(!manual ? [{ lines: [`<i>Progres dihitung otomatis dari ${g.progress_source === 'modul' ? 'modul belajar' : g.progress_source === 'tugas' ? 'tugas tertaut' : 'alokasi tabungan'}.</i>`] }] : []),
     ],
@@ -338,8 +337,8 @@ export async function financePanel(ctx: Ctx): Promise<Panel> {
         title: '📊 Bulan ini', quote: true,
         lines: [`🟢 Pemasukan: <b>${formatRupiah(inc)}</b>`, `🔴 Pengeluaran: <b>${formatRupiah(exp)}</b>`, `${inc - exp < 0 ? '⚠️ Defisit' : '💵 Sisa'}: <b>${formatRupiah(Math.abs(inc - exp))}</b>`, `🧾 Pengeluaran hari ini: <b>${formatRupiah(expToday)}</b>`],
       },
-      { title: `🏦 Saldo rekening · ${formatRupiah(total)}`, quote: true, lines: (accts.data ?? []).length ? (accts.data ?? []).map((a) => `• ${cut(a.name, 30)}: <b>${formatRupiah(balance.get(a.id) ?? 0)}</b>`) : ['<i>Belum ada rekening — tambahkan di web.</i>'] },
-      ...(by.size ? [{ title: '📉 Pengeluaran terbesar', quote: true as const, lines: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `• ${cut(cat.get(k) ?? 'Tanpa kategori', 30)}: <b>${formatRupiah(v)}</b> <i>(${exp ? Math.round((v / exp) * 100) : 0}%)</i>`) }] : []),
+      { title: `🏦 Saldo rekening · ${formatRupiah(total)}`, lines: (accts.data ?? []).length ? (accts.data ?? []).map((a) => `• ${cut(a.name, 30)}: <b>${formatRupiah(balance.get(a.id) ?? 0)}</b>`) : ['<i>Belum ada rekening — tambahkan di web.</i>'] },
+      ...(by.size ? [{ title: '📉 Pengeluaran terbesar', lines: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `• ${cut(cat.get(k) ?? 'Tanpa kategori', 30)}: <b>${formatRupiah(v)}</b> <i>(${exp ? Math.round((v / exp) * 100) : 0}%)</i>`) }] : []),
       ...((recent.data ?? []).length ? [{ title: '🧾 Transaksi terakhir', quote: 'expand' as const, lines: (recent.data ?? []).map((t) => `${t.type === 'pemasukan' ? '🟢 +' : '🔴 −'}<b>${formatRupiah(t.amount)}</b> ${cut(t.note || cat.get(t.category_id ?? '') || '', 26)} <i>· ${formatDay(t.occurred_on)}</i>`) }] : []),
     ],
     kb: [[btn('💸 Pengeluaran', 'f:keluar'), btn('💵 Pemasukan', 'f:masuk')], navRow('p:home', '/keuangan')],
@@ -362,7 +361,7 @@ export async function learningPanel(ctx: Ctx): Promise<Panel> {
     head: ['📚 <b>Ruang Belajar</b>', '<i>7 hari terakhir</i>'],
     sections: [
       { quote: true, lines: [`⏱ Total waktu: <b>${formatDuration(total)}</b>`, `📖 Jumlah sesi: <b>${sess.data?.length ?? 0}</b>`] },
-      { title: '🎓 Bidang aktif', quote: true, lines: (subs.data ?? []).length ? (subs.data ?? []).map((s) => `${cut(s.title, 30)}\n${bar(((per.get(s.id) ?? 0) / max) * 100)} <b>${formatDuration(per.get(s.id) ?? 0)}</b>`) : ['<i>Belum ada bidang aktif — tambahkan di web.</i>'] },
+      { title: '🎓 Bidang aktif', lines: (subs.data ?? []).length ? (subs.data ?? []).map((s) => `${cut(s.title, 30)}\n${bar(((per.get(s.id) ?? 0) / max) * 100)} <b>${formatDuration(per.get(s.id) ?? 0)}</b>`) : ['<i>Belum ada bidang aktif — tambahkan di web.</i>'] },
       ...((sess.data ?? []).length ? [{ title: '🕘 Sesi terakhir', quote: 'expand' as const, lines: (sess.data ?? []).slice(0, 6).map((s) => `• ${formatDay(s.session_date)} — ${cut(name.get(s.subject_id) ?? 'Bidang', 22)} <b>${formatDuration(s.duration_minutes)}</b>${s.material ? ` <i>${cut(s.material, 24)}</i>` : ''}`) }] : []),
     ],
     kb: [[btn('➕ Catat sesi belajar', 'f:sesi')], navRow('p:home', '/belajar')],
@@ -377,7 +376,6 @@ export async function journalPanel(ctx: Ctx): Promise<Panel> {
   return {
     head: ['🗒 <b>Catatan & Jurnal</b>', `<i>${list.length ? 'Terbaru · ketuk nomor untuk membaca' : 'Belum ada catatan'}</i>`],
     sections: [{
-      quote: true,
       lines: list.length ? list.map((j, i) => `${NUM[i]} <b>${cut(j.title || j.content.split('\n')[0] || 'Tanpa judul', 40)}</b>\n<i>${JOURNAL_KIND[j.kind]?.label ?? j.kind} · ${formatDay(j.entry_date)}${j.mood ? ` · ${MOOD[j.mood]}` : ''}</i>`) : ['Tulis catatan pertamamu lewat tombol di bawah, atau kirim pesan apa saja ke Rupi.'],
     }],
     kb: [...rows(list.map((j, i) => btn(NUM[i]!, `jn:${j.id}`)), 4), [btn('➕ Catatan / Jurnal', 'f:catatan')], navRow('p:home', '/jurnal')],
@@ -411,12 +409,12 @@ export async function habitsPanel(ctx: Ctx): Promise<Panel> {
   return {
     head: ['🔁 <b>Kebiasaan</b>', `<i>${shortDay(today)} · ${doneToday}/${list.length} sudah check-in · ketuk untuk check-in</i>`],
     sections: list.length ? list.map((h) => ({
-      title: `${h.s.doneToday ? '✅' : '⬜'} ${cut(h.name, 36)}`, quote: true as const,
+      title: `${h.s.doneToday ? '✅' : '⬜'} ${cut(h.name, 36)}`,
       lines: [
         `${h.s.last7.map((d) => (d.done ? '🟩' : '⬜')).join('')}`,
         `<i>${h.frequency === 'harian' ? `🔥 Streak ${h.s.current} hari · terbaik ${h.s.best}` : `Minggu ini ${h.s.thisWeek}/${h.times_per_week}×`}</i>`,
       ],
-    })) : [{ lines: ['Belum ada kebiasaan — tambahkan di web.'], quote: true }],
+    })) : [{ lines: ['<i>Belum ada kebiasaan — tambahkan di web.</i>'] }],
     kb: [...list.map((h) => [btn(`${h.s.doneToday ? '✅' : '⬜'} ${h.name.length > 28 ? `${h.name.slice(0, 27)}…` : h.name}`, `hb:${h.id}`)]), navRow('p:home', '/kebiasaan')],
   }
 }
@@ -433,7 +431,7 @@ export async function badgesPanel(ctx: Ctx): Promise<Panel> {
   return {
     head: ['🏆 <b>Pencapaian</b>', `<i>${got.length} dari ${(defs ?? []).length} lencana diraih</i>`],
     sections: [
-      { title: '🥇 Sudah diraih', quote: true, lines: got.length ? got.map((d) => `🏅 <b>${esc(d.name)}</b> <i>· ${formatDay(dayOf(at.get(d.id)!, ctx.tz))}</i>`) : ['<i>Belum ada — ayo mulai!</i>'] },
+      { title: '🥇 Sudah diraih', lines: got.length ? got.map((d) => `🏅 <b>${esc(d.name)}</b> <i>· ${formatDay(dayOf(at.get(d.id)!, ctx.tz))}</i>`) : ['<i>Belum ada — ayo mulai!</i>'] },
       { title: '🔒 Belum diraih', quote: 'expand', lines: locked.map((d) => `• <b>${esc(d.name)}</b> — <i>${esc(d.description)}</i>`) },
     ],
     kb: [navRow('p:home', '/pencapaian')],
@@ -505,14 +503,14 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
   return {
     head: ['⚙️ <b>Pengaturan</b>'],
     sections: [
-      { title: '👤 Akun', quote: true, lines: [`Nama: <b>${esc(prof?.display_name || '—')}</b>`, `Zona waktu: <b>${esc(prof?.timezone ?? 'Asia/Jakarta')}</b>`, `Telegram: <b>${conn?.username ? `@${esc(conn.username)}` : 'tertaut'}</b>${conn ? ` <i>sejak ${formatDay(dayOf(conn.linked_at, ctx.tz))}</i>` : ''}`] },
-      { title: '☀️ Ringkasan harian', quote: true, lines: [`Status: <b>${on ? 'Aktif' : 'Nonaktif'}</b>`, `Jam kirim: <b>${time.replace(':', '.')}</b>`, '<i>Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
+      { title: '👤 Akun', lines: [`Nama: <b>${esc(prof?.display_name || '—')}</b>`, `Zona waktu: <b>${esc(prof?.timezone ?? 'Asia/Jakarta')}</b>`, `Telegram: <b>${conn?.username ? `@${esc(conn.username)}` : 'tertaut'}</b>${conn ? ` <i>sejak ${formatDay(dayOf(conn.linked_at, ctx.tz))}</i>` : ''}`] },
+      { title: '☀️ Ringkasan harian', lines: [`Status: <b>${on ? 'Aktif' : 'Nonaktif'}</b>`, `Jam kirim: <b>${time.replace(':', '.')}</b>`, '<i>Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
     ],
     kb: [
       [btn(on ? '🔕 Matikan ringkasan harian' : '🔔 Aktifkan ringkasan harian', 'set:dg')],
       ...times,
       [btn('🔔 Pengingat 24 jam', 'p:ingat'), btn('📖 Bantuan', 'p:bantuan')],
-      [btn('🔌 Putuskan bot', 'set:putus')],
+      [btn('🔌 Putuskan bot', 'set:putus', 'danger')],
       [btn('⬅️ Menu', 'p:home'), link('🌐 Pengaturan web', '/pengaturan')],
     ],
   }
@@ -522,8 +520,8 @@ export function helpPanel(): Panel {
   return {
     head: ['📖 <b>Bantuan Rupi</b>', '<i>Semua fitur bisa dipakai lewat tombol. Perintah cepat:</i>'],
     sections: [
-      { title: '⌨️ Perintah', quote: true, lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul [besok] [09.00]</i>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
-      { title: '💬 Pesan bebas', quote: true, lines: ['Kirim teks apa saja → pilih <b>simpan sebagai catatan</b> atau <b>jadikan tugas</b>.'] },
+      { title: '⌨️ Perintah', lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul [besok] [09.00]</i>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
+      { title: '💬 Pesan bebas', lines: ['Kirim teks apa saja → pilih <b>simpan sebagai catatan</b> atau <b>jadikan tugas</b>.'] },
     ],
     kb: [navRow('p:home')],
   }
@@ -547,7 +545,7 @@ export function reminderText(t: { id: string; kind: string; title: string; due_a
 
 export function reminderKeyboard(t: { id: string; kind: string }): Keyboard {
   return [
-    [...(t.kind === 'tugas' ? [btn('✅ Tandai selesai', `d:${t.id}`)] : []), btn('📄 Detail', `td:${t.id}`)],
+    [...(t.kind === 'tugas' ? [btn('✅ Tandai selesai', `d:${t.id}`, 'success')] : []), btn('📄 Detail', `td:${t.id}`)],
     [btn('🏠 Menu', 'p:home'), link('🌐 Buka', `/tugas/${t.id}`)],
   ]
 }

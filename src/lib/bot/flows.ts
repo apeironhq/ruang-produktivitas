@@ -435,7 +435,7 @@ async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
   if (st.s >= flow.steps.length) {
     return {
       html: [...head.map((h, i) => (i === 0 ? `<b>${h}</b>` : h)), '', '✅ <b>Sudah benar?</b> Tekan <b>Simpan</b> untuk menyimpan.'].join('\n'),
-      kb: [[btn('✅ Simpan', 'w:ok'), btn('✖️ Batal', 'w:x')]] as Keyboard,
+      kb: [[btn('✅ Simpan', 'w:ok', 'success'), btn('✖️ Batal', 'w:x')]] as Keyboard,
     }
   }
   const step = flow.steps[st.s]!

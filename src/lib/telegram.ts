@@ -43,7 +43,9 @@ export function sendMessage(chatId: number | string, html: string, buttons?: Inl
   })
 }
 
-export type Keyboard = Array<Array<InlineButton | { text: string; url: string }>>
+/** Warna tombol (Bot API 9.4+): primary = biru, success = hijau, danger = merah. */
+export type ButtonStyle = 'primary' | 'success' | 'danger'
+export type Keyboard = Array<Array<(InlineButton | { text: string; url: string }) & { style?: ButtonStyle }>>
 
 /** Kirim foto (URL publik atau berkas JPEG di memori) + keterangan HTML + tombol inline. */
 export function sendPhoto(chatId: number | string, photo: string | Buffer, caption: string, keyboard?: Keyboard) {

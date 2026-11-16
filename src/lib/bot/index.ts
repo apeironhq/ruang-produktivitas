@@ -70,7 +70,7 @@ async function sendWelcome(chatId: number) {
       { title: '🔗 Tautkan akunmu dulu', quote: true, lines: ['1. Buka <b>Pengaturan → Bot Telegram</b> di aplikasi', '2. Tekan <b>Buat kode tautan</b>', '3. Tekan <b>Buka di Telegram</b>, atau kirim <code>/mulai KODE</code> ke sini'] },
     ],
     foot: ['<i>Data hanya bisa diakses dari akun yang sudah ditautkan.</i>'],
-    kb: [[link('🌐 Buka Pengaturan', '/pengaturan')]],
+    kb: [[link('🌐 Buka Pengaturan', '/pengaturan', 'primary')]],
   }
   const res = await sendPhoto(chatId, bannerUrl(), renderPanel(p, 1024), p.kb)
   if (!res.ok) await sendMessageKb(chatId, renderPanel(p, 4000), p.kb)
@@ -93,14 +93,8 @@ async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw
   if (error) throw error
   const ctx = await loadCtx(db, from.id, chatId)
   if (!ctx) return 'selesai' as const
-  await sendMessage(chatId, [
-    `🎉 <b>Akun tertaut! Selamat datang, ${esc(ctx.name.split(' ')[0] || ctx.name)}.</b>`,
-    '',
-    `<blockquote><b>✨ Mulai dari sini</b>\n${FEATURES.join('\n')}</blockquote>`,
-    '',
-    '<i>Ketuk tombol di bawah ringkasan untuk membuka menu, atau kirim pesan apa saja untuk dicatat.</i>',
-  ].join('\n'))
-  await sendDashboard(ctx)
+  // Langsung ke ringkasan dashboard, dengan satu baris sambutan.
+  await sendDashboard(ctx, '🎉 <b>Akun berhasil ditautkan!</b> <i>Pengingat & ringkasan harian akan dikirim ke sini.</i>')
   return 'selesai' as const
 }
 
@@ -178,7 +172,7 @@ function unlinkConfirm(): Panel {
   return {
     head: ['🔌 <b>Putuskan bot dari akun?</b>'],
     sections: [{ quote: true, lines: ['Rupi tidak bisa lagi membaca atau menambah datamu, dan pengingat berhenti dikirim.', '<i>Kamu bisa menautkan lagi kapan saja dari Pengaturan.</i>'] }],
-    kb: [[btn('🔌 Ya, putuskan', 'set:putus:ya'), btn('Batal', 'p:atur')]],
+    kb: [[btn('🔌 Ya, putuskan', 'set:putus:ya', 'danger'), btn('Batal', 'p:atur')]],
   }
 }
 

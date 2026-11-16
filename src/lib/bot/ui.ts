@@ -1,6 +1,6 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { esc, type Keyboard } from '../telegram'
+import { esc, type ButtonStyle, type Keyboard } from '../telegram'
 
 export { esc }
 
@@ -33,10 +33,12 @@ export const bar = (pct: number) => {
 export interface Section { title?: string; lines: string[]; quote?: boolean | 'expand' }
 export interface Panel { head: string[]; sections: Section[]; foot?: string[]; kb: Keyboard }
 
+/** Judul bagian di luar kutipan (seperti judul kartu), isinya di dalam kutipan bila quote. */
 function sectionHtml(s: Section, hidden: number) {
-  const body = [...(s.title ? [`<b>${s.title}</b>`] : []), ...s.lines, ...(hidden ? [`<i>+${hidden} lainnya</i>`] : [])].join('\n')
-  if (!s.quote) return body
-  return `<blockquote${s.quote === 'expand' ? ' expandable' : ''}>${body}</blockquote>`
+  const title = s.title ? `<b>${s.title}</b>\n` : ''
+  const body = [...s.lines, ...(hidden ? [`<i>+${hidden} lainnya</i>`] : [])].join('\n')
+  if (!s.quote) return `${title}${body}`
+  return `${title}<blockquote${s.quote === 'expand' ? ' expandable' : ''}>${body}</blockquote>`
 }
 
 /** Susun HTML panel; bila melebihi batas (keterangan foto 1024), kurangi baris dari bagian terpanjang. */
@@ -59,8 +61,8 @@ export function renderPanel(p: Panel, max = 4000): string {
 }
 
 /* ---------- Tombol ---------- */
-export const btn = (text: string, data: string) => ({ text, callback_data: data })
-export const link = (text: string, path = '/') => ({ text, url: `${siteUrl()}${path}` })
+export const btn = (text: string, data: string, style?: ButtonStyle) => ({ text, callback_data: data, ...(style ? { style } : {}) })
+export const link = (text: string, path = '/', style?: ButtonStyle) => ({ text, url: `${siteUrl()}${path}`, ...(style ? { style } : {}) })
 export function rows<T>(items: T[], per: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < items.length; i += per) out.push(items.slice(i, i + per))
@@ -79,7 +81,7 @@ export const MAIN_MENU: Keyboard = [
   [btn('🔁 Kebiasaan', 'p:habit'), btn('🏆 Pencapaian', 'p:lencana')],
   [btn('📊 Ringkasan', 'p:ringkas'), btn('⚙️ Pengaturan', 'p:atur')],
 ]
-export const mainKeyboard = (): Keyboard => [...MAIN_MENU, [link('🌐 Buka Ruang Produktivitas')]]
+export const mainKeyboard = (): Keyboard => [...MAIN_MENU, [link('🌐 Buka Ruang Produktivitas', '/', 'primary')]]
 
 /* ---------- Waktu ---------- */
 export function greetingFor(tz: string, now = new Date()) {
