@@ -664,6 +664,7 @@ a.item-link:hover { background: var(--bg-subtle); }
   border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .tab:hover { color: var(--text-heading); }
+.tab.tab-end { margin-left: auto; }
 .tab.active { color: var(--text-heading); border-bottom-color: var(--brand); }
 .tab-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--n-100); font-size: var(--fs-micro); line-height: 18px; text-align: center; color: var(--text-muted); }
 .tab.active .tab-count { background: var(--brand-soft); color: var(--brand-ink); }

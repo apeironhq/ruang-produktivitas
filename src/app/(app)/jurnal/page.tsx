@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react'
+import { Archive, ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react'
 import { EmptyState, PageHead, SectionHead } from '@/components/ui/display'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { todayIn } from '@/lib/dates'
@@ -41,9 +41,10 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
   }
   const user = (await getCurrentUser())!
   const today = todayIn(user.timezone)
-  const [{ data, count }, options] = await Promise.all([
+  const [{ data, count }, options, { count: archivedCount }] = await Promise.all([
     query.order('entry_date', { ascending: false }).order('created_at', { ascending: false }).range((page - 1) * PER_PAGE, page * PER_PAGE - 1),
     loadLinkOptions(supabase),
+    supabase.from('journal_entries').select('id', { count: 'exact', head: true }).eq('is_archived', true),
   ])
   const entries = (data ?? []) as JournalEntry[]
   const total = count ?? 0
@@ -64,21 +65,24 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
         actions={<NewJournalButton today={today} goals={options.goals} subjects={options.subjects} projects={options.projects} preset={kind ? { kind: kind as JournalEntry['kind'] } : undefined} />} />
 
       <nav className="tabs" aria-label="Jenis catatan">
-        <Link href={hrefWith('/jurnal', sp, { jenis: null })} className={`tab${!kind ? ' active' : ''}`} aria-current={!kind ? 'page' : undefined}>Semua</Link>
+        <Link href={hrefWith('/jurnal', sp, { jenis: null, arsip: null, hal: null })} className={`tab${!kind && !archived ? ' active' : ''}`} aria-current={!kind && !archived ? 'page' : undefined}>Semua</Link>
         {Object.entries(JOURNAL_KIND).map(([k, v]) => (
-          <Link key={k} href={hrefWith('/jurnal', sp, { jenis: k })} className={`tab${kind === k ? ' active' : ''}`} aria-current={kind === k ? 'page' : undefined}>{v.label}</Link>
+          <Link key={k} href={hrefWith('/jurnal', sp, { jenis: k, arsip: null, hal: null })} className={`tab${kind === k && !archived ? ' active' : ''}`} aria-current={kind === k && !archived ? 'page' : undefined}>{v.label}</Link>
         ))}
+        {/* Arsip di ujung: semua catatan yang diarsipkan berkumpul di sini */}
+        <Link href={hrefWith('/jurnal', sp, { arsip: '1', jenis: null, hal: null })} className={`tab tab-end${archived ? ' active' : ''}`} aria-current={archived ? 'page' : undefined}>
+          <Archive size={15} aria-hidden="true" />Arsip{(archivedCount ?? 0) > 0 && <span className="tab-count">{formatNumber(archivedCount ?? 0)}</span>}
+        </Link>
       </nav>
 
       <section className="card" aria-labelledby="note-title">
-        <SectionHead id="note-title" icon={<NotebookPen size={18} />} title={kind ? JOURNAL_KIND[kind]!.label : 'Semua catatan'}
-          desc={archived ? 'Catatan yang diarsipkan' : 'Terbaru di atas'}>
+        <SectionHead id="note-title" icon={<NotebookPen size={18} />} title={archived ? 'Arsip' : kind ? JOURNAL_KIND[kind]!.label : 'Semua catatan'}
+          desc={archived ? 'Catatan yang diarsipkan — kembalikan kapan saja' : 'Terbaru di atas'}>
           {total > 0 && <span className="badge">{formatNumber(total)} catatan</span>}
         </SectionHead>
         <div className="card-filters">
           <SearchParamInput label="Cari catatan" placeholder="Cari judul atau isi catatan" />
           <ParamSelect param="periode" label="Bulan" options={[{ value: '', label: 'Semua tanggal' }, ...months]} />
-          <ParamSelect param="arsip" label="Arsip" options={[{ value: '', label: 'Tidak diarsipkan' }, { value: '1', label: 'Diarsipkan' }]} />
           {tag && <span className="text-caption w-full">Menyaring tag <span className="tag">#{tag}</span> · <Link href={hrefWith('/jurnal', sp, { tag: null })} className="link">hapus saringan</Link></span>}
         </div>
         {entries.length === 0 ? (
