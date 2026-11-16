@@ -59,6 +59,8 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
       delta = { up: pct >= 0, text: `${pct > 0 ? '+' : ''}${pct}%`, flat: pct === 0 }
     }
   }
+  // Ponsel: kartu bergrafik selebar layar; kartu ringkas (angka / progress bar) dua kolom.
+  const kind = series.length > 0 && progress === undefined ? 'has-spark' : 'compact'
   const body = (
     <>
       <div className="kpi-top">
@@ -86,8 +88,8 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
     </>
   )
   return href
-    ? <Link href={href} className="kpi card clickable">{body}</Link>
-    : <div className="kpi card">{body}</div>
+    ? <Link href={href} className={`kpi card clickable ${kind}`}>{body}</Link>
+    : <div className={`kpi card ${kind}`}>{body}</div>
 }
 
 /** Donut dengan celah 2px antar-segmen, total di tengah, legenda selalu ada (warna + label + angka + persen). */

@@ -114,7 +114,7 @@ export default async function Page({ searchParams }: PageProps<'/kalender'>) {
                 <p className={`text-overline mb-1${d === today ? ' !text-[var(--brand)]' : ''}`}>{formatDayLong(d)}{d === today ? ' · hari ini' : ''}</p>
                 <ul className="items">
                   {byDay.get(d)!.map((e) => (
-                    <li key={`${e.id}-a`} className={`item${e.done ? ' is-done' : ''}`}>
+                    <li key={`${e.id}-a`} className={`item agenda-item${e.done ? ' is-done' : ''}`}>
                       <span className="swatch shrink-0" style={{ background: e.color }} aria-hidden="true" />
                       <Link href={e.href} className="item-title flex-1 min-w-0 truncate hover:text-[var(--brand)]">{e.title}</Link>
                       <span className="item-meta">{e.kind}{e.time ? ` · ${e.time}` : ''}</span>
