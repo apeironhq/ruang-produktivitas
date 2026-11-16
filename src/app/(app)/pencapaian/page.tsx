@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
-import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy, Check } from 'lucide-react'
+import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint, solid } from '@/components/ui/display'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
@@ -9,6 +9,7 @@ import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Achievement, Goal } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
 import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
+import { ScrollRows } from '@/components/ui/ScrollRows'
 import { goalNumbers } from '../target/GoalCard'
 
 export const metadata: Metadata = { title: 'Pencapaian' }
@@ -47,6 +48,14 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
   const earnedAt = new Map((earned.data ?? []).map((e) => [e.achievement_id as string, e.earned_at as string]))
   const metrics = new Map(((metricsRes.data ?? []) as Array<{ metric: string; value: number }>).map((m) => [m.metric, Number(m.value)]))
   const earnedCount = badges.filter((b) => earnedAt.has(b.id)).length
+  // Yang sudah diraih dulu (terbaru di atas), lalu yang belum diraih menurut progres terdekat.
+  const progressOf = (b: Achievement) => Math.min(1, (metrics.get(b.metric) ?? 0) / b.min_value)
+  const sortedBadges = [...badges].sort((a, b) => {
+    const ea = earnedAt.get(a.id), eb = earnedAt.get(b.id)
+    if (ea && eb) return eb.localeCompare(ea)
+    if (ea || eb) return ea ? -1 : 1
+    return progressOf(b) - progressOf(a)
+  })
 
   // Statistik periode berjalan vs periode sebelumnya (PC-05)
   const curDays = dayRange(curFrom, today)
@@ -90,21 +99,22 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
           <span className="badge">{earnedCount} dari {badges.length} diraih</span>
         </SectionHead>
         <div className="card-body">
-          <div className="badges">
-            {badges.map((b) => {
+          <ScrollRows rows={3} className="badges">
+            {sortedBadges.map((b) => {
               const at = earnedAt.get(b.id)
               const val = Math.min(metrics.get(b.metric) ?? 0, b.min_value)
+              const c = BADGE_COLOR[b.icon] ?? 'var(--brand)'
               return (
-                <div key={b.id} className={`badge-card${at ? '' : ' locked'}`}>
-                  <span className="badge-medal" style={at ? tint(BADGE_COLOR[b.icon]) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                <div key={b.id} className={`badge-card${at ? ' earned' : ' locked'}`} style={{ '--badge-c': c } as React.CSSProperties}>
+                  <span className="badge-medal" style={at ? solid(c) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
                   <span className="min-w-0 flex-1">
                     <span className="badge-name">{b.name}</span>
                     <span className="item-sub block">{b.description}</span>
                     {at ? (
-                      <span className="item-meta block mt-1" style={{ color: 'var(--ok)' }}>Diraih {formatDay(isoToDay(at, tz))}</span>
+                      <span className="badge-earned"><Check size={12} strokeWidth={3} aria-hidden="true" />Diraih {formatDay(isoToDay(at, tz))}</span>
                     ) : (
                       <span className="block mt-1">
-                        <ProgressBar percent={(val / b.min_value) * 100} label={`Progres lencana ${b.name}`} color="var(--n-400)" />
+                        <ProgressBar percent={(val / b.min_value) * 100} label={`Progres lencana ${b.name}`} color={c} />
                         <span className="item-sub">{formatNumber(val)} / {formatNumber(b.min_value)}</span>
                       </span>
                     )}
@@ -112,7 +122,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
                 </div>
               )
             })}
-          </div>
+          </ScrollRows>
         </div>
       </section>
 
