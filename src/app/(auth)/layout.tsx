@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="auth">
       <div className="auth-card card">
         <div className="auth-brand">
-          <AppLogo size={44} />
+          <AppLogo size={56} />
           <span className="auth-brand-text">
             <strong>{APP_NAME}</strong>
             <small>{APP_TAGLINE}</small>

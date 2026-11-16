@@ -50,7 +50,7 @@ function Sidebar({ open, onClose, pathname }: { open: boolean; onClose: () => vo
       {open && <div className="sidebar-overlay" aria-hidden="true" onClick={onClose} />}
       <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label="Navigasi">
         <div className="sidebar-brand">
-          <AppLogo size={34} />
+          <AppLogo size={40} />
           <span className="brand-text">
             <strong>{APP_NAME}</strong>
             <small>{APP_TAGLINE}</small>
@@ -92,7 +92,7 @@ function TopBar({ user, onToggle }: { user: ShellUser; onToggle: () => void }) {
   return (
     <header className="topbar">
       <button className="topbar-burger" type="button" aria-label="Buka menu" onClick={onToggle}><Menu size={20} /></button>
-      <AppLogo size={32} className="topbar-logo" />
+      <AppLogo size={38} className="topbar-logo" />
       <SearchBox />
       <div className="topbar-actions">
         <NotificationBell />
