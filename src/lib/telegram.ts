@@ -64,6 +64,11 @@ export function editMessageCaption(chatId: number | string, messageId: number, c
   return call('editMessageCaption', { chat_id: chatId, message_id: messageId, caption: caption.slice(0, 1024), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
 }
 
+/** Ganti/hapus tombol saja (mis. menonaktifkan tombol formulir lama). */
+export function editMessageReplyMarkup(chatId: number | string, messageId: number, keyboard: Keyboard) {
+  return call('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: keyboard } })
+}
+
 /** Ganti teks pesan + tombolnya. */
 export function editMessageKb(chatId: number | string, messageId: number, html: string, keyboard: Keyboard) {
   return call('editMessageText', { chat_id: chatId, message_id: messageId, text: html.slice(0, 4000), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: keyboard } })

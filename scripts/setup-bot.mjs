@@ -72,20 +72,28 @@ const me = await tg('getMe')
 await tg('setWebhook', { url: `${url}/api/telegram/webhook`, secret_token: webhookSecret, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true, max_connections: 10 })
 await tg('setMyCommands', {
   commands: [
-    { command: 'menu', description: 'Ringkasan hari ini & menu utama' },
-    { command: 'tugas', description: 'Tugas & kegiatan hari ini' },
-    { command: 'tambah', description: 'Tambah tugas (judul besok 09.00)' },
-    { command: 'catat', description: 'Simpan catatan cepat' },
-    { command: 'belajar', description: 'Catat sesi belajar (menit bidang materi)' },
-    { command: 'target', description: 'Progres target aktif' },
-    { command: 'pengingat', description: 'Pengingat 24 jam ke depan' },
-    { command: 'bantuan', description: 'Daftar perintah' },
-    { command: 'putus', description: 'Putuskan bot dari akun' },
+    { command: 'menu', description: '🏠 Ringkasan hari ini & menu utama' },
+    { command: 'tugas', description: '✅ Tugas & kegiatan' },
+    { command: 'tambah', description: '➕ Tambah tugas (judul besok 09.00)' },
+    { command: 'kegiatan', description: '📅 Jadwalkan kegiatan' },
+    { command: 'catat', description: '🗒 Catatan / jurnal' },
+    { command: 'keluar', description: '💸 Catat pengeluaran (25rb makan)' },
+    { command: 'masuk', description: '💵 Catat pemasukan' },
+    { command: 'belajar', description: '📚 Catat sesi belajar' },
+    { command: 'kalender', description: '📅 Agenda 7 hari' },
+    { command: 'target', description: '🎯 Progres target' },
+    { command: 'keuangan', description: '💰 Ringkasan keuangan' },
+    { command: 'kebiasaan', description: '🔁 Check-in kebiasaan' },
+    { command: 'ringkasan', description: '📊 Perkembangan 7 hari' },
+    { command: 'pengaturan', description: '⚙️ Jam ringkasan & akun' },
+    { command: 'bantuan', description: '📖 Daftar perintah' },
+    { command: 'batal', description: '✖️ Batalkan isian' },
   ],
 })
 // Tombol Menu biru di chat menampilkan daftar perintah.
 await tg('setChatMenuButton', { menu_button: { type: 'commands' } })
-await tg('setMyDescription', { description: 'Asisten Ruang Produktivitas: pengingat tugas, agenda harian, catatan cepat, dan sesi belajar. Tautkan dari Pengaturan di aplikasi.' })
+await tg('setMyDescription', { description: 'Rupi — asisten produktivitas pribadimu: tugas & pengingat, agenda harian, keuangan, belajar, jurnal, target, dan kebiasaan. Tautkan dari Pengaturan di Ruang Produktivitas.' })
+await tg('setMyShortDescription', { short_description: 'Asisten produktivitas pribadimu 🐰' })
 if (process.env.TELEGRAM_BOT_USERNAME !== me.username) ensureEnv('TELEGRAM_BOT_USERNAME', () => me.username)
 console.log(`✓ Webhook @${me.username} → ${url}/api/telegram/webhook`)
 console.log(`✓ Daftar perintah dipasang`)
