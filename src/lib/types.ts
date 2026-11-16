@@ -8,7 +8,7 @@ export interface Goal {
   metric_type: 'rupiah' | 'jumlah' | 'durasi' | 'persentase' | 'biner'
   unit_label: string
   direction: 'naik' | 'turun'
-  progress_source: 'manual' | 'modul' | 'tugas'
+  progress_source: 'manual' | 'alokasi' | 'modul' | 'tugas'
   start_value: number
   target_value: number
   priority: 'rendah' | 'sedang' | 'tinggi'
@@ -156,3 +156,32 @@ export interface JournalEntry {
 }
 
 export interface Option { id: string; title: string }
+
+// ---------- Keuangan ----------
+export interface Account {
+  id: string
+  name: string
+  kind: 'tunai' | 'bank' | 'dompet_digital' | 'lainnya'
+  opening_balance: number
+  is_archived: boolean
+  created_at: string
+}
+export interface AccountWithBalance extends Account { balance: number; allocated: number }
+
+export interface Category { id: string; name: string; type: 'pemasukan' | 'pengeluaran' }
+
+export interface Transaction {
+  id: string
+  account_id: string
+  type: 'pemasukan' | 'pengeluaran' | 'transfer_keluar' | 'transfer_masuk'
+  amount: number
+  category_id: string | null
+  occurred_on: string
+  note: string
+  transfer_group_id: string | null
+  created_at: string
+}
+
+export interface Budget { id: string; category_id: string; month: string; limit_amount: number }
+
+export interface Allocation { id: string; goal_id: string; account_id: string; amount: number; occurred_on: string; note: string; created_at: string }

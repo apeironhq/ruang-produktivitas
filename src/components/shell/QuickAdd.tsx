@@ -1,6 +1,7 @@
 'use client'
 
-import { BookOpen, CalendarClock, CheckSquare, Clock, NotebookPen, Plus, Target } from 'lucide-react'
+import { BookOpen, CalendarClock, CheckSquare, Clock, NotebookPen, Plus, Target, Wallet } from 'lucide-react'
+import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keuangan/FinanceForms'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { loadQuickData, type QuickData } from '@/app/(app)/quick-data'
 import { SessionFormModal, SubjectFormModal } from '@/app/(app)/belajar/LearningForms'
@@ -9,7 +10,7 @@ import { GoalFormModal, blankGoal } from '@/app/(app)/target/GoalForm'
 import { TaskFormModal, emptyTask } from '@/app/(app)/tugas/TaskForm'
 import { useToast } from '@/components/ui/Toast'
 
-export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang'
+export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening'
 /** Tautan yang sudah terisi saat popup dibuka dari halaman tertentu (mis. detail target). */
 type Preset = { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }
 
@@ -21,6 +22,7 @@ export const useQuickAdd = () => useContext(QuickContext)
 export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; icon: React.ReactNode; color: string }> = [
   { kind: 'tugas', label: 'Tugas', desc: 'Tenggat, prioritas & subtugas', icon: <CheckSquare size={17} />, color: 'var(--c-blue)' },
   { kind: 'kegiatan', label: 'Kegiatan', desc: 'Jadwal jam mulai–selesai', icon: <CalendarClock size={17} />, color: 'var(--c-lilac)' },
+  { kind: 'transaksi', label: 'Transaksi', desc: 'Pemasukan, pengeluaran, transfer', icon: <Wallet size={17} />, color: 'var(--c-peach)' },
   { kind: 'catatan', label: 'Catatan', desc: 'Catatan & jurnal', icon: <NotebookPen size={17} />, color: 'var(--c-rose)' },
   { kind: 'sesi', label: 'Sesi belajar', desc: 'Durasi, ringkasan & posisi', icon: <Clock size={17} />, color: 'var(--c-peach)' },
   { kind: 'target', label: 'Target', desc: 'Target & tahapannya', icon: <Target size={17} />, color: 'var(--c-blue)' },
@@ -51,6 +53,11 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
       try {
         const data = await fetchData()
         if (!data) { toast.error('Koneksi bermasalah atau sesi berakhir. Coba lagi.'); return }
+        if (kind === 'transaksi' && data.accounts.length === 0) {
+          toast.info('Tambahkan rekening terlebih dahulu, lalu catat transaksinya.')
+          setActive({ kind: 'rekening', preset, key: Date.now(), data })
+          return
+        }
         if (kind === 'sesi' && data.bundles.length === 0) {
           toast.info('Buat bidang belajar terlebih dahulu, lalu catat sesinya.')
           setActive({ kind: 'bidang', preset, key: Date.now(), data })
@@ -82,6 +89,10 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
       {a?.kind === 'sesi' && (
         <SessionFormModal key={a.key} open onClose={close} subjects={a.data.bundles} today={a.data.today} defaultSubjectId={a.preset.subject_id ?? undefined} />
       )}
+      {a?.kind === 'transaksi' && (
+        <TransactionFormModal key={a.key} open onClose={close} accounts={a.data.accounts} categories={a.data.categories} initial={emptyTx(a.data.today, a.data.accounts)} />
+      )}
+      {a?.kind === 'rekening' && <AccountFormModal key={a.key} open onClose={close} initial={{ name: '', kind: 'bank', opening_balance: 0 }} />}
       {a?.kind === 'bidang' && (
         <SubjectFormModal key={a.key} open onClose={close} goals={a.data.options.goals} initial={{ title: '', description: '', goal_id: null, status: 'aktif' }} />
       )}

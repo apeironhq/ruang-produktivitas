@@ -54,6 +54,7 @@ export const METRIC: Record<string, { label: string; hint: string }> = {
 
 export const PROGRESS_SOURCE: Record<string, { label: string; hint: string }> = {
   manual: { label: 'Kontribusi manual', hint: 'Anda mencatat penambahan/pengurangan nilai sendiri.' },
+  alokasi: { label: 'Alokasi tabungan', hint: 'Dihitung dari dana rekening yang dialokasikan ke target (bukan pemasukan baru).' },
   modul: { label: 'Modul belajar', hint: 'Dihitung dari modul selesai pada bidang belajar yang ditautkan.' },
   tugas: { label: 'Tugas tertaut', hint: 'Dihitung dari tugas tertaut yang selesai (dibatalkan tidak dihitung).' },
 }
@@ -76,6 +77,16 @@ export const JOURNAL_KIND: Record<string, { label: string; color: string; desc: 
   pekerjaan: { label: 'Pekerjaan', color: '#475467', desc: 'Catatan rapat dan pekerjaan' },
   ide: { label: 'Ide', color: 'var(--c-rose)', desc: 'Ide, gagasan, rencana' },
   khusus: { label: 'Khusus', color: '#475467', desc: 'Jenis buatan sendiri (pakai tag)' },
+}
+
+export const ACCOUNT_KIND: Record<string, string> = {
+  tunai: 'Tunai', bank: 'Bank', dompet_digital: 'Dompet digital', lainnya: 'Lainnya',
+}
+
+export const TX_TYPE: Record<string, { label: string; tone: Tone }> = {
+  pemasukan: { label: 'Pemasukan', tone: 'tone-brand' },
+  pengeluaran: { label: 'Pengeluaran', tone: 'tone-err' },
+  transfer: { label: 'Transfer', tone: 'tone-neutral' },
 }
 
 export const MOOD: Record<number, string> = { 1: 'Sangat buruk', 2: 'Kurang baik', 3: 'Biasa', 4: 'Baik', 5: 'Sangat baik' }

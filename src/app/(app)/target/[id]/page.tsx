@@ -5,6 +5,8 @@ import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, Rot
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
+import { AllocationButton } from '../../keuangan/FinanceForms'
+import { loadAccounts } from '@/lib/finance'
 import { todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
 import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, displayStatus } from '@/lib/labels'
@@ -24,7 +26,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
   const tz = user.timezone
   const supabase = await createClient()
   // Satu putaran paralel: target, progres, tahapan, kontribusi, dan relasi sekaligus.
-  const [{ data: raw }, progress, ms, ev, tasks, subjects, journals, options] = await Promise.all([
+  const [{ data: raw }, progress, ms, ev, tasks, subjects, journals, options, accounts, allocs] = await Promise.all([
     supabase.from('goals').select(GOAL_COLUMNS).eq('id', id).maybeSingle(),
     loadProgress(supabase, id),
     supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').eq('goal_id', id).order('threshold'),
@@ -33,7 +35,11 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
     supabase.from('learning_subjects').select('id, title, status').eq('goal_id', id),
     supabase.from('journal_entries').select('id, title, kind, entry_date').eq('goal_id', id).order('entry_date', { ascending: false }).limit(10),
     loadLinkOptions(supabase),
+    loadAccounts(supabase),
+    supabase.from('goal_allocations').select('account_id, amount').eq('goal_id', id),
   ])
+  const held: Record<string, number> = {}
+  for (const a of allocs.data ?? []) held[a.account_id] = (held[a.account_id] ?? 0) + Number(a.amount)
   if (!raw) notFound()
   const goal = mergeProgress([raw as Goal], progress)[0]!
   const milestones = (ms.data ?? []) as Milestone[]
@@ -42,10 +48,12 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
   const linkedTasks = (tasks.data ?? []) as Pick<Task, 'id' | 'title' | 'status' | 'kind' | 'due_at'>[]
   const n = goalNumbers(goal)
   const st = GOAL_STATUS[goal.status]!
+  const alokasi = goal.progress_source === 'alokasi'
   const manual = goal.progress_source === 'manual'
+  const valued = manual || alokasi
   const binary = goal.metric_type === 'biner'
   const today = todayIn(tz)
-  const fmt = (v: number) => (manual ? formatMetric(v, goal.metric_type, goal.unit_label) : `${formatNumber(v)} ${goal.unit_label}`)
+  const fmt = (v: number) => (valued ?formatMetric(v, goal.metric_type, goal.unit_label) : `${formatNumber(v)} ${goal.unit_label}`)
   const initial: GoalFormValues = {
     id: goal.id, title: goal.title, description: goal.description, category: goal.category, metric_type: goal.metric_type, unit_label: goal.unit_label,
     direction: goal.direction, progress_source: goal.progress_source, start_value: String(goal.start_value), target_value: String(goal.target_value),
@@ -60,7 +68,8 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           meta={[PROGRESS_SOURCE[goal.progress_source]!.label, goal.category, goal.due_date ? `Tenggat ${formatDay(goal.due_date)}` : null]} />
         <div className="control-row">
           {goal.status === 'aktif' && manual && !binary && <ContributionButton goalId={goal.id} metric={goal.metric_type} today={today} direction={goal.direction} />}
-          {goal.status === 'aktif' && manual && binary && <ActionButton action={markBinaryDone.bind(null, goal.id)} className="btn btn-primary"><Check size={16} />Tandai tercapai</ActionButton>}
+          {goal.status === 'aktif' && alokasi && <AllocationButton goalId={goal.id} accounts={accounts} today={today} held={held} />}
+          {goal.status === 'aktif' && manual && binary &&<ActionButton action={markBinaryDone.bind(null, goal.id)} className="btn btn-primary"><Check size={16} />Tandai tercapai</ActionButton>}
           <EditGoalButton initial={initial} />
           {goal.status === 'arsip' || goal.status === 'tercapai'
             ? <ActionButton action={setGoalStatus.bind(null, goal.id, 'aktif')}><RotateCcw size={16} />Aktifkan lagi</ActionButton>
@@ -91,7 +100,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
               <ProgressBar percent={goal.percent} label="Progres target" large />
             </div>
             <dl className="dl">
-              {manual && !binary && <div><dt>Nilai awal</dt><dd>{formatMetric(goal.effStart, goal.metric_type, goal.unit_label)}</dd></div>}
+              {valued && !binary && <div><dt>Nilai awal</dt><dd>{formatMetric(goal.effStart, goal.metric_type, goal.unit_label)}</dd></div>}
               <div><dt>Nilai saat ini</dt><dd>{n.current}</dd></div>
               <div><dt>Nilai target</dt><dd>{n.target}</dd></div>
               <div><dt>Sisa</dt><dd>{n.remaining}</dd></div>

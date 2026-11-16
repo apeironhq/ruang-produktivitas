@@ -22,7 +22,7 @@ const goalSchema = z.object({
   metric_type: zEnum(['rupiah', 'jumlah', 'durasi', 'persentase', 'biner'] as const, 'Satuan'),
   unit_label: zOptText(30),
   direction: zEnum(['naik', 'turun'] as const, 'Arah').default('naik'),
-  progress_source: zEnum(['manual', 'modul', 'tugas'] as const, 'Sumber progres'),
+  progress_source: zEnum(['manual', 'alokasi', 'modul', 'tugas'] as const, 'Sumber progres'),
   start_value: z.preprocess((v) => (v === '' || v == null ? '0' : v), zNumber('Nilai awal')),
   target_value: z.preprocess((v) => (v === '' || v == null ? '0' : v), zNumber('Nilai target')),
   priority: zEnum(['rendah', 'sedang', 'tinggi'] as const, 'Prioritas'),
@@ -30,6 +30,9 @@ const goalSchema = z.object({
   due_date: zOptDay,
   milestones: zOptText(500),
 }).superRefine((v, ctx) => {
+  if (v.progress_source === 'alokasi' && !(v.target_value > v.start_value)) {
+    ctx.addIssue({ code: 'custom', path: ['target_value'], message: 'Nilai target harus lebih besar dari nilai awal.' })
+  }
   if (v.progress_source === 'manual' && v.metric_type !== 'biner') {
     if (v.direction === 'naik' && !(v.target_value > v.start_value)) ctx.addIssue({ code: 'custom', path: ['target_value'], message: 'Nilai target harus lebih besar dari nilai awal.' })
     if (v.direction === 'turun' && !(v.target_value < v.start_value)) ctx.addIssue({ code: 'custom', path: ['target_value'], message: 'Untuk target menurun, nilai target harus lebih kecil dari nilai awal.' })
@@ -42,17 +45,19 @@ export async function saveGoal(_: ActionState, formData: FormData): Promise<Acti
   if (parsed.error) return parsed.error
   const v = parsed.data
   const manual = v.progress_source === 'manual'
-  const binary = v.metric_type === 'biner'
+  const alokasi = v.progress_source === 'alokasi'
+  const binary = manual && v.metric_type === 'biner'
   const row = {
     title: v.title,
     description: v.description,
     category: v.category,
-    metric_type: manual ? v.metric_type : 'jumlah',
-    unit_label: manual ? v.unit_label : v.progress_source === 'modul' ? 'modul' : 'tugas',
+    // Target alokasi selalu rupiah & meningkat (menabung); modul/tugas dihitung per item.
+    metric_type: alokasi ? 'rupiah' : manual ? v.metric_type : 'jumlah',
+    unit_label: manual ? v.unit_label : alokasi ? '' : v.progress_source === 'modul' ? 'modul' : 'tugas',
     direction: manual && !binary ? v.direction : 'naik',
     progress_source: v.progress_source,
-    start_value: manual && !binary ? v.start_value : 0,
-    target_value: manual ? (binary ? 1 : v.target_value) : 0,
+    start_value: (manual && !binary) || alokasi ? v.start_value : 0,
+    target_value: alokasi ? v.target_value : manual ? (binary ? 1 : v.target_value) : 0,
     priority: v.priority,
     start_date: v.start_date,
     due_date: v.due_date,

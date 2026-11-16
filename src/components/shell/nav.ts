@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckSquare, LayoutDashboard, NotebookPen, Settings, Target, Trophy, type LucideIcon } from 'lucide-react'
+import { BookOpen, CalendarDays, CheckSquare, LayoutDashboard, NotebookPen, Settings, Target, Trophy, Wallet, type LucideIcon } from 'lucide-react'
 
 export interface NavItem { href: string; label: string; short?: string; icon: LucideIcon; desc: string }
 
@@ -10,6 +10,7 @@ export const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { href: '/tugas', label: 'Tugas & Kegiatan', short: 'Tugas', icon: CheckSquare, desc: 'Tugas, subtugas & jadwal kegiatan' },
       { href: '/kalender', label: 'Kalender', icon: CalendarDays, desc: 'Tenggat tugas & jadwal kegiatan per bulan' },
       { href: '/target', label: 'Target Saya', short: 'Target', icon: Target, desc: 'Target, tahapan & kontribusi' },
+      { href: '/keuangan', label: 'Keuangan', icon: Wallet, desc: 'Rekening, pemasukan, pengeluaran & anggaran' },
     ],
   },
   {

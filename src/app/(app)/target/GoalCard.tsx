@@ -6,7 +6,7 @@ import { GOAL_STATUS, PROGRESS_SOURCE } from '@/lib/labels'
 import type { GoalWithProgress } from '@/lib/types'
 
 export function goalNumbers(g: GoalWithProgress) {
-  if (g.progress_source !== 'manual') {
+  if (g.progress_source === 'modul' || g.progress_source === 'tugas') {
     const unit = g.progress_source === 'modul' ? 'modul' : 'tugas'
     return {
       current: `${g.itemDone} ${unit}`, target: `${g.itemTotal} ${unit}`, remaining: `${Math.max(0, g.itemTotal - g.itemDone)} ${unit}`,

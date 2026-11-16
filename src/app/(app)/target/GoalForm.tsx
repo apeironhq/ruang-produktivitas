@@ -44,9 +44,19 @@ export function GoalFormModal({ open, onClose, initial }: { open: boolean; onClo
           <Field label="Nama target" name="title" error={errors.title}>
             <input id="title" name="title" className={`input${errClass(errors, 'title')}`} defaultValue={initial.title} maxLength={160} required placeholder="Mis. Tabungan Rp100.000.000" />
           </Field>
-          <Choices name="progress_source" label="Sumber progres" value={source} onChange={setSource} error={errors.progress_source} columns={3}
+          <Choices name="progress_source" label="Sumber progres" value={source} onChange={setSource} error={errors.progress_source} columns={2}
             options={Object.entries(PROGRESS_SOURCE).map(([k, v]) => ({ value: k, title: v.label, desc: v.hint }))} />
-          {!manual && <input type="hidden" name="metric_type" value="jumlah" />}
+          {!manual && <input type="hidden" name="metric_type" value={source === 'alokasi' ? 'rupiah' : 'jumlah'} />}
+          {source === 'alokasi' && (
+            <div className="form-grid form-grid-2">
+              <Field label="Dana awal yang sudah disisihkan" name="start_value" error={errors.start_value} hint="Isi 0 bila mulai dari nol; dana berikutnya lewat tombol Alokasikan dana.">
+                <input id="start_value" name="start_value" inputMode="decimal" className={`input${errClass(errors, 'start_value')}`} defaultValue={initial.start_value} />
+              </Field>
+              <Field label="Nilai target (Rp)" name="target_value" error={errors.target_value} hint="Boleh pakai titik: 100.000.000">
+                <input id="target_value" name="target_value" inputMode="decimal" className={`input${errClass(errors, 'target_value')}`} defaultValue={initial.target_value} required />
+              </Field>
+            </div>
+          )}
           {manual && (
             <div className="form-grid form-grid-2">
               <Field label="Satuan" name="metric_type" error={errors.metric_type} hint={METRIC[metric]?.hint}>
