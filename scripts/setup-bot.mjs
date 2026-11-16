@@ -83,9 +83,12 @@ await tg('setMyCommands', {
     { command: 'putus', description: 'Putuskan bot dari akun' },
   ],
 })
+// Tombol Menu biru di chat membuka Mini App Rupi (/tg).
+await tg('setChatMenuButton', { menu_button: { type: 'web_app', text: 'Rupi', web_app: { url: `${url}/tg` } } })
 await tg('setMyDescription', { description: 'Asisten Ruang Produktivitas: pengingat tugas, agenda harian, catatan cepat, dan sesi belajar. Tautkan dari Pengaturan di aplikasi.' })
 if (process.env.TELEGRAM_BOT_USERNAME !== me.username) ensureEnv('TELEGRAM_BOT_USERNAME', () => me.username)
 console.log(`✓ Webhook @${me.username} → ${url}/api/telegram/webhook`)
 console.log(`✓ Daftar perintah dipasang`)
+console.log(`✓ Tombol Menu → Mini App ${url}/tg`)
 console.log('\nPastikan di Vercel → Settings → Environment Variables terisi:')
 console.log('  SUPABASE_SECRET_KEY, CRON_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, TELEGRAM_BOT_USERNAME')

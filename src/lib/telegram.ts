@@ -43,7 +43,7 @@ export function sendMessage(chatId: number | string, html: string, buttons?: Inl
   })
 }
 
-export type Keyboard = Array<Array<InlineButton | { text: string; url: string }>>
+export type Keyboard = Array<Array<InlineButton | { text: string; url: string } | { text: string; web_app: { url: string } }>>
 
 /** Kirim gambar (PNG di memori) + keterangan + tombol inline. */
 export function sendPhoto(chatId: number | string, png: Buffer, caption: string, keyboard?: Keyboard) {

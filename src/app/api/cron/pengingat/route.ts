@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { reminderText, sendDashboard } from '@/lib/bot'
+import { miniAppButton, reminderText, sendDashboard } from '@/lib/bot'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { esc, secretMatches, sendMessage } from '@/lib/telegram'
+import { esc, secretMatches, sendMessage, sendMessageKb } from '@/lib/telegram'
 
 export const maxDuration = 60
 
@@ -42,7 +42,8 @@ async function run(req: NextRequest) {
         return
       }
       const tz = isValidTimeZone(t.timezone) ? t.timezone : DEFAULT_TZ
-      const res = await sendMessage(t.chat_id, reminderText(t, tz))
+      const app = miniAppButton()
+      const res = app.length ? await sendMessageKb(t.chat_id, reminderText(t, tz), [app]) : await sendMessage(t.chat_id, reminderText(t, tz))
       if (res.ok) {
         stats.sent++
         logs.push({ user_id: t.user_id, task_id: t.id, kind: 'tugas', status: 'terkirim', detail: '' })

@@ -16,7 +16,15 @@ export interface TgUpdate { update_id: number; message?: TgMessage; callback_que
 interface Ctx { db: SupabaseClient; chatId: number; userId: string; tz: string; name: string }
 
 const OPEN = ['belum', 'dikerjakan', 'tertunda']
-export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')
+/** Alamat publik aplikasi: NEXT_PUBLIC_SITE_URL bila https, kalau tidak alamat produksi dari Vercel. */
+export const siteUrl = () => {
+  const env = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')
+  if (env.startsWith('https://')) return env
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  return prod ? `https://${prod}` : env
+}
+/** Tombol yang membuka Mini App Rupi di dalam Telegram (hanya bila alamat https tersedia). */
+export const miniAppButton = (text = '🐰 Buka Rupi') => (siteUrl().startsWith('https://') ? [{ text, web_app: { url: `${siteUrl()}/tg` } }] : [])
 const appLink = (path: string, label = 'Buka di aplikasi') => (siteUrl() ? `\n\n<a href="${siteUrl()}${path}">${label}</a>` : '')
 
 const HELP = [
@@ -278,7 +286,9 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
 
 /* ---------- Kartu ringkasan & menu utama ---------- */
 export function mainKeyboard(): Keyboard {
+  const app = miniAppButton('🐰 Buka Rupi — tampilan lengkap')
   const kb: Keyboard = [
+    ...(app.length ? [app] : []),
     [{ text: '📝 Catat Aktivitas', callback_data: 'm:catat' }, { text: '📋 Tugas Saya', callback_data: 'm:tugas' }],
     [{ text: '📖 Jurnal Belajar', callback_data: 'm:belajar' }, { text: '🎯 Target Saya', callback_data: 'm:target' }],
     [{ text: '💰 Keuangan', callback_data: 'm:uang' }, { text: '📊 Ringkasan', callback_data: 'm:ringkas' }],
