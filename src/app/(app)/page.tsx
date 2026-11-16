@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AlertCircle, ArrowDownLeft, ArrowUpRight, Award, BookOpen, CalendarClock, CheckCircle2, CheckSquare, ChevronRight, Clock, History, LineChart, NotebookPen, PieChart, Target, Wallet } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, Award, BookOpen, CalendarClock, CheckCircle2, CheckSquare, Clock, History, LineChart, NotebookPen, PieChart, Target, Wallet } from 'lucide-react'
 import { loadAccounts, monthRange, sumFlow } from '@/lib/finance'
 import { DonutChart, EmptyState, KpiCard, ProgressBar, tint } from '@/components/ui/display'
 import { TrendChart } from '@/components/ui/charts'
@@ -13,6 +13,7 @@ import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task, Transaction } from '@/lib/types'
 import { str } from '@/lib/url'
 import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
+import { BadgeStrip } from './BadgeStrip'
 import { NewGoalButton } from './target/GoalForm'
 import { goalNumbers } from './target/GoalCard'
 import { TaskCheck } from './tugas/TaskForm'
@@ -154,27 +155,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
             <div><h2 id="badge-home-title"><Award size={18} />Lencana terbaru</h2><p className="text-caption">{earnedBadges.length} lencana sudah Anda raih</p></div>
             <Link href="/pencapaian" className="link-sm">Lihat semua</Link>
           </div>
-          <div className="badge-strip">
-            {earnedBadges.slice(0, 4).map((b) => (
-              <Link key={b.id} href="/pencapaian" className="badge-chip" title={b.description}>
-                <span className="badge-medal" style={tint(BADGE_COLOR[b.icon])} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
-                <span className="min-w-0">
-                  <span className="badge-name truncate">{b.name}</span>
-                  <span className="item-sub block">Diraih {formatDay(isoToDay(b.earned_at, tz))}</span>
-                </span>
-              </Link>
-            ))}
-            {earnedBadges.length > 4 && (
-              <Link href="/pencapaian" className="badge-chip">
-                <span className="badge-medal" style={tint()} aria-hidden="true"><Award size={20} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="badge-name truncate">+{earnedBadges.length - 4} lencana lainnya</span>
-                  <span className="item-sub block">Lihat semua pencapaian</span>
-                </span>
-                <ChevronRight size={16} className="text-[var(--text-faint)] shrink-0" aria-hidden="true" />
-              </Link>
-            )}
-          </div>
+          <BadgeStrip badges={earnedBadges.map((b) => ({ id: b.id, name: b.name, description: b.description, earned: formatDay(isoToDay(b.earned_at, tz)), icon: BADGE_ICON[b.icon] ?? <Award size={20} />, color: BADGE_COLOR[b.icon] ?? 'var(--brand)' }))} />
         </section>
       )}
 

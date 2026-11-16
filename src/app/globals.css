@@ -839,6 +839,13 @@ a.item-link:hover { background: var(--bg-subtle); }
 .badge-chip:hover { border-color: var(--border-strong); background: var(--bg-subtle); }
 .badge-chip .badge-name { display: block; }
 .badge-chip.more { justify-content: center; gap: 0.25rem; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--brand); }
+@media (max-width: 640px) {
+  /* Ponsel 2 kolom: ikon di atas, teks di bawah agar nama lencana tidak terpotong. */
+  .badge-strip { gap: 0.6rem; padding: 0.25rem 1rem 1rem; }
+  .badge-strip .badge-chip { flex-direction: column; align-items: flex-start; gap: 0.55rem; padding: 0.8rem; }
+  .badge-strip .badge-chip .truncate { overflow: visible; white-space: normal; }
+  .badge-strip .badge-chip > svg:last-child { display: none; }
+}
 
 /* Pemilih tanggal & jam (components/ui/DateTimePicker.tsx): pilihan cepat, kalender, jam, tombol Selesai */
 .dtp { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
