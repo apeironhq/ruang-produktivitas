@@ -533,7 +533,8 @@
 .kpi-label { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-body); }
 .kpi-body { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; flex: 1; }
 .kpi-body > .min-w-0 { align-self: flex-start; }
-.kpi-value { display: block; font-size: 1.875rem; line-height: 1.15; font-weight: var(--fw-medium); color: var(--text-heading); letter-spacing: var(--tracking-tight); }
+/* Ukuran angka mengikuti lebar kartu & panjang angkanya (mis. Rp151.165.500 di kartu sempit ponsel) agar tidak meluber. */
+.kpi-value { display: block; white-space: nowrap; font-size: min(1.875rem, calc(100cqi / (var(--chars, 6) * 0.56))); line-height: 1.15; font-weight: var(--fw-medium); color: var(--text-heading); letter-spacing: var(--tracking-tight); }
 .kpi-unit { font-size: var(--fs-label); font-weight: var(--fw-regular); color: var(--text-muted); margin-left: 0.25rem; letter-spacing: 0; }
 .kpi-delta { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.35rem; font-size: var(--fs-caption); color: var(--text-body); }
 .kpi-delta.up { color: var(--ok); }
@@ -549,7 +550,7 @@
   .kpi-pill { order: 2; margin-left: auto; }
   .kpi-label { order: 3; width: 100%; }
   .kpi-body { flex-direction: column; align-items: stretch; gap: 0.5rem; }
-  .kpi-value { font-size: 1.5rem; }
+  .kpi-value { font-size: min(1.5rem, calc(100cqi / (var(--chars, 6) * 0.56))); }
   .kpi-spark { width: 100%; }
   .kpi .long { display: none; }
   .kpi .short { display: inline; }
@@ -562,6 +563,8 @@
 .donut-ring { position: relative; flex-shrink: 0; }
 .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.2; }
 .donut-center strong { font-size: 1.5rem; font-weight: var(--fw-medium); color: var(--text-heading); }
+.donut-center strong.long { font-size: 1.125rem; }
+.donut-center { padding: 0 22px; }
 .donut-center span { font-size: var(--fs-caption); color: var(--text-muted); }
 .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; min-width: 180px; flex: 1; }
 .legend li { display: grid; grid-template-columns: 10px 1fr auto 3rem; align-items: center; gap: 0.6rem; font-size: var(--fs-label); }

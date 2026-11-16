@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { formatNumber } from '@/lib/format'
+import { formatByUnit } from '@/lib/format'
 
 /** Sparkline: garis 2px + area 10%, titik akhir r=3 dengan cincin permukaan. Dekoratif. Lebar mengikuti wadah. */
 export function Sparkline({ values, color, height = 40 }: { values: number[]; color: string; height?: number }) {
@@ -46,17 +46,22 @@ export function TrendChart({ points, color = 'var(--p-blue)', label, unit = '', 
     ro.observe(wrap.current)
     return () => ro.disconnect()
   }, [])
-  const m = { top: 12, right: 12, bottom: 28, left: 36 }
-  const innerW = width - m.left - m.right
-  const innerH = height - m.top - m.bottom
   const niceMax = useMemo(() => {
     const max = Math.max(...points.map((p) => p.value), 0)
     if (max <= 4) return 4
+    // Menit ≥ 2 jam: kelipatan 4 jam agar garis bantu jatuh di jam bulat (0, 2 j, 4 j, …), bukan "6 j 15 m".
+    if (unit === 'menit' && max > 120) return Math.ceil(max / 240) * 240
     const mag = 10 ** Math.floor(Math.log10(max))
     const n = max / mag
     return (n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag
-  }, [points])
+  }, [points, unit])
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => Math.round(t * niceMax)).filter((v, i, a) => a.indexOf(v) === i)
+  // Label sumbu ringkas ("Rp5 jt", "1 j 30 m"); ruang kiri mengikuti label terpanjang agar tidak menempel ke tepi kartu.
+  const tickLabel = (v: number) => formatByUnit(v, unit, true)
+  const longest = Math.max(...ticks.map((t) => tickLabel(t).length))
+  const m = { top: 12, right: 20, bottom: 28, left: Math.max(36, Math.round(longest * 6.4) + 16) }
+  const innerW = width - m.left - m.right
+  const innerH = height - m.top - m.bottom
   const x = (i: number) => m.left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
   const y = (v: number) => m.top + innerH - (v / niceMax) * innerH
   const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ')
@@ -64,6 +69,9 @@ export function TrendChart({ points, color = 'var(--p-blue)', label, unit = '', 
   const fmt = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' })
   const dateLabel = (d: string) => fmt.format(new Date(`${d}T00:00:00Z`))
   const labelEvery = Math.max(1, Math.ceil(points.length / Math.max(2, Math.floor(innerW / 64))))
+  // Tanggal terakhir selalu tampil; label berkala yang terlalu dekat dengannya disembunyikan agar tidak bertumpuk.
+  const last = points.length - 1
+  const showDate = (i: number) => i === last || (i % labelEvery === 0 && last - i >= Math.max(1, labelEvery * 0.75))
 
   function onMove(e: React.MouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -90,11 +98,11 @@ export function TrendChart({ points, color = 'var(--p-blue)', label, unit = '', 
         {ticks.map((t) => (
           <g key={t}>
             <line x1={m.left} x2={width - m.right} y1={y(t)} y2={y(t)} className="grid" />
-            <text x={m.left - 8} y={y(t)} className="axis" textAnchor="end" dominantBaseline="middle">{t}</text>
+            <text x={m.left - 8} y={y(t)} className="axis" textAnchor="end" dominantBaseline="middle">{tickLabel(t)}</text>
           </g>
         ))}
-        {points.map((p, i) => (i % labelEvery === 0 || i === points.length - 1) ? (
-          <text key={p.date} x={x(i)} y={height - 8} className="axis" textAnchor="middle">{dateLabel(p.date)}</text>
+        {points.map((p, i) => showDate(i) ? (
+          <text key={p.date} x={x(i)} y={height - 8} className="axis" textAnchor={i === points.length - 1 && points.length > 1 ? 'end' : i === 0 ? 'start' : 'middle'}>{dateLabel(p.date)}</text>
         ) : null)}
         <path d={area} fill={color} fillOpacity={0.1} />
         <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
@@ -110,7 +118,7 @@ export function TrendChart({ points, color = 'var(--p-blue)', label, unit = '', 
       </svg>
       {tip && (
         <div className="tip" style={{ left: tip.left, top: Math.max(tip.top - 12, 0) }} role="status">
-          <strong>{formatNumber(tip.p.value)}</strong> {unit || label.toLowerCase()}
+          <strong>{formatByUnit(tip.p.value, unit)}</strong>{unit === 'rupiah' || unit === 'menit' ? null : <> {unit || label.toLowerCase()}</>}
           <span className="tip-date">{dateLabel(tip.p.date)}{tip.p.extra ? ` · ${tip.p.extra}` : ''}</span>
         </div>
       )}

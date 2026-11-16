@@ -103,7 +103,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
             <section className="card panel" aria-labelledby="cat-title">
               <div className="panel-head"><div><h2 id="cat-title"><PieChart size={18} />Pengeluaran per kategori</h2><p className="text-caption">Lima kategori terbesar</p></div></div>
               <div className="panel-body center">
-                {segments.length ? <DonutChart segments={segments} centerLabel="Pengeluaran" /> : <EmptyState title="Belum ada pengeluaran" description="Pengeluaran bulan ini akan dikelompokkan per kategori." className="fill" />}
+                {segments.length ? <DonutChart segments={segments} centerLabel="Pengeluaran" unit="rupiah" /> : <EmptyState title="Belum ada pengeluaran" description="Pengeluaran bulan ini akan dikelompokkan per kategori." className="fill" />}
               </div>
             </section>
           </div>

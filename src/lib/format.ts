@@ -88,3 +88,21 @@ export function progressPercent(current: number, start: number, target: number):
   if (target === start) return 0
   return Math.min(100, Math.max(0, Math.round(((current - start) / (target - start)) * 1000) / 10))
 }
+
+/** Angka ringkas untuk sumbu grafik & ruang sempit: 5.000.000 → "5 jt", 1.250.000 → "1,25 jt", 750.000 → "750 rb". */
+export function formatCompact(value: number): string {
+  const n = Math.abs(value)
+  const sign = value < 0 ? '−' : ''
+  const short = (v: number, suf: string) => `${sign}${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(v)} ${suf}`
+  if (n >= 1e9) return short(n / 1e9, 'M')
+  if (n >= 1e6) return short(n / 1e6, 'jt')
+  if (n >= 1e4) return short(n / 1e3, 'rb')
+  return sign + formatNumber(n)
+}
+
+/** Nilai sesuai satuannya: rupiah → "Rp4.124.000", menit → "1 j 30 m", lainnya → angka biasa. */
+export function formatByUnit(value: number, unit: string, compact = false): string {
+  if (unit === 'rupiah') return compact ? `Rp${formatCompact(value)}` : formatRupiah(value)
+  if (unit === 'menit') return formatDuration(value)
+  return compact ? formatCompact(value) : formatNumber(value)
+}

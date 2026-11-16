@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
-import { formatDuration, formatNumber } from '@/lib/format'
+import { formatByUnit, formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
 /** Ikon bernada lembut: warna modul (dari palet) di atas latar 14% warna yang sama. */
@@ -56,7 +56,7 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
       </div>
       <div className="kpi-body">
         <div className="min-w-0">
-          <span className="kpi-value">{display ?? (value === null ? '—' : formatNumber(value))}{unit && <span className="kpi-unit">{unit}</span>}</span>
+          <span className="kpi-value" style={{ '--chars': (display ?? (value === null ? '—' : formatNumber(value))).length + (unit ? unit.length + 1 : 0) } as React.CSSProperties}>{display ?? (value === null ? '—' : formatNumber(value))}{unit && <span className="kpi-unit">{unit}</span>}</span>
           {delta ? <p className="kpi-delta muted"><span className="long">Dibanding {compare[0]}</span><span className="short">vs {compare[1]}</span></p>
             : caption ? <p className="kpi-delta muted">{caption}</p> : null}
         </div>
@@ -70,7 +70,7 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
 }
 
 /** Donut dengan celah 2px antar-segmen, total di tengah, legenda selalu ada (warna + label + angka + persen). */
-export function DonutChart({ segments, centerLabel = 'Total', size = 148 }: { segments: Array<{ label: string; value: number; color: string }>; centerLabel?: string; size?: number }) {
+export function DonutChart({ segments, centerLabel = 'Total', size = 148, unit = '' }: { segments: Array<{ label: string; value: number; color: string }>; centerLabel?: string; size?: number; unit?: string }) {
   const stroke = 18
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
@@ -95,14 +95,14 @@ const lens = segments.map((s) => (total ? (s.value / total) * c : 0))
             ))}
           </g>
         </svg>
-        <div className="donut-center"><strong>{formatNumber(total)}</strong><span>{centerLabel}</span></div>
+        <div className="donut-center"><strong title={formatByUnit(total, unit)} className={formatByUnit(total, unit, true).length > 6 ? 'long' : undefined}>{formatByUnit(total, unit, true)}</strong><span>{centerLabel}</span></div>
       </div>
       <ul className="legend">
         {segments.map((s) => (
           <li key={s.label}>
             <span className="swatch" style={{ background: s.color }} aria-hidden="true" />
             <span className="name">{s.label}</span>
-            <span className="val">{formatNumber(s.value)}</span>
+            <span className="val">{formatByUnit(s.value, unit)}</span>
             <span className="pct">{pct(s.value)}%</span>
           </li>
         ))}
