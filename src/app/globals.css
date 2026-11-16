@@ -618,6 +618,18 @@
   /* kartu ringkas yang tersisa sendirian (ganjil) dibuat selebar layar agar tidak ada ruang kosong */
   .kpis > .kpi.compact:nth-last-child(1 of .compact):nth-child(odd of .compact) { grid-column: 1 / -1; }
   .kpis-3 > :last-child { grid-column: auto; }
+  /* Ringkasan Beranda: 2x2 ringkas, elemen bawah seragam (grafik tipis / progress bar) */
+  .kpis.kpis-summary > .kpi { grid-column: auto !important; }
+  /* grafik tipis selebar kotak di bawah, sejajar dengan progress bar kartu Target */
+  .kpis-summary .kpi-body { flex-direction: column; align-items: stretch; gap: 0.55rem; }
+  .kpis-summary .kpi-spark { width: 100%; margin-top: auto; }
+  .kpis-summary .kpi-top { flex-wrap: wrap; row-gap: 0.6rem; }
+  .kpis-summary .kpi-pill { order: 2; margin-left: auto; }
+  .kpis-summary .kpi-label { order: 3; width: 100%; font-size: var(--fs-caption); }
+  .kpis-summary .kpi-icon { width: 34px; height: 34px; }
+  .kpis-summary .kpi-icon svg { width: 17px; height: 17px; }
+  .kpis-summary .kpi-delta .long { display: none; }
+  .kpis-summary .kpi-delta .short { display: inline; }
   /* Kepala panel/kartu: judul diberi ruang minimal; pilihan (mis. rentang waktu) turun ke bawah bila sempit */
   .panel-head, .card-header { flex-wrap: wrap; row-gap: 0.6rem; }
   .panel-head > div:first-child, .card-header > div:first-child { flex: 1 1 190px; }

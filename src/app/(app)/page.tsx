@@ -139,7 +139,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
         </div>
       </div>
 
-      <div className="kpis kpis-4">
+      <div className="kpis kpis-4 kpis-summary">
         <KpiCard label="Tugas selesai" value={kTasks.cur} icon={<CheckSquare size={20} strokeWidth={1.9} />} color={C.blue} href="/tugas?tab=selesai"
           series={kTasks.values} thisWeek={kTasks.cur} lastWeek={kTasks.prev} />
         <KpiCard label="Waktu belajar" duration value={kLearn.cur} display={formatDuration(kLearn.cur)} icon={<Clock size={20} strokeWidth={1.9} />} color={C.peach} href="/belajar"
