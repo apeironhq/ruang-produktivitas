@@ -97,7 +97,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
               <div><dt>Dibuat</dt><dd>{formatDateTime(t.created_at, tz)}</dd></div>
               <div><dt>Target</dt><dd>{goal ? <Link className="link" href={`/target/${goal.id}`}>{goal.title}</Link> : '—'}</dd></div>
               <div><dt>Bidang belajar</dt><dd>{subject ? <Link className="link" href={`/belajar/${subject.id}`}>{subject.title}</Link> : '—'}</dd></div>
-              {project && <div><dt>Proyek</dt><dd>{project.title}</dd></div>}
+              {project && <div><dt>Proyek</dt><dd><Link className="link" href={`/proyek/${project.id}`}>{project.title}</Link></dd></div>}
             </dl>
           </div>
         </section>

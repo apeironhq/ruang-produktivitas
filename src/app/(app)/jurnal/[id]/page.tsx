@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, ArchiveRestore, BookOpen, Info, LineChart, NotebookPen, Target, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, BookOpen, FolderKanban, Info, LineChart, NotebookPen, Target, Trash2 } from 'lucide-react'
 import { EditJournalButton } from '../JournalForm'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { BackLink, DetailTitle, SectionHead } from '@/components/ui/display'
@@ -19,15 +19,17 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
   const user = (await getCurrentUser())!
   const supabase = await createClient()
   // Satu putaran paralel: catatan + judul target/bidang (dicocokkan di memori).
-  const [{ data }, goals, subjects] = await Promise.all([
+  const [{ data }, goals, subjects, projects] = await Promise.all([
     supabase.from('journal_entries').select('*').eq('id', id).maybeSingle(),
     supabase.from('goals').select('id, title').limit(1000),
     supabase.from('learning_subjects').select('id, title').limit(1000),
+    supabase.from('projects').select('id, title').limit(1000),
   ])
   if (!data) notFound()
   const e = data as JournalEntry
   const goal = { data: (goals.data ?? []).find((g) => g.id === e.goal_id) ?? null }
   const subject = { data: (subjects.data ?? []).find((s) => s.id === e.subject_id) ?? null }
+  const project = (projects.data ?? []).find((p) => p.id === e.project_id) ?? null
   const k = JOURNAL_KIND[e.kind]!
   const t = e.kind === 'trading' ? e.trading : null
   const num = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatNumber(v))
@@ -41,8 +43,8 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
             meta={[formatDayLong(e.entry_date), e.mood ? `Suasana ${MOOD[e.mood]!.toLowerCase()}` : null, e.is_archived ? 'Diarsipkan' : null, `Diperbarui ${formatDateTime(e.updated_at, user.timezone)}`]} />
         </div>
         <div className="control-row">
-          <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []}
-            initial={{ id: e.id, kind: e.kind, title: e.title, content: e.content, entry_date: e.entry_date, tags: e.tags.join(', '), mood: e.mood, goal_id: e.goal_id, subject_id: e.subject_id, trading: e.trading }} />
+          <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []} projects={projects.data ?? []}
+            initial={{ id: e.id, kind: e.kind, title: e.title, content: e.content, entry_date: e.entry_date, tags: e.tags.join(', '), mood: e.mood, goal_id: e.goal_id, subject_id: e.subject_id, project_id: e.project_id, trading: e.trading }} />
           <ActionButton action={setArchived.bind(null, e.id, !e.is_archived)}>{e.is_archived ? <><ArchiveRestore size={16} />Kembalikan</> : <><Archive size={16} />Arsipkan</>}</ActionButton>
           <ConfirmButton action={deleteEntry.bind(null, e.id)} redirect="/jurnal" title="Hapus catatan?" message={`"${e.title || 'Tanpa judul'}" akan dihapus permanen. Pilih Arsipkan jika hanya ingin menyembunyikannya.`}
             className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus catatan"><Trash2 size={16} /></ConfirmButton>
@@ -84,7 +86,8 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
             </div>
             <div>
               <p className="text-overline mb-2">Terkait</p>
-              {!goal.data && !subject.data && <p className="text-caption">Tidak ada.</p>}
+              {!goal.data && !subject.data && !project && <p className="text-caption">Tidak ada.</p>}
+              {project && <Link href={`/proyek/${project.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><FolderKanban size={15} aria-hidden="true" />{project.title}</Link>}
               {goal.data && <Link href={`/target/${goal.data.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><Target size={15} aria-hidden="true" />{goal.data.title}</Link>}
               {subject.data && <Link href={`/belajar/${subject.data.id}`} className="flex items-center gap-2 py-1 text-label hover:text-[var(--brand)]"><BookOpen size={15} aria-hidden="true" />{subject.data.title}</Link>}
             </div>

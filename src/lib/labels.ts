@@ -79,6 +79,14 @@ export const JOURNAL_KIND: Record<string, { label: string; color: string; desc: 
   khusus: { label: 'Khusus', color: '#475467', desc: 'Jenis buatan sendiri (pakai tag)' },
 }
 
+export const PROJECT_STATUS: Record<string, { label: string; tone: Tone; desc: string }> = {
+  rencana: { label: 'Rencana', tone: 'tone-neutral', desc: 'Belum dimulai' },
+  aktif: { label: 'Berjalan', tone: 'tone-info', desc: 'Sedang dikerjakan' },
+  ditunda: { label: 'Ditunda', tone: 'tone-warn', desc: 'Dihentikan sementara' },
+  selesai: { label: 'Selesai', tone: 'tone-brand', desc: 'Sudah rampung' },
+  arsip: { label: 'Diarsipkan', tone: 'tone-neutral', desc: 'Disimpan tanpa dipantau' },
+}
+
 export const ACCOUNT_KIND: Record<string, string> = {
   tunai: 'Tunai', bank: 'Bank', dompet_digital: 'Dompet digital', lainnya: 'Lainnya',
 }

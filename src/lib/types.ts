@@ -150,12 +150,27 @@ export interface JournalEntry {
   is_archived: boolean
   goal_id: string | null
   subject_id: string | null
+  project_id: string | null
   task_id: string | null
   created_at: string
   updated_at: string
 }
 
 export interface Option { id: string; title: string }
+
+// ---------- Proyek ----------
+export interface Project {
+  id: string
+  title: string
+  description: string
+  status: 'rencana' | 'aktif' | 'selesai' | 'ditunda' | 'arsip'
+  goal_id: string | null
+  start_date: string | null
+  due_date: string | null
+  created_at: string
+  updated_at: string
+}
+export interface ProjectMilestone { id: string; project_id: string; title: string; due_date: string | null; completed_at: string | null; sort_order: number }
 
 // ---------- Keuangan ----------
 export interface Account {

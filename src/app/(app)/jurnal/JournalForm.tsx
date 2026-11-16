@@ -17,16 +17,17 @@ export interface JournalValues {
   mood: number | null
   goal_id: string | null
   subject_id: string | null
+  project_id?: string | null
   trading: JournalEntry['trading']
 }
 
 export const emptyJournal = (today: string, preset: Partial<JournalValues> = {}): JournalValues => ({
-  kind: 'catatan', title: '', content: '', entry_date: today, tags: '', mood: null, goal_id: null, subject_id: null, trading: null, ...preset,
+  kind: 'catatan', title: '', content: '', entry_date: today, tags: '', mood: null, goal_id: null, subject_id: null, project_id: null, trading: null, ...preset,
 })
 
 /** Popup tulis/ubah catatan — satu formulir untuk semua jenis (jurnal trading menampilkan kolom tambahan). */
-export function JournalFormModal({ open, onClose, initial, goals, subjects }: {
-  open: boolean; onClose: () => void; initial: JournalValues; goals: Option[]; subjects: Option[]
+export function JournalFormModal({ open, onClose, initial, goals, subjects, projects = [] }: {
+  open: boolean; onClose: () => void; initial: JournalValues; goals: Option[]; subjects: Option[]; projects?: Option[]
 }) {
   const [kind, setKind] = useState(initial.kind)
   const editing = !!initial.id
@@ -99,6 +100,14 @@ export function JournalFormModal({ open, onClose, initial, goals, subjects }: {
                 {subjects.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
               </select>
             </Field>
+            {projects.length > 0 ? (
+              <Field label="Proyek" name="project_id" className="col-span-full">
+                <select id="project_id" name="project_id" className="select" defaultValue={initial.project_id ?? ''}>
+                  <option value="">— Tidak ada —</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </Field>
+            ) : initial.project_id ? <input type="hidden" name="project_id" value={initial.project_id} /> : null}
           </div>
         </div>
       )}
@@ -106,25 +115,25 @@ export function JournalFormModal({ open, onClose, initial, goals, subjects }: {
   )
 }
 
-export function NewJournalButton({ today, goals, subjects, preset, label = 'Catatan baru', className = 'btn btn-primary', autoOpen = false }: {
-  today: string; goals: Option[]; subjects: Option[]; preset?: Partial<JournalValues>; label?: string; className?: string; autoOpen?: boolean
+export function NewJournalButton({ today, goals, subjects, projects, preset, label = 'Catatan baru', className = 'btn btn-primary', autoOpen = false }: {
+  today: string; goals: Option[]; subjects: Option[]; projects?: Option[]; preset?: Partial<JournalValues>; label?: string; className?: string; autoOpen?: boolean
 }) {
   const [open, setOpen] = useState(autoOpen)
   const [key, setKey] = useState(0)
   return (
     <>
       <button type="button" className={className} onClick={() => { setKey((k) => k + 1); setOpen(true) }}><Plus size={16} />{label}</button>
-      {open && <JournalFormModal key={key} open={open} onClose={() => setOpen(false)} initial={emptyJournal(today, preset)} goals={goals} subjects={subjects} />}
+      {open && <JournalFormModal key={key} open={open} onClose={() => setOpen(false)} initial={emptyJournal(today, preset)} goals={goals} subjects={subjects} projects={projects} />}
     </>
   )
 }
 
-export function EditJournalButton({ initial, goals, subjects }: { initial: JournalValues; goals: Option[]; subjects: Option[] }) {
+export function EditJournalButton({ initial, goals, subjects, projects }: { initial: JournalValues; goals: Option[]; subjects: Option[]; projects?: Option[] }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
-      {open && <JournalFormModal open={open} onClose={() => setOpen(false)} initial={initial} goals={goals} subjects={subjects} />}
+      {open && <JournalFormModal open={open} onClose={() => setOpen(false)} initial={initial} goals={goals} subjects={subjects} projects={projects} />}
     </>
   )
 }

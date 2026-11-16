@@ -60,7 +60,7 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
   return (
     <div className="page">
       <PageHead title="Catatan & Jurnal" description="Catatan bebas, jurnal harian, belajar, trading, dan ide — dalam satu tempat."
-        actions={<NewJournalButton today={today} goals={options.goals} subjects={options.subjects} preset={kind ? { kind: kind as JournalEntry['kind'] } : undefined} />} />
+        actions={<NewJournalButton today={today} goals={options.goals} subjects={options.subjects} projects={options.projects} preset={kind ? { kind: kind as JournalEntry['kind'] } : undefined} />} />
 
       <nav className="tabs" aria-label="Jenis catatan">
         <Link href={hrefWith('/jurnal', sp, { jenis: null })} className={`tab${!kind ? ' active' : ''}`} aria-current={!kind ? 'page' : undefined}>Semua</Link>
@@ -83,7 +83,7 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
         {entries.length === 0 ? (
           <EmptyState icon={<NotebookPen size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : archived ? 'Arsip kosong' : 'Belum ada catatan'}
             description={filtered ? 'Coba kata kunci atau saringan lain.' : 'Tulis catatan atau jurnal pertama Anda.'}
-            action={!filtered && !archived ? <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} /> : undefined} />
+            action={!filtered && !archived ? <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} projects={options.projects} /> : undefined} />
         ) : (
           <>
             <ul className="items">

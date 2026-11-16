@@ -26,6 +26,7 @@ const entrySchema = z.object({
   mood: z.preprocess((v) => (v === '' || v == null ? null : Number(v)), z.number().int().min(1).max(5).nullable()),
   goal_id: zOptUuid,
   subject_id: zOptUuid,
+  project_id: zOptUuid,
   task_id: zOptUuid,
   t_instrument: zOptText(60),
   t_strategy: zOptText(120),
@@ -51,6 +52,7 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
     mood: v.kind === 'harian' ? v.mood : null,
     goal_id: v.goal_id,
     subject_id: v.subject_id,
+    project_id: v.project_id,
     task_id: v.task_id,
     // Jurnal trading adalah catatan analisis — tidak pernah dicatat sebagai transaksi keuangan.
     trading: v.kind === 'trading' ? {

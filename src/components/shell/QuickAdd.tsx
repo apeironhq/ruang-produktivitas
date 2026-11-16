@@ -1,6 +1,7 @@
 'use client'
 
-import { BookOpen, CalendarClock, CheckSquare, Clock, NotebookPen, Plus, Target, Wallet } from 'lucide-react'
+import { BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen, Plus, Target, Wallet } from 'lucide-react'
+import { ProjectFormModal, emptyProject } from '@/app/(app)/proyek/ProjectForms'
 import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keuangan/FinanceForms'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { loadQuickData, type QuickData } from '@/app/(app)/quick-data'
@@ -10,7 +11,7 @@ import { GoalFormModal, blankGoal } from '@/app/(app)/target/GoalForm'
 import { TaskFormModal, emptyTask } from '@/app/(app)/tugas/TaskForm'
 import { useToast } from '@/components/ui/Toast'
 
-export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening'
+export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening' | 'proyek'
 /** Tautan yang sudah terisi saat popup dibuka dari halaman tertentu (mis. detail target). */
 type Preset = { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }
 
@@ -26,6 +27,7 @@ export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; 
   { kind: 'catatan', label: 'Catatan', desc: 'Catatan & jurnal', icon: <NotebookPen size={17} />, color: 'var(--c-rose)' },
   { kind: 'sesi', label: 'Sesi belajar', desc: 'Durasi, ringkasan & posisi', icon: <Clock size={17} />, color: 'var(--c-peach)' },
   { kind: 'target', label: 'Target', desc: 'Target & tahapannya', icon: <Target size={17} />, color: 'var(--c-blue)' },
+  { kind: 'proyek', label: 'Proyek', desc: 'Proyek & tahapannya', icon: <FolderKanban size={17} />, color: 'var(--c-peach)' },
   { kind: 'bidang', label: 'Bidang belajar', desc: 'Bidang & daftar modul', icon: <BookOpen size={17} />, color: 'var(--c-lilac)' },
 ]
 
@@ -83,9 +85,10 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
         <TaskFormModal key={a.key} open onClose={close} options={a.data.options} initial={emptyTask(a.kind, a.preset)} />
       )}
       {a?.kind === 'catatan' && (
-        <JournalFormModal key={a.key} open onClose={close} goals={a.data.options.goals} subjects={a.data.options.subjects} initial={emptyJournal(a.data.today, a.preset)} />
+        <JournalFormModal key={a.key} open onClose={close} goals={a.data.options.goals} subjects={a.data.options.subjects} projects={a.data.options.projects} initial={emptyJournal(a.data.today, a.preset)} />
       )}
       {a?.kind === 'target' && <GoalFormModal key={a.key} open onClose={close} initial={blankGoal(a.data.today)} />}
+      {a?.kind === 'proyek' && <ProjectFormModal key={a.key} open onClose={close} initial={emptyProject(a.data.today)} goals={a.data.options.goals} />}
       {a?.kind === 'sesi' && (
         <SessionFormModal key={a.key} open onClose={close} subjects={a.data.bundles} today={a.data.today} defaultSubjectId={a.preset.subject_id ?? undefined} />
       )}
