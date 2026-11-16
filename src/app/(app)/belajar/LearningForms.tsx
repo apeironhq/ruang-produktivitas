@@ -1,5 +1,6 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, ListChecks, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
@@ -115,7 +116,7 @@ export function SessionFormModal({ open, onClose, subjects, defaultSubjectId, to
                   </select>
                 </Field>
                 <Field label="Tanggal" name="session_date" error={errors.session_date}>
-                  <input id="session_date" name="session_date" type="date" className="input" defaultValue={today} required />
+                  <DateTimePicker id="session_date" name="session_date" mode="date" quick="past" defaultValue={today} invalid={!!errors.session_date} required />
                 </Field>
                 <Field label="Sumber" name="source_id" hint={source?.position ? `Posisi terakhir: ${source.position}` : 'Opsional'}>
                   <select id="source_id" name="source_id" className="select" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>

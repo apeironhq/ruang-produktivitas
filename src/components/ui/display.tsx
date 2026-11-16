@@ -4,7 +4,10 @@ import { formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
 
 /** Ikon bernada lembut: warna modul (dari palet) di atas latar 14% warna yang sama. */
-export const tint = (color = 'var(--brand)'): React.CSSProperties => ({ color: `color-mix(in srgb, ${color} 82%, #000)`, background: `color-mix(in srgb, ${color} 14%, transparent)` })
+// Navy 14% terlihat abu-abu kusam → latarnya memakai langit (#8ECAE6) dari palet yang sama.
+export const tint = (color = 'var(--brand)'): React.CSSProperties => /lilac|navy/.test(color)
+  ? { color: 'var(--p-navy)', background: 'color-mix(in srgb, var(--p-sky) 32%, transparent)' }
+  : { color: `color-mix(in srgb, ${color} 82%, #000)`, background: `color-mix(in srgb, ${color} 14%, transparent)` }
 /** Ikon solid untuk kartu KPI: lingkaran warna palet, simbol putih (navy di atas kuning agar terbaca). */
 const LIGHT = /rose|amber|sky/
 export const solid = (color = 'var(--brand)'): React.CSSProperties => ({ background: color, color: LIGHT.test(color) ? 'var(--p-navy)' : '#fff' })

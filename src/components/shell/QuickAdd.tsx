@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen, Plus, Repeat, Target, Wallet } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { HabitFormModal, emptyHabit } from '@/app/(app)/kebiasaan/HabitForms'
 import { ProjectFormModal, emptyProject } from '@/app/(app)/proyek/ProjectForms'
 import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keuangan/FinanceForms'
@@ -22,18 +22,6 @@ interface QuickApi { open: (kind: QuickKind, preset?: Preset) => void; edit: (t:
 const QuickContext = createContext<QuickApi>({ open: () => {}, edit: () => {}, prefetch: () => {}, pending: null })
 const CACHE_MS = 60_000
 export const useQuickAdd = () => useContext(QuickContext)
-
-export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; icon: React.ReactNode; color: string }> = [
-  { kind: 'tugas', label: 'Tugas', desc: 'Tenggat, prioritas & subtugas', icon: <CheckSquare size={17} />, color: 'var(--c-blue)' },
-  { kind: 'kegiatan', label: 'Kegiatan', desc: 'Jadwal jam mulai–selesai', icon: <CalendarClock size={17} />, color: 'var(--c-lilac)' },
-  { kind: 'transaksi', label: 'Transaksi', desc: 'Pemasukan, pengeluaran, transfer', icon: <Wallet size={17} />, color: 'var(--c-peach)' },
-  { kind: 'catatan', label: 'Catatan', desc: 'Catatan & jurnal', icon: <NotebookPen size={17} />, color: 'var(--c-rose)' },
-  { kind: 'sesi', label: 'Sesi belajar', desc: 'Durasi, ringkasan & posisi', icon: <Clock size={17} />, color: 'var(--c-peach)' },
-  { kind: 'target', label: 'Target', desc: 'Target & tahapannya', icon: <Target size={17} />, color: 'var(--c-blue)' },
-  { kind: 'proyek', label: 'Proyek', desc: 'Proyek & tahapannya', icon: <FolderKanban size={17} />, color: 'var(--c-peach)' },
-  { kind: 'kebiasaan', label: 'Kebiasaan', desc: 'Kebiasaan harian/mingguan', icon: <Repeat size={17} />, color: 'var(--c-blue)' },
-  { kind: 'bidang', label: 'Bidang belajar', desc: 'Bidang & daftar modul', icon: <BookOpen size={17} />, color: 'var(--c-lilac)' },
-]
 
 /** Satu tempat untuk semua popup "tambah": dipakai menu topbar dan tombol cepat di halaman. */
 export function QuickAddProvider({ children }: { children: React.ReactNode }) {

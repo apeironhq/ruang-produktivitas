@@ -1,5 +1,6 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Check, FolderKanban, Milestone, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
@@ -36,10 +37,10 @@ export function ProjectFormModal({ open, onClose, initial, goals }: { open: bool
             options={Object.entries(PROJECT_STATUS).filter(([k]) => editing || k === 'rencana' || k === 'aktif').map(([k, v]) => ({ value: k, title: v.label, desc: v.desc }))} />
           <div className="form-grid form-grid-2">
             <Field label="Tanggal mulai" name="start_date" error={errors.start_date} hint="Opsional">
-              <input id="start_date" name="start_date" type="date" className="input" defaultValue={initial.start_date} />
+              <DateTimePicker id="start_date" name="start_date" mode="date" defaultValue={initial.start_date} invalid={!!errors.start_date} />
             </Field>
             <Field label="Tenggat" name="due_date" error={errors.due_date} hint="Opsional">
-              <input id="due_date" name="due_date" type="date" className={`input${errClass(errors, 'due_date')}`} defaultValue={initial.due_date} />
+              <DateTimePicker id="due_date" name="due_date" mode="date" defaultValue={initial.due_date} invalid={!!errors.due_date} />
             </Field>
             <Field label="Target terkait" name="goal_id" className="col-span-full">
               <select id="goal_id" name="goal_id" className="select" defaultValue={initial.goal_id ?? ''}>
@@ -97,7 +98,7 @@ export function AddProjectMilestonesButton({ projectId }: { projectId: string })
                 <textarea id="titles" name="titles" rows={4} className={`textarea${errClass(errors, 'titles')}`} required placeholder={'Uji coba pengguna\nRilis publik'} />
               </Field>
               <Field label="Tenggat" name="due_date" hint="Opsional, hanya dipakai bila menambah satu tahapan">
-                <input id="due_date" name="due_date" type="date" className="input" />
+                <DateTimePicker id="due_date" name="due_date" mode="date" />
               </Field>
             </div>
           )}

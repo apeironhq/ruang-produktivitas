@@ -1,5 +1,6 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { ArrowLeftRight, Landmark, Pencil, Rabbit, Plus, Tags, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
@@ -65,7 +66,7 @@ export function TransactionFormModal({ open, onClose, initial, accounts, categor
               <MoneyInput name="amount" defaultValue={initial.amount} error={errors.amount} />
             </Field>
             <Field label="Tanggal" name="occurred_on" error={errors.occurred_on}>
-              <input id="occurred_on" name="occurred_on" type="date" className={`input${errClass(errors, 'occurred_on')}`} defaultValue={initial.occurred_on} required />
+              <DateTimePicker id="occurred_on" name="occurred_on" mode="date" quick="past" defaultValue={initial.occurred_on} invalid={!!errors.occurred_on} required />
             </Field>
             <Field label={kind === 'transfer' ? 'Dari rekening' : 'Rekening'} name="account_id" error={errors.account_id}>
               <select id="account_id" name="account_id" className="select" defaultValue={initial.account_id}>
@@ -256,7 +257,7 @@ export function AllocationButton({ goalId, accounts, today, held }: { goalId: st
                   <MoneyInput name="amount" error={errors.amount} />
                 </Field>
                 <Field label="Tanggal" name="occurred_on">
-                  <input id="occurred_on" name="occurred_on" type="date" className="input" defaultValue={today} required />
+                  <DateTimePicker id="occurred_on" name="occurred_on" mode="date" quick="past" defaultValue={today} required />
                 </Field>
               </div>
               <Field label="Catatan" name="note" hint="Opsional">

@@ -1,10 +1,11 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Copy, ExternalLink, Link2, Unlink } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import { ConfirmButton, useRunAction } from '@/components/ui/actions'
-import { Field, SubmitButton, errClass, useFormAction } from '@/components/ui/forms'
+import { Field, SubmitButton, useFormAction } from '@/components/ui/forms'
 import { useToast } from '@/components/ui/Toast'
 import { createLinkCode, saveNotifications, setTelegramPrompt, unlinkTelegram } from './telegram-actions'
 
@@ -113,7 +114,7 @@ export function NotificationForm({ digest, digestTime }: { digest: boolean; dige
         </span>
       </label>
       <Field label="Jam kirim ringkasan" name="digest_time" error={errors.digest_time} hint="Mengikuti zona waktu profil. Pengingat tiap tugas diatur di kolom “Ingatkan”.">
-        <input id="digest_time" name="digest_time" type="time" className={`input${errClass(errors, 'digest_time')}`} defaultValue={digestTime} required />
+        <DateTimePicker id="digest_time" name="digest_time" mode="time" defaultValue={digestTime} invalid={!!errors.digest_time} required />
       </Field>
       <div><SubmitButton pending={pending} variant="secondary">Simpan preferensi</SubmitButton></div>
     </form>

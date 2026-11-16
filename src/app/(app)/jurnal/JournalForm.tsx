@@ -1,5 +1,6 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { NotebookPen, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Field, FormModal, errClass } from '@/components/ui/forms'
@@ -46,7 +47,7 @@ export function JournalFormModal({ open, onClose, initial, goals, subjects, proj
               </select>
             </Field>
             <Field label="Tanggal" name="entry_date" error={errors.entry_date}>
-              <input id="entry_date" name="entry_date" type="date" className={`input${errClass(errors, 'entry_date')}`} defaultValue={initial.entry_date} required />
+              <DateTimePicker id="entry_date" name="entry_date" mode="date" quick="past" defaultValue={initial.entry_date} invalid={!!errors.entry_date} required />
             </Field>
           </div>
           <Field label="Judul" name="title" error={errors.title}>

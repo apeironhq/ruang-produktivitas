@@ -8,7 +8,7 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Achievement, Goal } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
-import { BADGE_ICON } from '@/lib/badges'
+import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
 import { goalNumbers } from '../target/GoalCard'
 
 export const metadata: Metadata = { title: 'Pencapaian' }
@@ -91,7 +91,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
               const val = Math.min(metrics.get(b.metric) ?? 0, b.min_value)
               return (
                 <div key={b.id} className={`badge-card${at ? '' : ' locked'}`}>
-                  <span className="badge-medal" style={at ? tint('var(--accent)') : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                  <span className="badge-medal" style={at ? tint(BADGE_COLOR[b.icon]) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
                   <span className="min-w-0 flex-1">
                     <span className="badge-name">{b.name}</span>
                     <span className="item-sub block">{b.description}</span>

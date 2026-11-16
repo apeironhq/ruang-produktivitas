@@ -1,12 +1,11 @@
 'use client'
 
-import { AlertCircle, Award, Bell, BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen, Plus, Repeat, Search, Target, X } from 'lucide-react'
+import { AlertCircle, Award, Bell, BookOpen, CalendarClock, CheckSquare, Clock, CornerDownLeft, FolderKanban, History, NotebookPen, Repeat, Search, Target, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { globalSearch, loadNotifications, type Notif, type SearchHit, type SearchKind } from '@/app/(app)/header-actions'
 import { tint } from '@/components/ui/display'
-import { QUICK_ITEMS, useQuickAdd } from './QuickAdd'
 
 /* ------------------------------ util ------------------------------ */
 
@@ -37,21 +36,26 @@ const KIND_ICON: Record<SearchKind, { icon: React.ReactNode; color: string }> = 
 
 /* ------------------------------ Pencarian ------------------------------ */
 
+const RECENT_KEY = 'rp_recent_q'
+function readRecent(): string[] {
+  try { return typeof window === 'undefined' ? [] : (JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as string[]).slice(0, 5) } catch { return [] }
+}
+
 /**
  * Kotak cari di header (desktop) / tombol kaca pembesar yang membuka lembar cari (ponsel).
- * Saat kosong: aksi cepat "Tambah …" (pengganti tombol Tambah lama). Saat mengetik: hasil dari semua modul.
- * Pintasan: Ctrl/⌘ + K.
+ * Saat kosong: pencarian terakhir (bila ada).
+ * Saat mengetik: hasil dari semua modul. Pintasan: Ctrl/⌘ + K.
  */
 export function SearchBox() {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<SearchHit[]>([])
-  const [active, setActive] = useState(0)
+  const [active, setActive] = useState(-1)
+  const [recent, setRecent] = useState<string[]>(readRecent)
   const [pending, start] = useTransition()
   const root = useRef<HTMLDivElement | null>(null)
   const input = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
-  const quick = useQuickAdd()
   const listId = useId()
   usePopover(open, setOpen, root)
 
@@ -66,24 +70,35 @@ export function SearchBox() {
 
   // Cari dengan jeda singkat agar tidak memanggil server di setiap ketukan.
   const term = q.trim()
+  const searching = term.length >= 2
   useEffect(() => {
     if (term.length < 2) return
     const t = setTimeout(() => start(async () => { setHits(await globalSearch(term).catch(() => [])); setActive(0) }), 220)
     return () => clearTimeout(t)
   }, [term])
 
-  const actions = QUICK_ITEMS.filter((it) => !term || `tambah ${it.label}`.toLowerCase().includes(term.toLowerCase()))
-  const shownHits = term.length >= 2 ? hits : []
-  type Row = { key: string; run: () => void }
-  const rows: Row[] = [
-    ...shownHits.map((h) => ({ key: `h-${h.kind}-${h.id}`, run: () => { setOpen(false); router.push(h.href) } })),
-    ...actions.map((a) => ({ key: `a-${a.kind}`, run: () => { setOpen(false); setQ(''); quick.open(a.kind) } })),
+  function remember(text: string) {
+    const next = [text, ...recent.filter((r) => r.toLowerCase() !== text.toLowerCase())].slice(0, 5)
+    setRecent(next)
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* abaikan */ }
+  }
+  function clearRecent() {
+    setRecent([])
+    try { localStorage.removeItem(RECENT_KEY) } catch { /* abaikan */ }
+  }
+  function go(h: SearchHit) { remember(term); setOpen(false); setQ(''); router.push(h.href) }
+
+  const shownHits = searching ? hits : []
+  const shownRecent = searching ? [] : recent
+  const rows: Array<() => void> = [
+    ...shownRecent.map((r) => () => { setQ(r); input.current?.focus() }),
+    ...shownHits.map((h) => () => go(h)),
   ]
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(rows.length - 1, i + 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)) }
-    else if (e.key === 'Enter') { e.preventDefault(); rows[active]?.run() }
+    else if (e.key === 'Enter') { e.preventDefault(); rows[active < 0 ? 0 : active]?.() }
   }
 
   let idx = -1
@@ -96,15 +111,32 @@ export function SearchBox() {
         <Search size={16} className="search-field-icon" aria-hidden="true" />
         <input ref={input} type="search" className="search-input" placeholder="Cari tugas, catatan, target…" value={q} role="combobox"
           aria-expanded={open} aria-controls={listId} aria-autocomplete="list" autoComplete="off"
-          onFocus={() => { setOpen(true); quick.prefetch() }} onChange={(e) => { setQ(e.target.value); setActive(0); setOpen(true) }} onKeyDown={onKeyDown} />
+          onFocus={() => setOpen(true)} onClick={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setActive(-1); setOpen(true) }} onKeyDown={onKeyDown} />
         {pending ? <span className="spinner search-kbd" aria-hidden="true" /> : <kbd className="search-kbd">Ctrl K</kbd>}
         <button type="button" className="search-close" aria-label="Tutup pencarian" onClick={() => { setOpen(false); setQ('') }}><X size={18} /></button>
       </div>
 
-      {open && (
-        <div id={listId} className="search-pop" role="listbox" aria-label="Hasil pencarian">
-          {term.length >= 2 && (
-            <>
+      {open && (searching || shownRecent.length > 0) && (
+        <div id={listId} className="search-pop" role="listbox" aria-label="Pencarian">
+          {shownRecent.length > 0 && (
+            <div className="search-sec">
+              <div className="search-group-row"><p className="search-group">Terakhir dicari</p><button type="button" className="search-clear" onClick={clearRecent}>Hapus</button></div>
+              {shownRecent.map((r) => {
+                idx++
+                const i = idx
+                return (
+                  <button key={r} type="button" role="option" aria-selected={active === i} className={`search-row compact${active === i ? ' on' : ''}`}
+                    onMouseEnter={() => setActive(i)} onClick={() => { setQ(r); input.current?.focus() }}>
+                    <History size={15} className="search-muted" aria-hidden="true" />
+                    <span className="search-title flex-1">{r}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {searching && (
+            <div className="search-sec">
               <p className="search-group">Hasil</p>
               {shownHits.length === 0 ? (
                 <p className="search-empty">{pending ? 'Mencari…' : `Tidak ada yang cocok dengan “${term}”.`}</p>
@@ -114,31 +146,16 @@ export function SearchBox() {
                 const k = KIND_ICON[h.kind]
                 return (
                   <Link key={`${h.kind}-${h.id}`} href={h.href} role="option" aria-selected={active === i} className={`search-row${active === i ? ' on' : ''}`}
-                    onMouseEnter={() => setActive(i)} onClick={() => setOpen(false)}>
+                    onMouseEnter={() => setActive(i)} onClick={() => { remember(term); setOpen(false); setQ('') }}>
                     <span className="search-ico" style={tint(k.color)} aria-hidden="true">{k.icon}</span>
                     <span className="min-w-0 flex-1"><span className="search-title">{h.title}</span><span className="search-sub">{h.sub}</span></span>
+                    {active === i && <CornerDownLeft size={14} className="search-muted" aria-hidden="true" />}
                   </Link>
                 )
               })}
-            </>
+            </div>
           )}
-          {actions.length > 0 && (
-            <>
-              <p className="search-group">Tambah cepat</p>
-              {actions.map((a) => {
-                idx++
-                const i = idx
-                return (
-                  <button key={a.kind} type="button" role="option" aria-selected={active === i} className={`search-row${active === i ? ' on' : ''}`}
-                    onMouseEnter={() => setActive(i)} onClick={() => { setOpen(false); setQ(''); quick.open(a.kind) }}>
-                    <span className="search-ico" style={tint(a.color)} aria-hidden="true">{a.icon}</span>
-                    <span className="min-w-0 flex-1"><span className="search-title">Tambah {a.label.toLowerCase()}</span><span className="search-sub">{a.desc}</span></span>
-                    <Plus size={15} className="search-plus" aria-hidden="true" />
-                  </button>
-                )
-              })}
-            </>
-          )}
+
         </div>
       )}
     </div>

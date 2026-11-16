@@ -1,5 +1,6 @@
 'use client'
 
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Flag, Plus, Target } from 'lucide-react'
 import { useState } from 'react'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
@@ -89,10 +90,10 @@ export function GoalFormModal({ open, onClose, initial }: { open: boolean; onClo
           )}
           <div className="form-grid form-grid-2">
             <Field label="Tanggal mulai" name="start_date" error={errors.start_date}>
-              <input id="start_date" name="start_date" type="date" className={`input${errClass(errors, 'start_date')}`} defaultValue={initial.start_date} required />
+              <DateTimePicker id="start_date" name="start_date" mode="date" defaultValue={initial.start_date} invalid={!!errors.start_date} required />
             </Field>
             <Field label="Tenggat" name="due_date" error={errors.due_date} hint="Opsional">
-              <input id="due_date" name="due_date" type="date" className={`input${errClass(errors, 'due_date')}`} defaultValue={initial.due_date} />
+              <DateTimePicker id="due_date" name="due_date" mode="date" defaultValue={initial.due_date} invalid={!!errors.due_date} />
             </Field>
             <Field label="Prioritas" name="priority">
               <select id="priority" name="priority" className="select" defaultValue={initial.priority}>
@@ -159,7 +160,7 @@ export function ContributionButton({ goalId, metric, today, direction }: { goalI
                 <input id="amount" name="amount" inputMode="decimal" className={`input${errClass(errors, 'amount')}`} required placeholder={metric === 'rupiah' ? '500.000' : '1'} />
               </Field>
               <Field label="Tanggal" name="occurred_on" error={errors.occurred_on}>
-                <input id="occurred_on" name="occurred_on" type="date" className="input" defaultValue={today} required />
+                <DateTimePicker id="occurred_on" name="occurred_on" mode="date" quick="past" defaultValue={today} invalid={!!errors.occurred_on} required />
               </Field>
               <Field label="Catatan" name="note" hint="Opsional, mis. sumber dana">
                 <input id="note" name="note" className="input" maxLength={500} />

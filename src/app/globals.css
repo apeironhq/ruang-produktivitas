@@ -965,3 +965,16 @@ a.item-link:hover { background: var(--bg-subtle); }
   .search-box.is-open .search-input { padding-right: 1rem; font-size: 1rem; background: var(--bg-surface); }
   .search-box.is-open .search-pop { position: static; display: block; max-height: none; flex: 1; border: 0; box-shadow: none; background: transparent; padding: 0; }
 }
+
+/* Pencarian: bagian "terakhir dicari" */
+.search-sec + .search-sec { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid var(--border); }
+.search-group-row { display: flex; align-items: center; justify-content: space-between; padding-right: 0.6rem; }
+.search-clear { border: 0; background: none; padding: 0; font-size: var(--fs-micro); color: var(--text-muted); cursor: pointer; }
+.search-clear:hover { color: var(--brand); }
+.search-row.compact { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+.search-muted { color: var(--text-faint); flex-shrink: 0; }
+
+/* Pemilih jam: pilihan jam & menit (pengganti input time bawaan yang tanpa tombol OK) */
+.dtp-time.solo { padding-top: 0; border-top: 0; }
+.dtp-hm { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); }
+.select.dtp-sel { width: 76px; height: 34px; padding-left: 0.6rem; font-size: var(--fs-label); }

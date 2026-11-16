@@ -12,7 +12,7 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task, Transaction } from '@/lib/types'
 import { str } from '@/lib/url'
-import { BADGE_ICON } from '@/lib/badges'
+import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
 import { NewGoalButton } from './target/GoalForm'
 import { goalNumbers } from './target/GoalCard'
 import { TaskCheck } from './tugas/TaskForm'
@@ -157,14 +157,23 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           <div className="badge-strip">
             {earnedBadges.slice(0, 4).map((b) => (
               <Link key={b.id} href="/pencapaian" className="badge-chip" title={b.description}>
-                <span className="badge-medal" style={tint('var(--accent)')} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                <span className="badge-medal" style={tint(BADGE_COLOR[b.icon])} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
                 <span className="min-w-0">
                   <span className="badge-name truncate">{b.name}</span>
                   <span className="item-sub block">Diraih {formatDay(isoToDay(b.earned_at, tz))}</span>
                 </span>
               </Link>
             ))}
-            {earnedBadges.length > 4 && <Link href="/pencapaian" className="badge-chip more">+{earnedBadges.length - 4} lainnya<ChevronRight size={16} aria-hidden="true" /></Link>}
+            {earnedBadges.length > 4 && (
+              <Link href="/pencapaian" className="badge-chip">
+                <span className="badge-medal" style={tint()} aria-hidden="true"><Award size={20} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="badge-name truncate">+{earnedBadges.length - 4} lencana lainnya</span>
+                  <span className="item-sub block">Lihat semua pencapaian</span>
+                </span>
+                <ChevronRight size={16} className="text-[var(--text-faint)] shrink-0" aria-hidden="true" />
+              </Link>
+            )}
           </div>
         </section>
       )}
