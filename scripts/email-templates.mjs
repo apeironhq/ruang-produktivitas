@@ -4,6 +4,10 @@
 //   npm run email:apply                 → pasang ke Supabase (butuh SUPABASE_ACCESS_TOKEN di .env.local,
 //                                          token pribadi dari supabase.com/dashboard/account/tokens)
 //
+// Paket gratis Supabase hanya mengizinkan template kustom bila memakai SMTP sendiri. Isi juga di .env.local:
+//   SMTP_USER=alamat@gmail.com   SMTP_PASS=<App Password 16 huruf>   (opsional: SMTP_HOST, SMTP_PORT,
+//   SMTP_FROM, SMTP_SENDER_NAME — bawaan smtp.gmail.com:465, "Ruang Produktivitas")
+//
 // Tautan memakai token_hash → diverifikasi oleh /auth/confirm di server, sehingga tetap berhasil
 // walau email dibuka di perangkat/browser lain (alur PKCE bawaan butuh browser yang sama).
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -159,6 +163,20 @@ if (process.argv.includes('--apply')) {
     process.exit(1)
   }
   const body = {}
+  // SMTP sendiri (wajib di paket gratis agar template bisa diubah). Gmail: App Password, port 465.
+  const smtpUser = process.env.SMTP_USER, smtpPass = (process.env.SMTP_PASS ?? '').replace(/\s+/g, '')
+  if (smtpUser && smtpPass) {
+    Object.assign(body, {
+      smtp_host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+      smtp_port: process.env.SMTP_PORT ?? '465',
+      smtp_user: smtpUser,
+      smtp_pass: smtpPass,
+      smtp_admin_email: process.env.SMTP_FROM ?? smtpUser,
+      smtp_sender_name: process.env.SMTP_SENDER_NAME ?? 'Ruang Produktivitas',
+      rate_limit_email_sent: 100, // email per jam (bawaan Supabase dengan SMTP sendiri: 30)
+    })
+    console.log(`• SMTP: ${body.smtp_host}:${body.smtp_port} sebagai "${body.smtp_sender_name}" <${body.smtp_admin_email}>`)
+  }
   for (const [name, t] of Object.entries(TEMPLATES)) {
     body[`mailer_subjects_${name}`] = t.subject
     body[`mailer_templates_${name}_content`] = t.html
