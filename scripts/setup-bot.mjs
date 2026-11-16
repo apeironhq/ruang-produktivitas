@@ -48,12 +48,12 @@ await db.query('create extension if not exists pg_cron with schema pg_catalog')
 await db.query('create extension if not exists pg_net with schema extensions')
 await db.query(`select cron.unschedule(jobid) from cron.job where jobname = 'ruang-pengingat'`)
 const { rows } = await db.query(
-  `select cron.schedule('ruang-pengingat', '*/5 * * * *', format(
+  `select cron.schedule('ruang-pengingat', '* * * * *', format(
      $f$select net.http_post(url := %L, headers := jsonb_build_object('Authorization', %L, 'Content-Type', 'application/json'), body := '{}'::jsonb, timeout_milliseconds := 55000)$f$,
      $1::text, $2::text)) as id`,
   [`${url}/api/cron/pengingat`, `Bearer ${cronSecret}`],
 )
-console.log(`✓ pg_cron dijadwalkan (job ${rows[0].id}): setiap 5 menit → ${url}/api/cron/pengingat`)
+console.log(`✓ pg_cron dijadwalkan (job ${rows[0].id}): setiap menit → ${url}/api/cron/pengingat`)
 // Ping ringan ke webhook setiap 2 menit agar fungsinya tetap hangat (tombol bot tanpa cold start).
 await db.query(`select cron.unschedule(jobid) from cron.job where jobname = 'ruang-bot-hangat'`)
 await db.query(
@@ -87,6 +87,9 @@ await tg('setMyCommands', {
     { command: 'keluar', description: '💸 Catat pengeluaran (25rb makan)' },
     { command: 'masuk', description: '💵 Catat pemasukan' },
     { command: 'belajar', description: '📚 Catat sesi belajar' },
+    { command: 'timer', description: '⏱ Timer, mis. /timer 25 fokus' },
+    { command: 'ingatkan', description: '🔔 Ingatkan saya, mis. /ingatkan 30m minum obat' },
+    { command: 'sore', description: '🌙 Tugas hari ini yang belum selesai' },
     { command: 'kalender', description: '📅 Agenda 7 hari' },
     { command: 'target', description: '🎯 Progres target' },
     { command: 'keuangan', description: '💰 Ringkasan keuangan' },

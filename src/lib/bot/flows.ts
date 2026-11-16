@@ -3,6 +3,7 @@ import { addDays, todayIn, zonedToIso } from '../dates'
 import { formatDuration, formatNumber, formatRupiah, formatShort, parseIdNumber } from '../format'
 import { JOURNAL_KIND, MOOD } from '../labels'
 import { editMessageCaption, editMessageKb, editMessageReplyMarkup, sendMessageKb, type Keyboard } from '../telegram'
+import { createTimer, parseDuration } from './timers'
 import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
 
 /*
@@ -256,6 +257,34 @@ export const FLOWS: Record<string, Flow> = {
       if (error) throw error
       await ctx.db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
       return { lines: ['<b>Sesi belajar tercatat!</b> Terus semangat'], kb: NAV_AFTER('p:belajar', '📚 Lihat belajar') }
+    },
+  },
+
+  ingat: {
+    title: 'Ingatkan saya',
+    steps: [
+      textStep('label', 'Pesan', 'Ingatkan tentang apa?', 'Mis. <i>Minum obat</i>, <i>Telepon ibu</i>, <i>Angkat jemuran</i>'),
+      {
+        key: 'at', label: 'Waktu',
+        ask: () => ({ q: 'Kapan diingatkan?', hint: 'Pilih tombol, atau ketik mis. <code>45m</code>, <code>14.30</code>, <code>besok 08.00</code>', choices: [{ text: '15 menit lagi', v: 'r15' }, { text: '30 menit lagi', v: 'r30' }, { text: '1 jam lagi', v: 'r60' }, { text: '3 jam lagi', v: 'r180' }, { text: 'Besok 09.00', v: 'b09' }], perRow: 2, typing: true }),
+        accept: (ctx, _s, { text, choice }) => {
+          let iso: string | null = null
+          if (choice?.startsWith('r')) iso = new Date(Date.now() + Number(choice.slice(1)) * 60_000).toISOString()
+          else if (choice === 'b09') iso = zonedToIso(`${addDays(todayIn(ctx.tz), 1)}T09:00`, ctx.tz)
+          else if (text) {
+            const min = parseDuration(text)
+            iso = min ? new Date(Date.now() + min * 60_000).toISOString() : parseWhen(text, ctx.tz, '09:00')
+          }
+          if (!iso) return { error: 'Waktu tidak dikenali. Contoh: <code>45m</code>, <code>14.30</code>, <code>besok 08.00</code>.' }
+          if (new Date(iso).getTime() <= Date.now()) return { error: 'Waktunya sudah lewat. Pilih waktu yang akan datang.' }
+          return { value: iso, label: formatShort(iso, ctx.tz) }
+        },
+      },
+    ],
+    commit: async (ctx, st) => {
+      const r = await createTimer(ctx, 'ingat', String(st.d.at), String(st.d.label), null)
+      if ('error' in r) return { lines: [`<b>Belum disimpan.</b> ${r.error}`], kb: [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]] }
+      return { lines: ['<b>Pengingat dijadwalkan.</b> Rupi akan mengirim notifikasi tepat waktunya.'], kb: [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]] }
     },
   },
 

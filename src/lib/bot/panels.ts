@@ -511,21 +511,26 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
     ctx.db.from('profiles').select('display_name, timezone, notification_settings').eq('id', ctx.userId).maybeSingle(),
     ctx.db.from('telegram_connections').select('username, linked_at').eq('user_id', ctx.userId).maybeSingle(),
   ])
-  const ns = (prof?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string }
+  const ns = (prof?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string; evening?: boolean; evening_time?: string }
   const on = ns.digest !== false
   const time = ns.digest_time ?? '07:00'
-  const times = rows(['05:00', '06:00', '07:00', '08:00', '12:00', '20:00'].map((t) => btn(`${t === time ? '● ' : ''}${t.replace(':', '.')}`, `set:dt:${t.slice(0, 2)}`)), 3)
+  const eveOn = ns.evening !== false
+  const eveTime = ns.evening_time ?? '19:00'
+  const times = rows(['05:00', '06:00', '07:00', '08:00'].map((t) => btn(`${t === time ? '● ' : ''}Pagi ${t.replace(':', '.')}`, `set:dt:${t.slice(0, 2)}`)), 4)
+  const eveTimes = rows(['17:00', '19:00', '20:00', '21:00'].map((t) => btn(`${t === eveTime ? '● ' : ''}Sore ${t.replace(':', '.')}`, `set:et:${t.slice(0, 2)}`)), 4)
   return {
     head: ['<b>Pengaturan</b>'],
     sections: [
       { title: 'Akun', lines: [], table: [['Nama', plain(prof?.display_name || '—')], ['Zona waktu', prof?.timezone ?? 'Asia/Jakarta'], ['Telegram', conn?.username ? `@${conn.username}` : 'tertaut'], ...(conn ? [['Tertaut sejak', formatDay(dayOf(conn.linked_at, ctx.tz))] as [string, string]] : [])] },
-      { title: 'Ringkasan harian', lines: [], table: [['Status', on ? 'Aktif' : 'Nonaktif'], ['Jam kirim', time.replace(':', '.')]] },
-      { lines: ['<i>Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
+      { title: 'Notifikasi otomatis', lines: [], table: [['Ringkasan pagi', on ? `Aktif · ${time.replace(':', '.')}` : 'Nonaktif'], ['Cek tugas sore', eveOn ? `Aktif · ${eveTime.replace(':', '.')}` : 'Nonaktif']] },
+      { lines: ['<i>Cek sore hanya dikirim bila masih ada tugas hari ini yang belum selesai. Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
     ],
     kb: [
-      [btn(on ? '🔕 Matikan ringkasan harian' : '🔔 Aktifkan ringkasan harian', 'set:dg')],
+      [btn(on ? '🔕 Matikan ringkasan pagi' : '🔔 Aktifkan ringkasan pagi', 'set:dg')],
       ...times,
-      [btn('🔔 Pengingat 24 jam', 'p:ingat'), btn('📖 Bantuan', 'p:bantuan')],
+      [btn(eveOn ? '🔕 Matikan cek sore' : '🔔 Aktifkan cek sore', 'set:eg')],
+      ...eveTimes,
+      [btn('⏱ Timer & Pengingat', 'p:timer'), btn('📖 Bantuan', 'p:bantuan')],
       [btn('🔌 Putuskan bot', 'set:putus', 'danger')],
       [btn('⬅️ Menu', 'p:home'), link('🌐 Pengaturan web', '/pengaturan')],
     ],
@@ -536,7 +541,7 @@ export function helpPanel(): Panel {
   return {
     head: ['<b>Bantuan Rupi</b>', '<i>Semua fitur bisa dipakai lewat tombol. Perintah cepat:</i>'],
     sections: [
-      { title: 'Perintah', lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul [besok] [09.00]</i>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
+      { title: 'Perintah', lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul [besok] [09.00]</i>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/timer <i>25 [keterangan]</i> — timer hitung mundur', '/ingatkan <i>30m / 14.30 / besok 08.00 pesan</i>', '/sore — tugas hari ini yang belum selesai', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
       { title: 'Pesan bebas', lines: ['Kirim teks apa saja → pilih <b>simpan sebagai catatan</b> atau <b>jadikan tugas</b>.'] },
     ],
     kb: [navRow('p:home')],
@@ -555,7 +560,7 @@ export function reminderText(t: { id: string; kind: string; title: string; due_a
   ]
   const w = Math.max(...rows_.map((r) => r[0].length))
   return [
-    `${t.kind === 'kegiatan' ? '' : ''} <b>Pengingat ${t.kind === 'kegiatan' ? 'kegiatan' : 'tugas'}</b>`,
+    `<b>Pengingat ${t.kind === 'kegiatan' ? 'kegiatan' : 'tugas'}</b>`,
     '',
     `<b>${esc(t.title)}</b>`,
     `<pre>${esc(rows_.map(([l, v]) => `${l.padEnd(w)} : ${v}`).join('\n'))}</pre>`,

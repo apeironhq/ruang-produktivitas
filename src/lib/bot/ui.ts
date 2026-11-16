@@ -96,6 +96,7 @@ export const MAIN_MENU: Keyboard = [
   [btn('📚 Belajar', 'p:belajar'), btn('🗒 Jurnal', 'p:jurnal')],
   [btn('🔁 Kebiasaan', 'p:habit'), btn('🏆 Pencapaian', 'p:lencana')],
   [btn('📊 Ringkasan', 'p:ringkas'), btn('⚙️ Pengaturan', 'p:atur')],
+  [btn('⏱ Timer & Pengingat', 'p:timer')],
 ]
 export const mainKeyboard = (): Keyboard => [...MAIN_MENU, [link('🌐 Buka Ruang Produktivitas', '/', 'primary')]]
 

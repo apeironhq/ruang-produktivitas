@@ -2,13 +2,15 @@ import 'server-only'
 import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '../dates'
-import { answerCallback, editMessageCaption, editMessageKb, editViaWebhookReply, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
+import { answerCallback, editMessageCaption, editMessageKb, editMessageReplyMarkup, editViaWebhookReply, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
 import { clearFlow, continueFlow, loadPending, startFlow, type FlowState } from './flows'
 import {
   badgesPanel, calendarPanel, catatPanel, financePanel, goalDetailPanel, goalsPanel, habitsPanel, helpPanel, homePanel, journalDetailPanel,
-  journalPanel, learningPanel, projectDetailPanel, projectsPanel, remindersPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
+  journalPanel, learningPanel, projectDetailPanel, projectsPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
 } from './panels'
+import { createTimer, eveningPanel, parseDuration, parseReminder, timerPanel } from './timers'
 import { btn, cut, esc, link, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
+import { formatDuration, formatShort, formatTime } from '../format'
 
 export { reminderKeyboard, reminderText } from './panels'
 export { siteUrl }
@@ -145,7 +147,10 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate, user?: BotUs
     case 'kebiasaan': await sendPanel(chatId, await habitsPanel(ctx)); break
     case 'pencapaian': case 'lencana': await sendPanel(chatId, await badgesPanel(ctx)); break
     case 'ringkasan': await sendPanel(chatId, await weeklyPanel(ctx)); break
-    case 'pengingat': await sendPanel(chatId, await remindersPanel(ctx)); break
+    case 'pengingat': await sendPanel(chatId, await timerPanel(ctx)); break
+    case 'timer': await cmdTimer(ctx, arg); break
+    case 'ingatkan': await cmdRemind(ctx, arg); break
+    case 'sore': await sendPanel(chatId, (await eveningPanel(ctx, true))!); break
     case 'pengaturan': await sendPanel(chatId, await settingsPanel(ctx)); break
     case 'tambah': await startFlow(ctx, 'tugas', arg, null); break
     case 'kegiatan': await startFlow(ctx, 'kegiatan', arg, null); break
@@ -174,6 +179,33 @@ async function offerFreeText(ctx: Ctx, text: string) {
     ...(looksMoney ? [[btn('💸 Pengeluaran', 'q:keluar'), btn('💵 Pemasukan', 'q:masuk')]] : []),
     [btn('✖️ Abaikan', 'q:x')],
   ])
+}
+
+/** /timer 25 [keterangan] → langsung jalan. Tanpa angka → tampilkan panel Timer & Pengingat. */
+async function cmdTimer(ctx: Ctx, arg: string) {
+  const [head = '', ...rest] = arg.trim().split(/\s+/)
+  const min = head ? parseDuration(head) : null
+  if (!min) { await sendPanel(ctx.chatId, await timerPanel(ctx, arg ? 'Durasi tidak dikenali. Contoh: <code>/timer 25 fokus</code> atau <code>/timer 1j30m</code>.' : undefined)); return }
+  const at = new Date(Date.now() + min * 60_000).toISOString()
+  const r = await createTimer(ctx, 'timer', at, rest.join(' '), min)
+  if ('error' in r) { await sendMessageKb(ctx.chatId, r.error, [[btn('⏱ Timer & Pengingat', 'p:timer')]]); return }
+  await sendMessageKb(ctx.chatId, [
+    `<b>Timer ${formatDuration(min)} dimulai.</b>`,
+    `<i>Selesai pukul ${formatTime(at, ctx.tz)}${rest.length ? ` — ${esc(rest.join(' ').slice(0, 80))}` : ''}</i>`,
+  ].join('\n'), [[btn('✖️ Batalkan', `tm:x:${r.id}`), btn('⏱ Timer lain', 'p:timer')]])
+}
+
+/** /ingatkan 30m minum obat · /ingatkan 14.30 rapat · /ingatkan besok 08.00 bayar listrik. */
+async function cmdRemind(ctx: Ctx, arg: string) {
+  const p = arg ? parseReminder(arg, ctx.tz) : null
+  if (!p) { await startFlow(ctx, 'ingat', '', null); return }
+  const r = await createTimer(ctx, 'ingat', p.at, p.label, null)
+  if ('error' in r) { await sendMessageKb(ctx.chatId, r.error, [[btn('⏱ Timer & Pengingat', 'p:timer')]]); return }
+  await sendMessageKb(ctx.chatId, [
+    '<b>Pengingat dijadwalkan.</b>',
+    `<blockquote>${esc(p.label.slice(0, 200))}</blockquote>`,
+    `<i>${formatShort(p.at, ctx.tz)}</i>`,
+  ].join('\n'), [[btn('✖️ Batalkan', `tm:x:${r.id}`), btn('⏱ Timer & Pengingat', 'p:timer')]])
 }
 
 function unlinkConfirm(): Panel {
@@ -331,6 +363,43 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       await showPanel(ctx, await settingsPanel(ctx), msg)
       return 'selesai'
     }
+    case 'tm': { // timer & pengingat bebas
+      const [act, arg = ''] = rest.split(':')
+      if (act === 'ok') { answerNow('Oke'); await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
+      if (act === 'n') { // mulai timer preset
+        const min = Number(arg)
+        if (![5, 15, 25, 50].includes(min)) break
+        const r = await createTimer(ctx, 'timer', new Date(Date.now() + min * 60_000).toISOString(), '', min)
+        answerNow('error' in r ? r.error : `Timer ${min} menit dimulai`)
+        await showPanel(ctx, await timerPanel(ctx, 'error' in r ? undefined : `<b>Timer ${min} menit dimulai.</b> Selesai pukul ${formatTime(new Date(Date.now() + min * 60_000).toISOString(), ctx.tz)}.`), msg)
+        return 'selesai'
+      }
+      if (!UUID.test(arg)) break
+      if (act === 'x') { // batalkan
+        await db.from('bot_timers').delete().eq('id', arg).eq('user_id', ctx.userId).is('sent_at', null)
+        answerNow('Dibatalkan')
+        await showPanel(ctx, await timerPanel(ctx), msg)
+        return 'selesai'
+      }
+      // r = ulangi timer, z = tunda pengingat 10 menit (dari pesan yang sudah berbunyi)
+      const { data: t } = await db.from('bot_timers').select('kind, label, minutes').eq('id', arg).eq('user_id', ctx.userId).maybeSingle()
+      if (!t) { toast = 'Timer tidak ditemukan.'; break }
+      const min = act === 'r' ? (t.minutes ?? 25) : 10
+      const r = await createTimer(ctx, act === 'r' ? 'timer' : 'ingat', new Date(Date.now() + min * 60_000).toISOString(), t.label, act === 'r' ? min : null)
+      if ('error' in r) { toast = r.error; break }
+      answerNow(act === 'r' ? `Timer ${formatDuration(min)} dimulai lagi` : 'Ditunda 10 menit')
+      await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]])
+      return 'selesai'
+    }
+    case 'ev': { // cek sore: tandai tugas selesai lalu perbarui daftar
+      if (!UUID.test(rest)) break
+      const { data: t } = await db.from('tasks').update({ status: 'selesai' }).eq('id', rest).eq('user_id', ctx.userId).eq('kind', 'tugas').select('title').maybeSingle()
+      if (!t) { toast = 'Tugas tidak ditemukan.'; break }
+      after(async () => { await db.rpc('evaluate_achievements_for', { p_user: ctx.userId }) })
+      answerNow(`Selesai: ${t.title.slice(0, 40)}`)
+      await showPanel(ctx, (await eveningPanel(ctx, true))!, msg)
+      return 'selesai'
+    }
     case 'ya': case 'batal': toast = 'Konfirmasi ini sudah tidak berlaku.'; break
   }
   answerNow(toast)
@@ -352,7 +421,8 @@ async function panelFor(ctx: Ctx, name: string): Promise<Panel | null> {
     case 'lencana': return badgesPanel(ctx)
     case 'ringkas': return weeklyPanel(ctx)
     case 'atur': return settingsPanel(ctx)
-    case 'ingat': return remindersPanel(ctx)
+    case 'ingat': case 'timer': return timerPanel(ctx)
+    case 'sore': return eveningPanel(ctx, true)
     case 'bantuan': return helpPanel()
     default: return null
   }
@@ -369,6 +439,8 @@ async function applySetting(ctx: Ctx, what: string): Promise<boolean | 'putus' |
   const ns = { ...((prof?.notification_settings as Record<string, unknown>) ?? {}) }
   if (what === 'dg') ns.digest = ns.digest === false
   else if (/^dt:(0[5-9]|1\d|2[0-2])$/.test(what)) { ns.digest_time = `${what.slice(3)}:00`; ns.digest = true }
+  else if (what === 'eg') ns.evening = ns.evening === false
+  else if (/^et:(1[5-9]|2[0-2])$/.test(what)) { ns.evening_time = `${what.slice(3)}:00`; ns.evening = true }
   else return false
   const { error } = await ctx.db.from('profiles').update({ notification_settings: ns }).eq('id', ctx.userId)
   return !error
