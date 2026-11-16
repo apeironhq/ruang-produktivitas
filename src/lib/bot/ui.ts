@@ -30,12 +30,28 @@ export const bar = (pct: number) => {
  * Panel = isi satu pesan bot: judul, beberapa bagian (blockquote Telegram), kaki, dan tombol.
  * Bagian berbingkai (quote) membuat pesan teks tetap rapi; 'expand' = kutipan yang bisa dibuka-tutup.
  */
-export interface Section { title?: string; lines: string[]; quote?: boolean | 'expand' }
+export interface Section {
+  title?: string
+  lines: string[]
+  quote?: boolean | 'expand'
+  /** Tabel 2 kolom "label : nilai" dalam blok monospace → titik dua sejajar. Teks polos (di-escape otomatis). */
+  table?: Array<[string, string]>
+  /** Baris monospace bebas (mis. tabel 3 kolom). Teks polos. */
+  pre?: string[]
+}
 export interface Panel { head: string[]; sections: Section[]; foot?: string[]; kb: Keyboard }
+
+/** Susun tabel "label : nilai" dengan lebar label seragam (dipotong bila terlalu panjang). */
+export function tableText(rows: Array<[string, string]>, maxLabel = 16) {
+  const w = Math.min(maxLabel, Math.max(0, ...rows.map((r) => r[0].length)))
+  return rows.map(([l, v]) => `${(l.length > w ? `${l.slice(0, w - 1)}…` : l).padEnd(w)} : ${v}`).join('\n')
+}
 
 /** Judul bagian di luar kutipan (seperti judul kartu), isinya di dalam kutipan bila quote. */
 function sectionHtml(s: Section, hidden: number) {
   const title = s.title ? `<b>${s.title}</b>\n` : ''
+  if (s.table) return `${title}<pre>${esc(tableText(s.table))}</pre>`
+  if (s.pre) return `${title}<pre>${esc(s.pre.join('\n'))}</pre>`
   const body = [...s.lines, ...(hidden ? [`<i>+${hidden} lainnya</i>`] : [])].join('\n')
   if (!s.quote) return `${title}${body}`
   return `${title}<blockquote${s.quote === 'expand' ? ' expandable' : ''}>${body}</blockquote>`
@@ -46,7 +62,7 @@ export function renderPanel(p: Panel, max = 4000): string {
   const secs = p.sections.map((s) => ({ ...s, lines: [...s.lines], hidden: 0 }))
   const build = () => [
     p.head.join('\n'),
-    ...secs.filter((s) => s.lines.length || s.title).map((s) => sectionHtml(s, s.hidden)),
+    ...secs.filter((s) => s.lines.length || s.title || s.table || s.pre).map((s) => sectionHtml(s, s.hidden)),
     ...(p.foot?.length ? [p.foot.join('\n')] : []),
   ].filter(Boolean).join('\n\n')
   let html = build()

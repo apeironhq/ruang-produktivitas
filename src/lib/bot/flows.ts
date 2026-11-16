@@ -3,7 +3,7 @@ import { addDays, todayIn, zonedToIso } from '../dates'
 import { formatDuration, formatNumber, formatRupiah, formatShort, parseIdNumber } from '../format'
 import { JOURNAL_KIND, MOOD } from '../labels'
 import { editMessageCaption, editMessageKb, editMessageReplyMarkup, sendMessageKb, type Keyboard } from '../telegram'
-import { btn, cut, esc, rows, type Ctx } from './ui'
+import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
 
 /*
  * Isian bertahap ("alur"): satu pesan formulir yang terus diperbarui. Status disimpan di
@@ -426,12 +426,16 @@ function summary(flow: Flow, st: FlowState) {
   const order = [...flow.steps.map((s) => s.key), ...Object.keys(st.l)]
   const seen = new Set<string>()
   const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ project: '📁 Proyek', goal: '🎯 Target', task: '✅ Tugas', account: '🏦 Rekening', amount: '💰 Jumlah', note: '📝 Keterangan', kind: '🏷 Jenis', body: '📝 Isi' } as Record<string, string>)[k] ?? k
-  return order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined)).map((k) => `${labelOf(k)}: <b>${st.l[k]}</b>`)
+  // Tabel monospace: label tanpa ikon, titik dua sejajar. Nilai disimpan ter-escape → kembalikan ke teks polos.
+  const unesc = (v: string) => v.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+  const rows_ = order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined))
+    .map((k) => [labelOf(k).replace(/^\S+\s+/u, ''), unesc(st.l[k]!)] as [string, string])
+  return rows_.length ? [`<pre>${esc(tableText(rows_, 12))}</pre>`] : []
 }
 
 async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
   const filled = summary(flow, st)
-  const head = [`${flow.title}`, ...(filled.length ? [`<blockquote>${filled.join('\n')}</blockquote>`] : [])]
+  const head = [`${flow.title}`, ...filled]
   if (st.s >= flow.steps.length) {
     return {
       html: [...head.map((h, i) => (i === 0 ? `<b>${h}</b>` : h)), '', '✅ <b>Sudah benar?</b> Tekan <b>Simpan</b> untuk menyimpan.'].join('\n'),
@@ -502,7 +506,7 @@ export async function continueFlow(ctx: Ctx, st: FlowState, input: { text?: stri
     const { data: gone } = await ctx.db.from('telegram_pending').delete().eq('chat_id', ctx.chatId).eq('action', 'alur').select('chat_id')
     if (!gone?.length) return true
     const res = await flow.commit(ctx, st)
-    const html = [`<b>${flow.title}</b>`, `<blockquote>${summary(flow, st).join('\n')}</blockquote>`, '', ...res.lines].join('\n')
+    const html = [`<b>${flow.title}</b>`, ...summary(flow, st), '', ...res.lines].join('\n')
     if (edit) await (edit.photo ? editMessageCaption(ctx.chatId, edit.id, html, res.kb) : editMessageKb(ctx.chatId, edit.id, html, res.kb))
     else await sendMessageKb(ctx.chatId, html, res.kb)
     return true
