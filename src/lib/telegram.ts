@@ -43,17 +43,30 @@ export function sendMessage(chatId: number | string, html: string, buttons?: Inl
   })
 }
 
-export type Keyboard = Array<Array<InlineButton | { text: string; url: string } | { text: string; web_app: { url: string } }>>
+export type Keyboard = Array<Array<InlineButton | { text: string; url: string }>>
 
-/** Kirim gambar (PNG di memori) + keterangan + tombol inline. */
-export function sendPhoto(chatId: number | string, png: Buffer, caption: string, keyboard?: Keyboard) {
+/** Kirim foto (URL publik atau berkas JPEG di memori) + keterangan HTML + tombol inline. */
+export function sendPhoto(chatId: number | string, photo: string | Buffer, caption: string, keyboard?: Keyboard) {
+  if (typeof photo === 'string') {
+    return call('sendPhoto', { chat_id: chatId, photo, caption: caption.slice(0, 1024), parse_mode: 'HTML', ...(keyboard ? { reply_markup: { inline_keyboard: keyboard } } : {}) })
+  }
   const fd = new FormData()
   fd.set('chat_id', String(chatId))
-  fd.set('photo', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'ringkasan.png')
+  fd.set('photo', new Blob([new Uint8Array(photo)], { type: 'image/jpeg' }), 'rupi.jpg')
   fd.set('caption', caption.slice(0, 1024))
   fd.set('parse_mode', 'HTML')
   if (keyboard) fd.set('reply_markup', JSON.stringify({ inline_keyboard: keyboard }))
   return call('sendPhoto', fd)
+}
+
+/** Ganti keterangan foto + tombolnya (pesan beranda berbanner). */
+export function editMessageCaption(chatId: number | string, messageId: number, caption: string, keyboard: Keyboard) {
+  return call('editMessageCaption', { chat_id: chatId, message_id: messageId, caption: caption.slice(0, 1024), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
+}
+
+/** Ganti teks pesan + tombolnya. */
+export function editMessageKb(chatId: number | string, messageId: number, html: string, keyboard: Keyboard) {
+  return call('editMessageText', { chat_id: chatId, message_id: messageId, text: html.slice(0, 4000), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: keyboard } })
 }
 
 export function sendMessageKb(chatId: number | string, html: string, keyboard: Keyboard) {

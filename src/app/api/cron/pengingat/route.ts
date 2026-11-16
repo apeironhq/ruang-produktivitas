@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { miniAppButton, reminderText, sendDashboard } from '@/lib/bot'
+import { reminderKeyboard, reminderText, sendDashboard } from '@/lib/bot'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { esc, secretMatches, sendMessage, sendMessageKb } from '@/lib/telegram'
+import { secretMatches, sendMessageKb } from '@/lib/telegram'
 
 export const maxDuration = 60
 
@@ -42,8 +42,7 @@ async function run(req: NextRequest) {
         return
       }
       const tz = isValidTimeZone(t.timezone) ? t.timezone : DEFAULT_TZ
-      const app = miniAppButton()
-      const res = app.length ? await sendMessageKb(t.chat_id, reminderText(t, tz), [app]) : await sendMessage(t.chat_id, reminderText(t, tz))
+      const res = await sendMessageKb(t.chat_id, reminderText(t, tz), reminderKeyboard(t))
       if (res.ok) {
         stats.sent++
         logs.push({ user_id: t.user_id, task_id: t.id, kind: 'tugas', status: 'terkirim', detail: '' })
@@ -86,12 +85,10 @@ async function run(req: NextRequest) {
         db.from('habit_checkins').select('id', { count: 'exact', head: true }).eq('user_id', c.user_id).eq('checkin_date', today),
       ])
       const habitLeft = Math.max((habits.count ?? 0) - (checks.count ?? 0), 0)
-      // Kartu ringkasan (gambar) + tombol menu — sama dengan /menu.
+      // Pesan beranda (banner + ringkasan + menu) — sama dengan /menu.
       const res = await sendDashboard(
-        { db, chatId: Number(c.chat_id), userId: c.user_id, tz, name: p.display_name || 'Anda' },
-        [`☀️ <b>Ringkasan hari ini</b> — semangat, ${esc((p.display_name || 'Anda').split(' ')[0]!)}!`,
-          ...(habitLeft ? [`🔁 ${habitLeft} kebiasaan harian menunggu check-in.`] : []),
-          '', '✨ <b>Apa yang ingin kamu lakukan sekarang?</b>'].join('\n'),
+        { db, chatId: Number(c.chat_id), userId: c.user_id, tz, name: p.display_name || 'Kamu' },
+        habitLeft ? `🔁 <b>${habitLeft} kebiasaan harian</b> menunggu check-in.` : undefined,
       )
       if (res.ok) {
         stats.digests++

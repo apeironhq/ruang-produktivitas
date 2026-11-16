@@ -2,8 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Halaman yang boleh dibuka tanpa masuk.
-// /tg = Mini App Telegram (autentikasi lewat initData Telegram, bukan cookie sesi).
-const PUBLIC_PATHS = ['/masuk', '/daftar', '/lupa-password', '/auth', '/tg']
+const PUBLIC_PATHS = ['/masuk', '/daftar', '/lupa-password', '/auth']
 
 /**
  * Menyegarkan sesi Supabase di setiap request (cookie diperbarui) dan
