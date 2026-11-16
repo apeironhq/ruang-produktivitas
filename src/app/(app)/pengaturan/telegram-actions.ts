@@ -2,11 +2,13 @@
 
 import { randomInt } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { dbError, fail, ok, parseForm, zCheckbox, type ActionState } from '@/lib/action'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import { telegramConfigured } from '@/lib/telegram'
+import { TG_PROMPT_COOKIE } from '@/lib/telegram-prompt'
 
 // Tanpa huruf/angka yang mirip (0/O, 1/I) agar mudah diketik.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -26,6 +28,59 @@ export async function createLinkCode(): Promise<{ code: string; expiresAt: strin
     if (error.code !== '23505') break
   }
   return { error: 'Gagal membuat kode. Coba lagi.' }
+}
+
+/* ---------- Ajakan menyambungkan Telegram setelah masuk ---------- */
+// Cookie TG_PROMPT_COOKIE = sudah diputuskan (tersambung / ditunda / dimatikan) → layout tidak perlu query lagi.
+type PromptPref = 'off' | { until: string } | undefined
+
+async function savePrompt(pref: PromptPref) {
+  const user = await getCurrentUser()
+  if (!user) return false
+  const supabase = await createClient()
+  const { data: prof } = await supabase.from('profiles').select('notification_settings').eq('id', user.id).maybeSingle()
+  const ns = { ...((prof?.notification_settings as Record<string, unknown>) ?? {}) }
+  if (pref === undefined) delete ns.tg_prompt
+  else ns.tg_prompt = pref
+  const { error } = await supabase.from('profiles').update({ notification_settings: ns }).eq('id', user.id)
+  return !error
+}
+
+async function setPromptCookie(maxAgeSec: number | null) {
+  const jar = await cookies()
+  if (maxAgeSec === null) jar.delete(TG_PROMPT_COOKIE)
+  else jar.set(TG_PROMPT_COOKIE, '1', { maxAge: maxAgeSec, httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' })
+}
+
+/** Dipakai popup untuk mengecek berkala apakah bot sudah menautkan akun. */
+export async function checkTelegramConnected(): Promise<boolean> {
+  const user = await getCurrentUser()
+  if (!user) return false
+  const supabase = await createClient()
+  const { data } = await supabase.from('telegram_connections').select('user_id').maybeSingle()
+  if (data) await setPromptCookie(365 * 86_400)
+  return !!data
+}
+
+/** "Nanti saja" → muncul lagi setelah 3 hari. */
+export async function snoozeTelegramPrompt(): Promise<void> {
+  const until = new Date(Date.now() + 3 * 86_400_000).toISOString()
+  await savePrompt({ until })
+  await setPromptCookie(3 * 86_400)
+}
+
+/** Nyalakan / matikan ajakan (dari popup "Jangan tampilkan lagi" atau dari Pengaturan). */
+export async function setTelegramPrompt(on: boolean): Promise<ActionState> {
+  if (!(await savePrompt(on ? undefined : 'off'))) return fail('Gagal menyimpan. Coba lagi.')
+  await setPromptCookie(on ? null : 365 * 86_400)
+  revalidatePath('/pengaturan')
+  return ok(on ? 'Ajakan sambungkan Telegram dinyalakan.' : 'Ajakan sambungkan Telegram dimatikan.')
+}
+
+/** Layout sudah tahu ajakan tidak perlu tampil → simpan cookie selama `seconds` agar tidak query lagi. */
+export async function rememberTelegramPromptDecided(seconds: number): Promise<void> {
+  if (!Number.isFinite(seconds) || seconds <= 0) return
+  await setPromptCookie(Math.min(Math.floor(seconds), 30 * 86_400))
 }
 
 /** BT-09: putuskan bot dari akun. */

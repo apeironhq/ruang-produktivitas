@@ -3,15 +3,17 @@
 import { Copy, ExternalLink, Link2, Unlink } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
-import { ConfirmButton } from '@/components/ui/actions'
+import { ConfirmButton, useRunAction } from '@/components/ui/actions'
 import { Field, SubmitButton, errClass, useFormAction } from '@/components/ui/forms'
 import { useToast } from '@/components/ui/Toast'
-import { createLinkCode, saveNotifications, unlinkTelegram } from './telegram-actions'
+import { createLinkCode, saveNotifications, setTelegramPrompt, unlinkTelegram } from './telegram-actions'
 
 export interface TelegramInfo {
   configured: boolean
   bot: string
   connection: { username: string; linked_at: string; linkedLabel: string } | null
+  /** popup ajakan setelah masuk aktif? */
+  promptOn: boolean
 }
 
 export function TelegramLink({ info }: { info: TelegramInfo }) {
@@ -80,7 +82,22 @@ export function TelegramLink({ info }: { info: TelegramInfo }) {
           {pending ? <span className="spinner" aria-hidden="true" /> : <Link2 size={16} />}Buat kode tautan
         </button>
       )}
+      <PromptToggle on={info.promptOn} />
     </div>
+  )
+}
+
+/** Nyalakan / matikan popup "Sambungkan Telegram" yang muncul setelah masuk. */
+function PromptToggle({ on }: { on: boolean }) {
+  const { pending, run } = useRunAction()
+  return (
+    <label className="choice">
+      <input type="checkbox" checked={on} disabled={pending} onChange={(e) => run(() => setTelegramPrompt(e.target.checked))} />
+      <span className="min-w-0">
+        <span className="choice-title">Ingatkan saya untuk menyambungkan Telegram</span>
+        <span className="choice-desc">Tampilkan ajakan menyambungkan setelah masuk, sampai Telegram tersambung.</span>
+      </span>
+    </label>
   )
 }
 

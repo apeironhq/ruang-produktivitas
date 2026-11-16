@@ -24,7 +24,7 @@ export default async function Page() {
     supabase.from('profiles').select('notification_settings').eq('id', user.id).maybeSingle(),
     supabase.from('reminder_logs').select('id, kind, status, detail, created_at, task_id').order('created_at', { ascending: false }).limit(6),
   ])
-  const ns = (prof.data?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string }
+  const ns = (prof.data?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string; tg_prompt?: unknown }
   const c = conn.data
   return (
     <div className="page">
@@ -42,6 +42,7 @@ export default async function Page() {
                 configured: telegramConfigured(),
                 bot: botUsername(),
                 connection: c ? { username: c.username, linked_at: c.linked_at, linkedLabel: formatDateTime(c.linked_at, user.timezone) } : null,
+                promptOn: ns.tg_prompt !== 'off',
               }} />
             </div>
           </section>
