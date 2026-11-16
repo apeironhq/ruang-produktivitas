@@ -19,9 +19,11 @@ export function EmptyState({ title, description, icon, action, className = '' }:
 }
 
 /** Kartu KPI: ikon bernada, label, angka besar, perubahan vs 7 hari sebelumnya, sparkline 7 hari. */
-export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, href, display, duration }: {
+export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek, lastWeek, caption, href, display, duration, compare = ['7 hari sebelumnya', '7 hari lalu'] }: {
   label: string; value: number | null; unit?: string; icon: React.ReactNode; color: string
   series?: number[]; thisWeek?: number; lastWeek?: number; caption?: string; href?: string; display?: string
+  /** label pembanding [panjang, pendek] */
+  compare?: [string, string]
   /** nilai berupa menit → selisih ditulis "+1 j 20 m", bukan "+80 baru" */
   duration?: boolean
 }) {
@@ -46,7 +48,7 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
           {delta ? (
             <p className={`kpi-delta${delta.up && !delta.flat ? ' up' : ''}`}>
               {!delta.flat && (delta.up ? <TrendingUp size={14} aria-hidden="true" /> : <TrendingDown size={14} aria-hidden="true" />)}
-              <span>{delta.text}</span> <span className="muted long">vs 7 hari sebelumnya</span><span className="muted short">vs 7 hari lalu</span>
+              <span>{delta.text}</span> <span className="muted long">vs {compare[0]}</span><span className="muted short">vs {compare[1]}</span>
             </p>
           ) : caption ? <p className="kpi-delta muted">{caption}</p> : null}
         </div>

@@ -4,7 +4,7 @@ import { createClient, getCurrentUser } from '@/lib/supabase/server'
 const TABLES = [
   'goals', 'goal_milestones', 'goal_progress_events', 'projects',
   'learning_subjects', 'learning_sources', 'learning_modules', 'learning_sessions',
-  'tasks', 'task_subtasks', 'journal_entries', 'project_milestones',
+  'tasks', 'task_subtasks', 'journal_entries', 'project_milestones', 'habits', 'habit_checkins', 'user_achievements',
   'financial_accounts', 'transaction_categories', 'transactions', 'budgets', 'goal_allocations',
 ] as const
 

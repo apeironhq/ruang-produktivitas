@@ -10,6 +10,8 @@ export type ActionState = {
   id?: string
   /** penanda unik agar efek klien (toast/tutup modal) terpicu setiap submit */
   ts: number
+  /** tampilkan pesan sukses walau aksinya biasanya senyap (mis. lencana baru dari check-in) */
+  notify?: boolean
 } | null
 
 type Result = NonNullable<ActionState>

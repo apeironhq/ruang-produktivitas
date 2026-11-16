@@ -172,6 +172,18 @@ export interface Project {
 }
 export interface ProjectMilestone { id: string; project_id: string; title: string; due_date: string | null; completed_at: string | null; sort_order: number }
 
+// ---------- Kebiasaan & lencana ----------
+export interface Habit {
+  id: string
+  name: string
+  description: string
+  frequency: 'harian' | 'mingguan'
+  times_per_week: number
+  is_archived: boolean
+  created_at: string
+}
+export interface Achievement { id: string; code: string; name: string; description: string; icon: string; metric: string; min_value: number; sort_order: number }
+
 // ---------- Keuangan ----------
 export interface Account {
   id: string

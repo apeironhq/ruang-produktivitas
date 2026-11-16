@@ -51,6 +51,7 @@ export function useOptimisticToggle(value: boolean) {
       try {
         const res = await fn(next)
         if (!res?.ok) { setLocal(null); toast.error(res?.message ?? 'Gagal menyimpan. Coba lagi.') }
+        else if (res.notify) toast.success(res.message)
       } catch {
         setLocal(null)
         toast.error('Koneksi bermasalah. Coba lagi.')

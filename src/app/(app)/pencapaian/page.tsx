@@ -1,42 +1,123 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CheckCircle2, Clock, Flag, Trophy } from 'lucide-react'
-import { EmptyState, KpiCard, PageHead, SectionHead, tint } from '@/components/ui/display'
-import { isoToDay } from '@/lib/dates'
+import { Award, BarChart3, BookOpen, Check, CheckCircle2, Clock, Flag, Flame, FolderKanban, NotebookPen, Repeat, Target, Trophy } from 'lucide-react'
+import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { addDays, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
-import type { Goal } from '@/lib/types'
+import type { Achievement, Goal } from '@/lib/types'
+import { hrefWith, str } from '@/lib/url'
 import { goalNumbers } from '../target/GoalCard'
 
 export const metadata: Metadata = { title: 'Pencapaian' }
 
-export default async function Page() {
+const BADGE_ICON: Record<string, React.ReactNode> = {
+  check: <Check size={20} />, book: <BookOpen size={20} />, clock: <Clock size={20} />, target: <Target size={20} />,
+  folder: <FolderKanban size={20} />, note: <NotebookPen size={20} />, flame: <Flame size={20} />, repeat: <Repeat size={20} />,
+}
+const BADGE_COLOR: Record<string, string> = {
+  check: 'var(--c-blue)', book: 'var(--c-lilac)', clock: 'var(--c-peach)', target: 'var(--c-rose)',
+  folder: 'var(--c-peach)', note: 'var(--c-rose)', flame: 'var(--c-peach)', repeat: 'var(--c-lilac)',
+}
+const PERIODS = [{ key: '7', days: 7 }, { key: '30', days: 30 }, { key: '90', days: 90 }] as const
+
+export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
+  const sp = await searchParams
   const user = (await getCurrentUser())!
+  const tz = user.timezone
+  const today = todayIn(tz)
+  const period = PERIODS.find((p) => p.key === str(sp.periode)) ?? PERIODS[0]
+  const curFrom = addDays(today, -(period.days - 1))
+  const prevFrom = addDays(curFrom, -period.days)
   const supabase = await createClient()
-  const [goalsRes, ms, tasks, mods, mins, progress, titles] = await Promise.all([
+
+  // Beri lencana yang syaratnya baru terpenuhi (idempoten) sebelum membaca daftar lencana.
+  await supabase.rpc('evaluate_achievements')
+
+  const [goalsRes, ms, progress, titles, defs, earned, metricsRes, doneRes, sessRes, noteRes, checkRes] = await Promise.all([
     supabase.from('goals').select(GOAL_COLUMNS).not('achieved_at', 'is', null).order('achieved_at', { ascending: false }),
     supabase.from('goal_milestones').select('id, goal_id, title, threshold, reached_at').not('reached_at', 'is', null).order('reached_at', { ascending: false }).limit(20),
-    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'selesai'),
-    supabase.from('learning_modules').select('id', { count: 'exact', head: true }).not('completed_at', 'is', null),
-    supabase.from('learning_sessions').select('duration_minutes'),
     loadProgress(supabase),
     supabase.from('goals').select('id, title'),
+    supabase.from('achievements').select('id, code, name, description, icon, metric, min_value, sort_order').order('sort_order'),
+    supabase.from('user_achievements').select('achievement_id, earned_at'),
+    supabase.rpc('my_achievement_metrics'),
+    supabase.from('tasks').select('completed_at').gte('completed_at', startOfDayIso(prevFrom, tz)).limit(10000),
+    supabase.from('learning_sessions').select('session_date, duration_minutes').gte('session_date', prevFrom).limit(10000),
+    supabase.from('journal_entries').select('entry_date').gte('entry_date', prevFrom).limit(10000),
+    supabase.from('habit_checkins').select('checkin_date').gte('checkin_date', prevFrom).limit(20000),
   ])
   const achieved = mergeProgress((goalsRes.data ?? []) as Goal[], progress)
-  const totalMinutes = (mins.data ?? []).reduce((n, s) => n + s.duration_minutes, 0)
   const goalTitle = new Map((titles.data ?? []).map((g) => [g.id, g.title]))
+  const badges = (defs.data ?? []) as Achievement[]
+  const earnedAt = new Map((earned.data ?? []).map((e) => [e.achievement_id as string, e.earned_at as string]))
+  const metrics = new Map(((metricsRes.data ?? []) as Array<{ metric: string; value: number }>).map((m) => [m.metric, Number(m.value)]))
+  const earnedCount = badges.filter((b) => earnedAt.has(b.id)).length
+
+  // Statistik periode berjalan vs periode sebelumnya (PC-05)
+  const split = <T,>(rows: T[], day: (r: T) => string, weight: (r: T) => number = () => 1) => {
+    let cur = 0, prev = 0
+    for (const r of rows) { const d = day(r); if (d >= curFrom) cur += weight(r); else if (d >= prevFrom) prev += weight(r) }
+    return { cur, prev }
+  }
+  const sDone = split(doneRes.data ?? [], (r) => isoToDay(r.completed_at!, tz))
+  const sMin = split(sessRes.data ?? [], (r) => r.session_date, (r) => r.duration_minutes)
+  const sNote = split(noteRes.data ?? [], (r) => r.entry_date)
+  const sCheck = split(checkRes.data ?? [], (r) => r.checkin_date)
+  const cmp: [string, string] = [`${period.days} hari sebelumnya`, `periode lalu`]
 
   return (
     <div className="page">
-      <PageHead title="Pencapaian" description="Riwayat target yang berhasil dicapai, dicatat sekali saat syaratnya terpenuhi." />
+      <PageHead title="Pencapaian" description="Lencana, statistik perkembangan, dan riwayat target — dicatat sekali saat syaratnya terpenuhi." />
 
-      <div className="kpis kpis-4">
-        <KpiCard label="Target tercapai" value={achieved.length} icon={<Trophy size={20} strokeWidth={1.9} />} color="var(--c-peach)" caption="Sepanjang waktu" />
-        <KpiCard label="Tugas selesai" value={tasks.count ?? 0} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption="Sepanjang waktu" />
-        <KpiCard label="Modul dituntaskan" value={mods.count ?? 0} icon={<Flag size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption="Dari seluruh bidang belajar" />
-        <KpiCard label="Total belajar" value={totalMinutes} display={formatDuration(totalMinutes)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-rose)" caption={`${formatNumber((mins.data ?? []).length)} sesi`} />
-      </div>
+      <section className="card" aria-labelledby="stat-title">
+        <SectionHead id="stat-title" icon={<BarChart3 size={18} />} title="Statistik perkembangan" desc={`${formatDay(curFrom)} – ${formatDay(today)} dibanding ${period.days} hari sebelumnya`}>
+          <div className="seg" role="group" aria-label="Periode">
+            {PERIODS.map((p) => <Link key={p.key} href={hrefWith('/pencapaian', sp, { periode: p.key === '7' ? null : p.key })} className={period.key === p.key ? 'on' : ''} scroll={false}>{p.days} hari</Link>)}
+          </div>
+        </SectionHead>
+        <div className="card-body">
+          <div className="kpis kpis-4">
+            <KpiCard label="Tugas selesai" value={sDone.cur} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" thisWeek={sDone.cur} lastWeek={sDone.prev} compare={cmp} />
+            <KpiCard label="Waktu belajar" value={sMin.cur} display={formatDuration(sMin.cur)} duration icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" thisWeek={sMin.cur} lastWeek={sMin.prev} compare={cmp} />
+            <KpiCard label="Catatan ditulis" value={sNote.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color="var(--c-rose)" thisWeek={sNote.cur} lastWeek={sNote.prev} compare={cmp} />
+            <KpiCard label="Check-in kebiasaan" value={sCheck.cur} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" thisWeek={sCheck.cur} lastWeek={sCheck.prev} compare={cmp} />
+          </div>
+        </div>
+      </section>
+
+      <section className="card" aria-labelledby="badge-title">
+        <SectionHead id="badge-title" icon={<Award size={18} />} title="Lencana" desc="Diberikan otomatis saat syaratnya terpenuhi, masing-masing sekali">
+          <span className="badge">{earnedCount} dari {badges.length} diraih</span>
+        </SectionHead>
+        <div className="card-body">
+          <div className="badges">
+            {badges.map((b) => {
+              const at = earnedAt.get(b.id)
+              const val = Math.min(metrics.get(b.metric) ?? 0, b.min_value)
+              const color = BADGE_COLOR[b.icon] ?? 'var(--brand)'
+              return (
+                <div key={b.id} className={`badge-card${at ? '' : ' locked'}`}>
+                  <span className="badge-medal" style={at ? tint(color) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="badge-name">{b.name}</span>
+                    <span className="item-sub block">{b.description}</span>
+                    {at ? (
+                      <span className="item-meta block mt-1" style={{ color: 'var(--brand-ink)' }}>Diraih {formatDay(isoToDay(at, tz))}</span>
+                    ) : (
+                      <span className="block mt-1">
+                        <ProgressBar percent={(val / b.min_value) * 100} label={`Progres lencana ${b.name}`} color="var(--n-400)" />
+                        <span className="item-sub">{formatNumber(val)} / {formatNumber(b.min_value)}</span>
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
       <div className="row-2">
         <section className="card" aria-labelledby="ach-title">
@@ -55,7 +136,7 @@ export default async function Page() {
                       <span className="item-sub block truncate">{n.target} · dimulai {formatDay(g.start_date)}</span>
                     </Link>
                     <span className="text-right">
-                      <span className="item-meta block">{formatDateTime(g.achieved_at, user.timezone)}</span>
+                      <span className="item-meta block">{formatDateTime(g.achieved_at, tz)}</span>
                       {g.status === 'arsip' && <span className="badge mt-1">Diarsipkan</span>}
                     </span>
                   </li>
@@ -77,7 +158,7 @@ export default async function Page() {
                       <span className="item-title block truncate">{m.title || `Ambang ${formatNumber(m.threshold)}`}</span>
                       <span className="item-sub block truncate">{goalTitle.get(m.goal_id) ?? 'Target'}</span>
                     </Link>
-                    <span className="item-meta">{formatDay(isoToDay(m.reached_at!, user.timezone))}</span>
+                    <span className="item-meta">{formatDay(isoToDay(m.reached_at!, tz))}</span>
                   </li>
                 ))}
               </ul>

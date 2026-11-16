@@ -680,6 +680,32 @@ a.item-link:hover { background: var(--bg-subtle); }
 .detail-meta .meta-status.tone-neutral::before { background: var(--n-400); }
 .detail-meta .overdue { color: var(--err); }
 
+/* Kebiasaan: tombol check-in hari ini & strip 7 hari */
+.habit-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.habit-row:last-child { border-bottom: 0; }
+.habit-check { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px; border: 1.5px dashed var(--n-300); background: var(--bg-surface); color: var(--n-300); cursor: pointer; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+.habit-check:hover { border-color: var(--brand); color: var(--brand); }
+.habit-check.done { border-style: solid; border-color: var(--brand); background: var(--brand); color: var(--text-inverse); }
+.habit-check:disabled { cursor: progress; }
+.day-strip { display: flex; gap: 0.35rem; }
+.day-dot { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0; border: 0; background: none; cursor: pointer; }
+.day-dot-label { font-size: 0.68rem; color: var(--text-muted); }
+.day-dot.today .day-dot-label { color: var(--brand); font-weight: var(--fw-medium); }
+.day-dot-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--n-100); color: var(--text-inverse); transition: background var(--dur) var(--ease); }
+.day-dot:hover .day-dot-mark { background: var(--n-200); }
+.day-dot.done .day-dot-mark { background: var(--brand); }
+.day-dot:disabled { cursor: progress; }
+.streak { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--c-peach); font-weight: var(--fw-medium); }
+@media (max-width: 640px) { .habit-row .day-strip { width: 100%; justify-content: space-between; padding-left: calc(44px + 1rem); } }
+
+/* Lencana */
+.badges { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.badge-card { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-surface); }
+.badge-card.locked .badge-medal { color: var(--n-400); background: var(--n-100); }
+.badge-card.locked .badge-name { color: var(--text-body); }
+.badge-medal { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 999px; }
+.badge-name { display: block; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-heading); }
+
 /* Kepala kartu ber-ikon (card-header h2 di MDUNDIG: ikon 18px + judul + keterangan) */
 .card-header h2 { display: flex; align-items: center; gap: 0.5rem; }
 .card-header h2 svg { color: var(--text-muted); flex-shrink: 0; }

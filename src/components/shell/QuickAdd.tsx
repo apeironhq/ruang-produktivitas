@@ -1,6 +1,7 @@
 'use client'
 
-import { BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen, Plus, Target, Wallet } from 'lucide-react'
+import { BookOpen, CalendarClock, CheckSquare, Clock, FolderKanban, NotebookPen, Plus, Repeat, Target, Wallet } from 'lucide-react'
+import { HabitFormModal, emptyHabit } from '@/app/(app)/kebiasaan/HabitForms'
 import { ProjectFormModal, emptyProject } from '@/app/(app)/proyek/ProjectForms'
 import { AccountFormModal, TransactionFormModal, emptyTx } from '@/app/(app)/keuangan/FinanceForms'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
@@ -11,7 +12,7 @@ import { GoalFormModal, blankGoal } from '@/app/(app)/target/GoalForm'
 import { TaskFormModal, emptyTask } from '@/app/(app)/tugas/TaskForm'
 import { useToast } from '@/components/ui/Toast'
 
-export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening' | 'proyek'
+export type QuickKind = 'tugas' | 'kegiatan' | 'catatan' | 'target' | 'sesi' | 'bidang' | 'transaksi' | 'rekening' | 'proyek' | 'kebiasaan'
 /** Tautan yang sudah terisi saat popup dibuka dari halaman tertentu (mis. detail target). */
 type Preset = { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }
 
@@ -28,6 +29,7 @@ export const QUICK_ITEMS: Array<{ kind: QuickKind; label: string; desc: string; 
   { kind: 'sesi', label: 'Sesi belajar', desc: 'Durasi, ringkasan & posisi', icon: <Clock size={17} />, color: 'var(--c-peach)' },
   { kind: 'target', label: 'Target', desc: 'Target & tahapannya', icon: <Target size={17} />, color: 'var(--c-blue)' },
   { kind: 'proyek', label: 'Proyek', desc: 'Proyek & tahapannya', icon: <FolderKanban size={17} />, color: 'var(--c-peach)' },
+  { kind: 'kebiasaan', label: 'Kebiasaan', desc: 'Kebiasaan harian/mingguan', icon: <Repeat size={17} />, color: 'var(--c-blue)' },
   { kind: 'bidang', label: 'Bidang belajar', desc: 'Bidang & daftar modul', icon: <BookOpen size={17} />, color: 'var(--c-lilac)' },
 ]
 
@@ -96,6 +98,7 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
         <TransactionFormModal key={a.key} open onClose={close} accounts={a.data.accounts} categories={a.data.categories} initial={emptyTx(a.data.today, a.data.accounts)} />
       )}
       {a?.kind === 'rekening' && <AccountFormModal key={a.key} open onClose={close} initial={{ name: '', kind: 'bank', opening_balance: 0 }} />}
+      {a?.kind === 'kebiasaan' && <HabitFormModal key={a.key} open onClose={close} initial={emptyHabit()} />}
       {a?.kind === 'bidang' && (
         <SubjectFormModal key={a.key} open onClose={close} goals={a.data.options.goals} initial={{ title: '', description: '', goal_id: null, status: 'aktif' }} />
       )}
