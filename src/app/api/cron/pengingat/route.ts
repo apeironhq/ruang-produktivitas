@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { agendaLines, reminderText, siteUrl, todayAgenda } from '@/lib/bot'
+import { reminderText, sendDashboard } from '@/lib/bot'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
-import { formatDayLong } from '@/lib/format'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { esc, secretMatches, sendMessage } from '@/lib/telegram'
 
@@ -81,22 +80,18 @@ async function run(req: NextRequest) {
       const { data: got } = await claim.select('id')
       if (!got?.length) continue
 
-      const [agenda, habits, checks] = await Promise.all([
-        todayAgenda(db, c.user_id, tz),
+      const [habits, checks] = await Promise.all([
         db.from('habits').select('id', { count: 'exact', head: true }).eq('user_id', c.user_id).eq('is_archived', false).eq('frequency', 'harian'),
         db.from('habit_checkins').select('id', { count: 'exact', head: true }).eq('user_id', c.user_id).eq('checkin_date', today),
       ])
-      const lines = agendaLines(agenda, tz)
       const habitLeft = Math.max((habits.count ?? 0) - (checks.count ?? 0), 0)
-      const text = [
-        `☀️ <b>Selamat pagi, ${esc(p.display_name || 'Anda')}!</b>`,
-        formatDayLong(today),
-        '',
-        ...(lines.length ? lines : ['Tidak ada tugas atau kegiatan terjadwal hari ini.']),
-        ...(habitLeft ? ['', `🔁 ${habitLeft} kebiasaan harian menunggu check-in.`] : []),
-        ...(siteUrl() ? ['', `<a href="${siteUrl()}/">Buka Beranda</a>`] : []),
-      ].join('\n')
-      const res = await sendMessage(c.chat_id, text)
+      // Kartu ringkasan (gambar) + tombol menu — sama dengan /menu.
+      const res = await sendDashboard(
+        { db, chatId: Number(c.chat_id), userId: c.user_id, tz, name: p.display_name || 'Anda' },
+        [`☀️ <b>Ringkasan hari ini</b> — semangat, ${esc((p.display_name || 'Anda').split(' ')[0]!)}!`,
+          ...(habitLeft ? [`🔁 ${habitLeft} kebiasaan harian menunggu check-in.`] : []),
+          '', '✨ <b>Apa yang ingin kamu lakukan sekarang?</b>'].join('\n'),
+      )
       if (res.ok) {
         stats.digests++
         logs.push({ user_id: c.user_id, task_id: null, kind: 'ringkasan', status: 'terkirim', detail: '' })

@@ -72,7 +72,9 @@ const me = await tg('getMe')
 await tg('setWebhook', { url: `${url}/api/telegram/webhook`, secret_token: webhookSecret, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true, max_connections: 10 })
 await tg('setMyCommands', {
   commands: [
+    { command: 'menu', description: 'Ringkasan hari ini & menu utama' },
     { command: 'tugas', description: 'Tugas & kegiatan hari ini' },
+    { command: 'tambah', description: 'Tambah tugas (judul besok 09.00)' },
     { command: 'catat', description: 'Simpan catatan cepat' },
     { command: 'belajar', description: 'Catat sesi belajar (menit bidang materi)' },
     { command: 'target', description: 'Progres target aktif' },

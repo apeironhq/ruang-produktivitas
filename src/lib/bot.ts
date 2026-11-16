@@ -1,10 +1,11 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { DEFAULT_TZ, isValidTimeZone, startOfDayIso, todayIn, addDays } from './dates'
-import { formatDuration, formatShort, formatTime } from './format'
+import { renderDashboardCard, type CardData } from './bot-card'
+import { DEFAULT_TZ, isValidTimeZone, startOfDayIso, todayIn, addDays, zonedToIso } from './dates'
+import { formatDayLong, formatDuration, formatNumber, formatRupiah, formatShort, formatTime } from './format'
 import { GOAL_COLUMNS, mergeProgress } from './queries'
 import type { Goal, GoalProgressRow } from './types'
-import { answerCallback, editMessage, esc, sendMessage } from './telegram'
+import { answerCallback, editMessage, esc, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from './telegram'
 
 /* ---------- Tipe minimal update Telegram ---------- */
 interface TgUser { id: number; username?: string; first_name?: string }
@@ -20,7 +21,9 @@ const appLink = (path: string, label = 'Buka di aplikasi') => (siteUrl() ? `\n\n
 
 const HELP = [
   '<b>Perintah Ruang Produktivitas</b>',
+  '/menu — ringkasan hari ini & menu utama',
   '/tugas — tugas & kegiatan hari ini',
+  '/tambah <i>judul [besok] [09.00]</i> — tambah tugas',
   '/catat <i>isi</i> — simpan catatan cepat',
   '/belajar <i>menit bidang materi</i> — catat sesi belajar\n   contoh: <code>/belajar 45 Next.js middleware</code>',
   '/target — progres target aktif',
@@ -60,9 +63,12 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate): Promise<'se
   }
 
   switch (cmd ? name : '') {
-    case 'start': case 'mulai': await sendMessage(chatId, `Akun sudah tertaut sebagai <b>${esc(ctx.name)}</b>.\n\n${HELP}`); break
+    case 'start': case 'mulai': case 'menu': await sendDashboard(ctx); break
     case 'bantuan': case 'help': await sendMessage(chatId, HELP); break
     case 'tugas': await cmdTasks(ctx); break
+    case 'tambah': await askTask(ctx, arg); break
+    case 'keuangan': await cmdFinance(ctx); break
+    case 'ringkasan': await cmdWeekly(ctx); break
     case 'target': await cmdGoals(ctx); break
     case 'pengingat': await cmdReminders(ctx); break
     case 'catat': await askNote(ctx, arg); break
@@ -107,8 +113,9 @@ async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw
     { onConflict: 'user_id' },
   )
   if (error) throw error
-  const { data: prof } = await db.from('profiles').select('display_name').eq('id', claimed.user_id).maybeSingle()
-  await sendMessage(chatId, `✅ Tertaut dengan akun <b>${esc(prof?.display_name || 'Anda')}</b>. Pengingat tugas & ringkasan harian akan dikirim ke sini.\n\n${HELP}`)
+  const ctx = await loadCtx(db, from.id, chatId)
+  await sendMessage(chatId, `✅ Tertaut dengan akun <b>${esc(ctx?.name || 'Anda')}</b>. Pengingat tugas & ringkasan harian akan dikirim ke sini.`)
+  if (ctx) await sendDashboard(ctx)
   return 'selesai' as const
 }
 
@@ -220,6 +227,12 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
   if (!msg || msg.chat.type !== 'private') { await answerCallback(cb.id); return 'diabaikan' }
   const ctx = await loadCtx(db, cb.from.id, msg.chat.id)
   if (!ctx) { await answerCallback(cb.id, 'Akun belum ditautkan.'); return 'selesai' }
+  // Tombol menu utama (m:…) & pilihan "Catat Aktivitas" (c:…) — hanya membaca/menampilkan petunjuk.
+  if (cb.data?.startsWith('m:') || cb.data?.startsWith('c:')) {
+    await answerCallback(cb.id)
+    await handleMenu(ctx, cb.data)
+    return 'selesai'
+  }
   const { data: p } = await db.from('telegram_pending').select('user_id, action, payload, created_at').eq('chat_id', ctx.chatId).maybeSingle()
   const stale = !p || p.user_id !== ctx.userId || Date.now() - new Date(p.created_at).getTime() > 86_400_000
   if (stale) {
@@ -246,6 +259,12 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
     if (error) throw error
     await answerCallback(cb.id, 'Tersimpan')
     await editMessage(ctx.chatId, msg.message_id, `✅ Catatan tersimpan${title ? `: <b>${esc(title)}</b>` : ''}.` + appLink(`/jurnal/${data.id}`, 'Lihat catatan'))
+  } else if (p.action === 'tugas') {
+    const { data, error } = await db.from('tasks')
+      .insert({ user_id: ctx.userId, kind: 'tugas', title: String(pl.title), due_at: pl.due_at ?? null, priority: 'sedang', status: 'belum' }).select('id').single()
+    if (error) throw error
+    await answerCallback(cb.id, 'Tersimpan')
+    await editMessage(ctx.chatId, msg.message_id, `✅ Tugas ditambahkan: <b>${esc(String(pl.title))}</b>${pl.due_at ? `\nTenggat ${formatShort(String(pl.due_at), ctx.tz)}` : ''}` + appLink(`/tugas/${data.id}`, 'Atur detail di aplikasi'))
   } else {
     const { error } = await db.from('learning_sessions').insert({
       user_id: ctx.userId, subject_id: pl.subject_id, session_date: pl.date, duration_minutes: pl.minutes, material: pl.material ?? '',
@@ -255,6 +274,195 @@ async function handleCallback(db: SupabaseClient, cb: TgCallback): Promise<'sele
     await editMessage(ctx.chatId, msg.message_id, `✅ Sesi belajar <b>${esc(String(pl.subject))}</b> ${formatDuration(Number(pl.minutes))} tercatat.` + appLink(`/belajar/${pl.subject_id}`, 'Lihat bidang'))
   }
   return 'selesai'
+}
+
+/* ---------- Kartu ringkasan & menu utama ---------- */
+export function mainKeyboard(): Keyboard {
+  const kb: Keyboard = [
+    [{ text: '📝 Catat Aktivitas', callback_data: 'm:catat' }, { text: '📋 Tugas Saya', callback_data: 'm:tugas' }],
+    [{ text: '📖 Jurnal Belajar', callback_data: 'm:belajar' }, { text: '🎯 Target Saya', callback_data: 'm:target' }],
+    [{ text: '💰 Keuangan', callback_data: 'm:uang' }, { text: '📊 Ringkasan', callback_data: 'm:ringkas' }],
+  ]
+  // Tombol URL hanya boleh https (localhost ditolak Telegram).
+  if (siteUrl().startsWith('https://')) kb.push([{ text: '↗️ Buka Ruang Produktivitas', url: `${siteUrl()}/` }])
+  return kb
+}
+
+function greetingFor(tz: string, now = new Date()) {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(now))
+  return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam'
+}
+
+const MAX_AGENDA = 6
+
+export async function buildCardData(db: SupabaseClient, userId: string, tz: string, name: string): Promise<CardData> {
+  const [agenda, tasks, sessions, spend, goals] = await Promise.all([
+    todayAgenda(db, userId, tz),
+    db.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', 'tugas').in('status', OPEN),
+    db.from('learning_sessions').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('session_date', todayIn(tz)),
+    db.from('transactions').select('amount').eq('user_id', userId).eq('type', 'pengeluaran').eq('occurred_on', todayIn(tz)).limit(1000),
+    db.from('goals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'aktif'),
+  ])
+  const items = [
+    ...agenda.overdue.map((t) => ({ title: t.title, at: t.due_at!, time: isoDayLabel(t.due_at!, tz, agenda.today), late: true, event: false })),
+    ...agenda.events.map((e) => ({ title: e.title, at: e.start_at!, time: formatTime(e.start_at!, tz), late: false, event: true })),
+    ...agenda.dueToday.map((t) => ({ title: t.title, at: (t.due_at ?? t.start_at)!, time: t.due_at || t.start_at ? formatTime((t.due_at ?? t.start_at)!, tz) : '', late: !!t.due_at && new Date(t.due_at).getTime() < Date.now(), event: false })),
+  ]
+  const ordered = [...items.filter((i) => i.late), ...items.filter((i) => !i.late).sort((a, b) => a.at.localeCompare(b.at))]
+  const total = (spend.data ?? []).reduce((n, r) => n + Number(r.amount), 0)
+  return {
+    greeting: greetingFor(tz),
+    name: name.split(' ')[0] || name,
+    dateLabel: formatDayLong(agenda.today).replace(/^(\w+) /, '$1, '),
+    stats: { tasks: tasks.count ?? 0, sessions: sessions.count ?? 0, expense: formatRupiah(total), goals: goals.count ?? 0 },
+    agenda: ordered.slice(0, MAX_AGENDA).map(({ title, time, late, event }) => ({ title, time, late, event })),
+    more: Math.max(ordered.length - MAX_AGENDA, 0),
+  }
+}
+
+/** Tenggat yang sudah lewat: tampilkan jam bila kemarin/hari ini, tanggal bila lebih lama. */
+function isoDayLabel(iso: string, tz: string, today: string) {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(iso))
+  return day === today || day === addDays(today, -1) ? formatTime(iso, tz) : formatShort(iso, tz).replace(/,.*$/, '')
+}
+
+/** Kirim kartu ringkasan (gambar) + tombol menu. Bila render gambar gagal, kirim versi teks. */
+export async function sendDashboard(ctx: Pick<Ctx, 'db' | 'chatId' | 'userId' | 'tz' | 'name'>, caption = '✨ <b>Apa yang ingin kamu lakukan sekarang?</b>') {
+  const data = await buildCardData(ctx.db, ctx.userId, ctx.tz, ctx.name)
+  try {
+    const png = await renderDashboardCard(data)
+    const res = await sendPhoto(ctx.chatId, png, caption, mainKeyboard())
+    if (res.ok || !res.retryable) return res
+  } catch (e) {
+    console.error('render kartu', e)
+  }
+  const lines = [
+    `<b>${esc(data.greeting)}, ${esc(data.name)}!</b>`, data.dateLabel, '',
+    `✅ Tugas aktif: <b>${data.stats.tasks}</b> · 📖 Belajar hari ini: <b>${data.stats.sessions} sesi</b>`,
+    `💸 Pengeluaran: <b>${data.stats.expense}</b> · 🎯 Target aktif: <b>${data.stats.goals}</b>`, '',
+    '<b>Agenda hari ini</b>',
+    ...(data.agenda.length ? data.agenda.map((a) => `• ${a.time ? `${a.time} ` : ''}${esc(a.title)}${a.late ? ' — <i>terlambat</i>' : ''}`) : ['Tidak ada agenda.']),
+    '', caption,
+  ]
+  return sendMessageKb(ctx.chatId, lines.join('\n'), mainKeyboard())
+}
+
+async function handleMenu(ctx: Ctx, data: string) {
+  switch (data) {
+    case 'm:catat':
+      await sendMessageKb(ctx.chatId, '📝 <b>Catat aktivitas</b>\nMau mencatat apa?', [
+        [{ text: '🗒 Catatan', callback_data: 'c:catatan' }, { text: '📚 Sesi belajar', callback_data: 'c:belajar' }],
+        [{ text: '✅ Tugas baru', callback_data: 'c:tugas' }],
+      ])
+      break
+    case 'c:catatan': await sendMessage(ctx.chatId, 'Kirim saja isi catatanmu sebagai pesan biasa — atau <code>/catat isi catatan</code>. Baris pertama jadi judul. Rupi akan minta konfirmasi sebelum menyimpan.'); break
+    case 'c:belajar': await askSession(ctx, ''); break
+    case 'c:tugas': await sendMessage(ctx.chatId, 'Kirim: <code>/tambah judul tugas</code>\nBisa ditambah waktu, mis.:\n<code>/tambah Kirim laporan besok 09.00</code>\n<code>/tambah Bayar listrik 16.00</code>'); break
+    case 'm:tugas': await cmdTasks(ctx); break
+    case 'm:belajar': await cmdLearning(ctx); break
+    case 'm:target': await cmdGoals(ctx); break
+    case 'm:uang': await cmdFinance(ctx); break
+    case 'm:ringkas': await cmdWeekly(ctx); break
+  }
+}
+
+async function askTask(ctx: Ctx, arg: string) {
+  if (!arg) { await handleMenu(ctx, 'c:tugas'); return }
+  // "judul [hari ini|besok|lusa] [jam] HH.MM" — waktu & hari opsional.
+  const m = /^([\s\S]+?)(?:\s+(hari ini|besok|lusa))?(?:\s+(?:jam\s+|pukul\s+)?([01]?\d|2[0-3])[.:]([0-5]\d))?$/i.exec(arg.trim())
+  const title = (m?.[1] ?? arg).trim().slice(0, 200)
+  const dayWord = m?.[2]?.toLowerCase()
+  const today = todayIn(ctx.tz)
+  const day = dayWord === 'besok' ? addDays(today, 1) : dayWord === 'lusa' ? addDays(today, 2) : today
+  const due = m?.[3] ? zonedToIso(`${day}T${m[3].padStart(2, '0')}:${m[4]}`, ctx.tz) : dayWord ? zonedToIso(`${day}T23:59`, ctx.tz) : null
+  await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'tugas', payload: { title, due_at: due }, created_at: new Date().toISOString() })
+  await sendMessage(ctx.chatId, `Tambah tugas ini?\n\n✅ <b>${esc(title)}</b>${due ? `\n⏰ Tenggat ${formatShort(due, ctx.tz)}` : '\n<i>tanpa tenggat</i>'}`, CONFIRM)
+}
+
+async function cmdLearning(ctx: Ctx) {
+  const today = todayIn(ctx.tz)
+  const weekFrom = addDays(today, -6)
+  const [subs, sess] = await Promise.all([
+    ctx.db.from('learning_subjects').select('id, title').eq('user_id', ctx.userId).eq('status', 'aktif').order('title').limit(20),
+    ctx.db.from('learning_sessions').select('subject_id, session_date, duration_minutes, material').eq('user_id', ctx.userId).gte('session_date', weekFrom).order('session_date', { ascending: false }).limit(500),
+  ])
+  const per = new Map<string, number>()
+  for (const s of sess.data ?? []) per.set(s.subject_id, (per.get(s.subject_id) ?? 0) + s.duration_minutes)
+  const total = [...per.values()].reduce((a, b) => a + b, 0)
+  const last = sess.data?.[0]
+  const name = new Map((subs.data ?? []).map((s) => [s.id, s.title]))
+  const lines = [
+    '📖 <b>Jurnal belajar — 7 hari terakhir</b>', '',
+    `Total: <b>${formatDuration(total)}</b> dalam ${sess.data?.length ?? 0} sesi`,
+    ...(last ? [`Terakhir: ${esc(name.get(last.subject_id) ?? 'Bidang')}${last.material ? ` — ${esc(last.material)}` : ''}`] : []),
+    '',
+    ...((subs.data ?? []).length ? (subs.data ?? []).map((s) => `• ${esc(s.title)} — ${formatDuration(per.get(s.id) ?? 0)}`) : ['Belum ada bidang belajar aktif.']),
+    '', `Catat sesi: <code>/belajar 45 ${esc(subs.data?.[0]?.title ?? 'Next.js')} materi</code>`,
+  ]
+  await sendMessage(ctx.chatId, lines.join('\n') + appLink('/belajar'))
+}
+
+async function cmdFinance(ctx: Ctx) {
+  const today = todayIn(ctx.tz)
+  const monthStart = `${today.slice(0, 7)}-01`
+  const [tx, cats] = await Promise.all([
+    ctx.db.from('transactions').select('type, amount, category_id, occurred_on').eq('user_id', ctx.userId).in('type', ['pemasukan', 'pengeluaran']).gte('occurred_on', monthStart).limit(5000),
+    ctx.db.from('transaction_categories').select('id, name').eq('user_id', ctx.userId),
+  ])
+  let inc = 0, exp = 0, expToday = 0
+  const byCat = new Map<string, number>()
+  for (const t of tx.data ?? []) {
+    const a = Number(t.amount)
+    if (t.type === 'pemasukan') inc += a
+    else {
+      exp += a
+      if (t.occurred_on === today) expToday += a
+      const k = t.category_id ?? '-'
+      byCat.set(k, (byCat.get(k) ?? 0) + a)
+    }
+  }
+  const catName = new Map((cats.data ?? []).map((c) => [c.id, c.name]))
+  const top = [...byCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)
+  const month = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(`${monthStart}T12:00:00Z`))
+  const lines = [
+    `💰 <b>Keuangan — ${month}</b>`, '',
+    `Pemasukan: <b>${formatRupiah(inc)}</b>`,
+    `Pengeluaran: <b>${formatRupiah(exp)}</b>`,
+    `Selisih: <b>${formatRupiah(inc - exp)}</b>`,
+    `Pengeluaran hari ini: <b>${formatRupiah(expToday)}</b>`,
+    ...(top.length ? ['', '<b>Pengeluaran terbesar</b>', ...top.map(([k, v]) => `• ${esc(catName.get(k) ?? 'Tanpa kategori')} — ${formatRupiah(v)}`)] : []),
+  ]
+  await sendMessage(ctx.chatId, lines.join('\n') + appLink('/keuangan'))
+}
+
+async function cmdWeekly(ctx: Ctx) {
+  const today = todayIn(ctx.tz)
+  const cur = addDays(today, -6), prev = addDays(today, -13)
+  const fromIso = startOfDayIso(prev, ctx.tz), curIso = startOfDayIso(cur, ctx.tz)
+  const [done, sess, notes, checks] = await Promise.all([
+    ctx.db.from('tasks').select('completed_at').eq('user_id', ctx.userId).gte('completed_at', fromIso).limit(5000),
+    ctx.db.from('learning_sessions').select('session_date, duration_minutes').eq('user_id', ctx.userId).gte('session_date', prev).limit(5000),
+    ctx.db.from('journal_entries').select('entry_date').eq('user_id', ctx.userId).gte('entry_date', prev).limit(5000),
+    ctx.db.from('habit_checkins').select('checkin_date').eq('user_id', ctx.userId).gte('checkin_date', prev).limit(10000),
+  ])
+  const split = <T,>(rows: T[] | null, isCur: (r: T) => boolean, w: (r: T) => number = () => 1) => {
+    let c = 0, p = 0
+    for (const r of rows ?? []) { if (isCur(r)) c += w(r); else p += w(r) }
+    return { c, p }
+  }
+  const trend = (c: number, p: number) => (c > p ? '↑' : c < p ? '↓' : '→')
+  const d = split(done.data, (r) => r.completed_at! >= curIso)
+  const s = split(sess.data, (r) => r.session_date >= cur, (r) => r.duration_minutes)
+  const n = split(notes.data, (r) => r.entry_date >= cur)
+  const h = split(checks.data, (r) => r.checkin_date >= cur)
+  const lines = [
+    '📊 <b>Ringkasan 7 hari terakhir</b>', '<i>dibanding 7 hari sebelumnya</i>', '',
+    `✅ Tugas selesai: <b>${formatNumber(d.c)}</b> ${trend(d.c, d.p)} (${formatNumber(d.p)})`,
+    `📖 Waktu belajar: <b>${formatDuration(s.c)}</b> ${trend(s.c, s.p)} (${formatDuration(s.p)})`,
+    `🗒 Catatan ditulis: <b>${formatNumber(n.c)}</b> ${trend(n.c, n.p)} (${formatNumber(n.p)})`,
+    `🔁 Check-in kebiasaan: <b>${formatNumber(h.c)}</b> ${trend(h.c, h.p)} (${formatNumber(h.p)})`,
+  ]
+  await sendMessage(ctx.chatId, lines.join('\n') + appLink('/pencapaian', 'Lihat statistik lengkap'))
 }
 
 /* ---------- Pesan pengingat (dipakai cron) ---------- */

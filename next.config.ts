@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
     // Aksi simpan/ubah/hapus memanggil revalidatePath sehingga data tetap segar setelah perubahan.
     staleTimes: { dynamic: 60, static: 300 },
   },
+  // Kartu ringkasan Bot Telegram dirender di server (next/og) → sertakan font & maskot di bundle fungsi.
+  outputFileTracingIncludes: {
+    "/api/telegram/webhook": ["./assets/bot/**", "./public/fonts/ubuntu-*.woff"],
+    "/api/cron/pengingat": ["./assets/bot/**", "./public/fonts/ubuntu-*.woff"],
+  },
   turbopack: {
     rules: {
       "*.css": {
