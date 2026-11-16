@@ -6,6 +6,7 @@ const TABLES = [
   'learning_subjects', 'learning_sources', 'learning_modules', 'learning_sessions',
   'tasks', 'task_subtasks', 'journal_entries', 'project_milestones', 'habits', 'habit_checkins', 'user_achievements',
   'financial_accounts', 'transaction_categories', 'transactions', 'budgets', 'goal_allocations',
+  'reminder_logs', 'telegram_connections',
 ] as const
 
 /** Ekspor seluruh data milik pengguna (AK-04). RLS memastikan hanya baris milik sendiri yang terbaca. */

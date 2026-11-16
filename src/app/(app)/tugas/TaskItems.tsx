@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { CalendarClock, Clock, Flag, ListChecks, MapPin, Target } from 'lucide-react'
+import { Bell, CalendarClock, Clock, Flag, ListChecks, MapPin, Repeat, Target } from 'lucide-react'
 import { Badge } from '@/components/ui/display'
 import { formatShort, formatTime } from '@/lib/format'
 import { isoToDay } from '@/lib/dates'
-import { PRIORITY, displayStatus } from '@/lib/labels'
+import { PRIORITY, RECURRENCE, displayStatus, remindLabel } from '@/lib/labels'
 import type { Task } from '@/lib/types'
 import { StatusSelect, TaskCheck } from './TaskForm'
 
@@ -37,6 +37,8 @@ export function TaskRow({ t, meta, tz }: { t: Task; meta?: TaskMeta; tz: string 
           {t.kind === 'kegiatan' && <span className="badge">Kegiatan</span>}
           {when && <span className={when.overdue ? 'overdue' : ''}><Clock size={13} aria-hidden="true" />{when.text}</span>}
           {t.location && <span><MapPin size={13} aria-hidden="true" />{t.location}</span>}
+          {t.recurrence && t.recurrence !== 'tidak' && <span><Repeat size={13} aria-hidden="true" />{RECURRENCE[t.recurrence]!.short}</span>}
+          {t.remind_before_minutes !== null && t.remind_before_minutes !== undefined && <span title={remindLabel(t.remind_before_minutes) ?? ''}><Bell size={13} aria-label="Ada pengingat" /></span>}
           {t.kind === 'tugas' && t.priority !== 'sedang' && <span><Flag size={13} aria-hidden="true" />{pr.label}</span>}
           {meta && meta.subTotal > 0 && <span><ListChecks size={13} aria-hidden="true" />{meta.subDone}/{meta.subTotal}</span>}
           {meta?.goalTitle && <span><Target size={13} aria-hidden="true" />{meta.goalTitle}</span>}

@@ -4,7 +4,7 @@ import { CalendarClock, Check, CheckSquare, MapPin, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
-import { EVENT_STATUS, PRIORITY, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
+import { EVENT_STATUS, PRIORITY, RECURRENCE, REMIND_OPTIONS, TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/labels'
 import type { LinkOptions } from '@/lib/queries'
 import { saveTask, setTaskStatus } from './actions'
 
@@ -23,11 +23,15 @@ export interface TaskFormValues {
   goal_id: string | null
   project_id: string | null
   subject_id: string | null
+  recurrence: string
+  /** menit sebelum waktu; '' = tanpa pengingat */
+  remind: string
 }
 
 export const emptyTask = (kind: 'tugas' | 'kegiatan' = 'tugas', preset: Partial<TaskFormValues> = {}): TaskFormValues => ({
   kind, title: '', description: '', category: '', priority: 'sedang', status: 'belum',
-  due_local: '', start_local: '', end_local: '', location: '', goal_id: null, project_id: null, subject_id: null, ...preset,
+  due_local: '', start_local: '', end_local: '', location: '', goal_id: null, project_id: null, subject_id: null,
+  recurrence: 'tidak', remind: '', ...preset,
 })
 
 export function LinkSelects({ options, values, errors }: { options: LinkOptions; values: { goal_id?: string | null; subject_id?: string | null; project_id?: string | null }; errors: Record<string, string> }) {
@@ -107,6 +111,18 @@ export function TaskFormModal({ open, onClose, initial, options }: {
                 </Field>
               </>
             )}
+            <Field label="Ulangi" name="recurrence" error={errors.recurrence} hint="Saat selesai, jadwal berikutnya dibuat otomatis">
+              <select id="recurrence" name="recurrence" className={`select${errClass(errors, 'recurrence')}`} defaultValue={initial.recurrence}>
+                {Object.entries(RECURRENCE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Ingatkan" name="remind" error={errors.remind} hint="Lewat Telegram & ringkasan harian">
+              <select id="remind" name="remind" className={`select${errClass(errors, 'remind')}`} defaultValue={initial.remind}>
+                <option value="">Tanpa pengingat</option>
+                {REMIND_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {initial.remind !== '' && !REMIND_OPTIONS.some((o) => String(o.value) === initial.remind) && <option value={initial.remind}>{initial.remind} menit sebelumnya</option>}
+              </select>
+            </Field>
             <Field label="Prioritas" name="priority" error={errors.priority}>
               <select id="priority" name="priority" className="select" defaultValue={initial.priority}>
                 {Object.entries(PRIORITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}

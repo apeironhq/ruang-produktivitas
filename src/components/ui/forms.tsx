@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { startTransition, useActionState, useEffect, useRef } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import type { ActionState } from '@/lib/action'
@@ -10,10 +10,13 @@ import { useToast } from './Toast'
 type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>
 
 /** Tombol kirim yang terkunci selama proses; label "Memproses…" bertahan sampai selesai (AsyncButton). */
-export function SubmitButton({ children, variant = 'primary', size, block, loadingText = 'Memproses…', disabled }: {
+export function SubmitButton({ children, variant = 'primary', size, block, loadingText = 'Memproses…', disabled, pending: pendingProp }: {
   children: React.ReactNode; variant?: 'primary' | 'secondary' | 'danger'; size?: 'sm' | 'lg'; block?: boolean; loadingText?: string; disabled?: boolean
+  /** status proses dari useFormAction (form ber-onSubmit tidak terbaca useFormStatus) */
+  pending?: boolean
 }) {
-  const { pending } = useFormStatus()
+  const status = useFormStatus()
+  const pending = pendingProp ?? status.pending
   return (
     <button type="submit" className={`btn btn-${variant}${size ? ` btn-${size}` : ''}${block ? ' btn-block' : ''}`} disabled={pending || disabled} aria-busy={pending}>
       {pending ? <><span className="spinner" aria-hidden="true" /><span>{loadingText}</span></> : children}
@@ -33,9 +36,21 @@ export function Field({ label, name, error, hint, children, className = '' }: {
   )
 }
 
-/** Menghubungkan form ke Server Action: toast hasil, callback sukses, dan kesalahan per field. */
+/**
+ * Menghubungkan form ke Server Action: toast hasil, callback sukses, dan kesalahan per field.
+ *
+ * Pakai `onSubmit` (bukan `action={formAction}`): React 19 otomatis mengosongkan form setelah
+ * `<form action>` selesai — termasuk saat validasi gagal, sehingga isian pengguna hilang.
+ * Dengan onSubmit + startTransition, isian tetap ada sampai form ditutup/direset sendiri.
+ */
 export function useFormAction(action: FormAction, opts: { onSuccess?: (s: NonNullable<ActionState>) => void; silent?: boolean } = {}) {
-  const [state, formAction] = useActionState(action, null)
+  const [state, formAction, pending] = useActionState(action, null)
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (pending) return
+    const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter)
+    startTransition(() => formAction(fd))
+  }
   const toast = useToast()
   const last = useRef(0)
   const onSuccess = useRef(opts.onSuccess)
@@ -50,7 +65,7 @@ export function useFormAction(action: FormAction, opts: { onSuccess?: (s: NonNul
       toast.error(state.message)
     }
   }, [state, toast, opts.silent])
-  return { state, formAction, errors: state?.ok === false ? state.errors ?? {} : {} }
+  return { state, formAction, onSubmit, pending, errors: state?.ok === false ? state.errors ?? {} : {} }
 }
 
 /** Modal berisi form yang dikirim ke Server Action. Tertutup otomatis bila berhasil. */
@@ -61,7 +76,7 @@ export function FormModal({ action, onClose, submitLabel = 'Simpan', children, r
   children: (errors: Record<string, string>) => React.ReactNode
 }) {
   const router = useRouter()
-  const { state, formAction, errors } = useFormAction(action, {
+  const { state, onSubmit, pending, errors } = useFormAction(action, {
     onSuccess: (s) => {
       onClose()
       if (redirectTo && s.id) router.push(redirectTo(s.id))
@@ -71,11 +86,11 @@ export function FormModal({ action, onClose, submitLabel = 'Simpan', children, r
     <Modal
       {...modal}
       onClose={onClose}
-      as={(inner) => <form action={formAction} className="modal-form" noValidate>{inner}</form>}
+      as={(inner) => <form onSubmit={onSubmit} className="modal-form" noValidate>{inner}</form>}
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose}>Batal</button>
-          <SubmitButton>{submitLabel}</SubmitButton>
+          <SubmitButton pending={pending}>{submitLabel}</SubmitButton>
         </>
       }
     >

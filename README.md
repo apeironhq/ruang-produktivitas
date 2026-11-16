@@ -48,7 +48,20 @@ yang menandai tahapan/target tercapai secara idempoten.
 Di Supabase → Authentication → URL Configuration, tambahkan `http://localhost:3000/auth/confirm`
 dan URL produksi `/auth/confirm` ke Redirect URLs.
 
-## Tahap berikutnya (P1/P2)
+## Pengingat & Bot Telegram
 
-Keuangan (rekening, transaksi, transfer, anggaran, alokasi tabungan ke target), Proyek Saya, Kebiasaan &
-lencana, pengingat terjadwal, Bot Telegram (webhook, kode tautan sekali pakai, idempoten `update_id`).
+- **Tugas berulang** (harian/mingguan/bulanan): saat ditandai selesai, trigger DB membuat jadwal berikutnya tepat sekali.
+- **Pengingat**: kolom "Ingatkan" di tugas/kegiatan. `pg_cron` di Supabase memanggil `/api/cron/pengingat`
+  setiap 5 menit; pengingat diklaim atomik (tidak terkirim dua kali), gagal kirim dicatat di `reminder_logs`
+  dan dicoba lagi (maks. 5×). Ringkasan harian dikirim sekali sehari pada jam pilihan pengguna.
+- **Bot**: `/api/telegram/webhook` (header rahasia, `update_id` idempoten, hanya chat pribadi, akun harus
+  ditautkan lewat kode sekali pakai dari Pengaturan). Perintah: `/tugas /catat /belajar /target /pengingat /bantuan /putus`.
+  Menyimpan data selalu lewat tombol konfirmasi.
+
+Menyiapkan:
+
+1. Buat bot di **@BotFather**, isi `TELEGRAM_BOT_TOKEN` di `.env.local`.
+2. `npm run setup:bot -- --url https://domain-produksi` — membuat `CRON_SECRET` & `TELEGRAM_WEBHOOK_SECRET`
+   bila kosong, menjadwalkan pg_cron, memasang webhook & daftar perintah, mengisi `TELEGRAM_BOT_USERNAME`.
+3. Salin `SUPABASE_SECRET_KEY`, `CRON_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`,
+   `TELEGRAM_BOT_USERNAME` ke Vercel → Settings → Environment Variables, lalu redeploy.

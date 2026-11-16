@@ -17,10 +17,10 @@ const ZONES = [
 ]
 
 export function ProfileForm({ name, timezone, email }: { name: string; timezone: string; email: string }) {
-  const { formAction, errors } = useFormAction(saveProfile)
+  const { onSubmit, pending, errors } = useFormAction(saveProfile)
   const zones = ZONES.some((z) => z.value === timezone) ? ZONES : [{ value: timezone, label: timezone }, ...ZONES]
   return (
-    <form action={formAction} className="form-stack" noValidate>
+    <form onSubmit={onSubmit} className="form-stack" noValidate>
       <Field label="Email" name="email" hint="Email dipakai untuk masuk dan tidak dapat diubah di sini.">
         <input id="email" className="input" value={email} disabled readOnly />
       </Field>
@@ -32,23 +32,23 @@ export function ProfileForm({ name, timezone, email }: { name: string; timezone:
           {zones.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
         </select>
       </Field>
-      <div><SubmitButton>Simpan profil</SubmitButton></div>
+      <div><SubmitButton pending={pending}>Simpan profil</SubmitButton></div>
     </form>
   )
 }
 
 export function PasswordForm() {
   const form = useRef<HTMLFormElement | null>(null)
-  const { formAction, errors } = useFormAction(updatePassword, { onSuccess: () => form.current?.reset() })
+  const { onSubmit, pending, errors } = useFormAction(updatePassword, { onSuccess: () => form.current?.reset() })
   return (
-    <form ref={form} action={formAction} className="form-stack" noValidate>
+    <form ref={form} onSubmit={onSubmit} className="form-stack" noValidate>
       <Field label="Password baru" name="password" error={errors.password} hint="Minimal 8 karakter.">
         <input id="password" name="password" type="password" autoComplete="new-password" className={`input${errClass(errors, 'password')}`} required />
       </Field>
       <Field label="Ulangi password baru" name="confirm" error={errors.confirm}>
         <input id="confirm" name="confirm" type="password" autoComplete="new-password" className={`input${errClass(errors, 'confirm')}`} required />
       </Field>
-      <div><SubmitButton variant="secondary">Ganti password</SubmitButton></div>
+      <div><SubmitButton pending={pending} variant="secondary">Ganti password</SubmitButton></div>
     </form>
   )
 }

@@ -21,7 +21,7 @@ function PasswordInput({ id, name, autoComplete, error }: { id: string; name: st
 }
 
 export function SignInForm({ next, notice }: { next: string; notice: string }) {
-  const { state, formAction, errors } = useFormAction(signIn, { silent: true })
+  const { state, onSubmit, pending, errors } = useFormAction(signIn, { silent: true })
   return (
     <div>
       <div className="mb-7">
@@ -29,7 +29,7 @@ export function SignInForm({ next, notice }: { next: string; notice: string }) {
         <p className="text-caption">Masuk untuk membuka ruang produktivitas Anda.</p>
       </div>
       {notice && <div className="alert mb-5" role="status">{notice}</div>}
-      <form action={formAction} className="flex flex-col gap-5" noValidate>
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
         <input type="hidden" name="next" value={next} />
         <Field label="Email" name="email" error={errors.email}>
           <input id="email" name="email" className={`input${errClass(errors, 'email')}`} type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required />
@@ -38,7 +38,7 @@ export function SignInForm({ next, notice }: { next: string; notice: string }) {
           <PasswordInput id="password" name="password" autoComplete="current-password" error={errors.password} />
         </Field>
         {state && !state.ok && !state.errors && <p className="alert tone-err" role="alert">{state.message}</p>}
-        <SubmitButton size="lg" block>Masuk</SubmitButton>
+        <SubmitButton pending={pending} size="lg" block>Masuk</SubmitButton>
       </form>
       <div className="mt-6 flex flex-col items-center gap-2 text-caption">
         <Link href="/lupa-password" className="link">Lupa password?</Link>
@@ -49,7 +49,7 @@ export function SignInForm({ next, notice }: { next: string; notice: string }) {
 }
 
 export function SignUpForm() {
-  const { state, formAction, errors } = useFormAction(signUp, { silent: true })
+  const { state, onSubmit, pending, errors } = useFormAction(signUp, { silent: true })
   if (state?.ok) {
     return (
       <div>
@@ -65,7 +65,7 @@ export function SignUpForm() {
         <h1 className="mb-2">Daftar</h1>
         <p className="text-caption">Buat akun pribadi. Data Anda hanya bisa diakses oleh Anda.</p>
       </div>
-      <form action={formAction} className="flex flex-col gap-5" noValidate>
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
         <Field label="Nama" name="display_name" error={errors.display_name}>
           <input id="display_name" name="display_name" className={`input${errClass(errors, 'display_name')}`} autoComplete="name" required maxLength={80} />
         </Field>
@@ -76,7 +76,7 @@ export function SignUpForm() {
           <PasswordInput id="password" name="password" autoComplete="new-password" error={errors.password} />
         </Field>
         {state && !state.ok && !state.errors && <p className="alert tone-err" role="alert">{state.message}</p>}
-        <SubmitButton size="lg" block>Buat akun</SubmitButton>
+        <SubmitButton pending={pending} size="lg" block>Buat akun</SubmitButton>
       </form>
       <p className="mt-6 text-center text-caption">Sudah punya akun? <Link href="/masuk" className="link">Masuk</Link></p>
     </div>
@@ -84,7 +84,7 @@ export function SignUpForm() {
 }
 
 export function ForgotForm() {
-  const { state, formAction, errors } = useFormAction(requestPasswordReset, { silent: true })
+  const { state, onSubmit, pending, errors } = useFormAction(requestPasswordReset, { silent: true })
   return (
     <div>
       <div className="mb-7">
@@ -92,11 +92,11 @@ export function ForgotForm() {
         <p className="text-caption">Masukkan email akun Anda. Kami kirim tautan untuk membuat password baru.</p>
       </div>
       {state?.ok ? <p className="alert" role="status">{state.message}</p> : (
-        <form action={formAction} className="flex flex-col gap-5" noValidate>
+        <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
           <Field label="Email" name="email" error={errors.email}>
             <input id="email" name="email" className={`input${errClass(errors, 'email')}`} type="email" autoComplete="email" required />
           </Field>
-          <SubmitButton size="lg" block>Kirim tautan</SubmitButton>
+          <SubmitButton pending={pending} size="lg" block>Kirim tautan</SubmitButton>
         </form>
       )}
       <p className="mt-6 text-center text-caption"><Link href="/masuk" className="link">Kembali ke halaman masuk</Link></p>
@@ -106,14 +106,14 @@ export function ForgotForm() {
 
 export function ResetPasswordForm() {
   const router = useRouter()
-  const { state, formAction, errors } = useFormAction(updatePassword, { onSuccess: () => router.push('/') })
+  const { state, onSubmit, pending, errors } = useFormAction(updatePassword, { onSuccess: () => router.push('/') })
   return (
     <div>
       <div className="mb-7">
         <h1 className="mb-2">Atur password baru</h1>
         <p className="text-caption">Gunakan minimal 8 karakter.</p>
       </div>
-      <form action={formAction} className="flex flex-col gap-5" noValidate>
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
         <Field label="Password baru" name="password" error={errors.password}>
           <PasswordInput id="password" name="password" autoComplete="new-password" error={errors.password} />
         </Field>
@@ -121,7 +121,7 @@ export function ResetPasswordForm() {
           <PasswordInput id="confirm" name="confirm" autoComplete="new-password" error={errors.confirm} />
         </Field>
         {state && !state.ok && !state.errors && <p className="alert tone-err" role="alert">{state.message}</p>}
-        <SubmitButton size="lg" block>Simpan password</SubmitButton>
+        <SubmitButton pending={pending} size="lg" block>Simpan password</SubmitButton>
       </form>
     </div>
   )

@@ -98,3 +98,24 @@ export const TX_TYPE: Record<string, { label: string; tone: Tone }> = {
 }
 
 export const MOOD: Record<number, string> = { 1: 'Sangat buruk', 2: 'Kurang baik', 3: 'Biasa', 4: 'Baik', 5: 'Sangat baik' }
+
+export const RECURRENCE: Record<string, { label: string; short: string }> = {
+  tidak: { label: 'Tidak berulang', short: '' },
+  harian: { label: 'Setiap hari', short: 'Harian' },
+  mingguan: { label: 'Setiap minggu', short: 'Mingguan' },
+  bulanan: { label: 'Setiap bulan', short: 'Bulanan' },
+}
+
+/** Pilihan "Ingatkan" (menit sebelum tenggat/jadwal mulai). */
+export const REMIND_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 0, label: 'Tepat pada waktunya' },
+  { value: 10, label: '10 menit sebelumnya' },
+  { value: 30, label: '30 menit sebelumnya' },
+  { value: 60, label: '1 jam sebelumnya' },
+  { value: 180, label: '3 jam sebelumnya' },
+  { value: 1440, label: '1 hari sebelumnya' },
+]
+export function remindLabel(min: number | null | undefined) {
+  if (min === null || min === undefined) return null
+  return REMIND_OPTIONS.find((o) => o.value === min)?.label ?? `${min} menit sebelumnya`
+}

@@ -6,7 +6,7 @@ import { ConfirmButton } from '@/components/ui/actions'
 import { BackLink, DetailTitle, EmptyState, ProgressBar, SectionHead } from '@/components/ui/display'
 import { isoToLocalInput } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
-import { PRIORITY, TASK_KIND, displayStatus } from '@/lib/labels'
+import { PRIORITY, RECURRENCE, TASK_KIND, displayStatus, remindLabel } from '@/lib/labels'
 import { loadLinkOptions } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Subtask, Task } from '@/lib/types'
@@ -29,7 +29,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
     loadLinkOptions(supabase),
   ])
   if (!task) notFound()
-  const t = task as Task
+  const t = task as Task & { reminded_at: string | null }
   const subtasks = (subs ?? []) as Subtask[]
   const done = subtasks.filter((s) => s.is_completed).length
   const goal = options.goals.find((g) => g.id === t.goal_id)
@@ -40,6 +40,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
     id: t.id, kind: t.kind, title: t.title, description: t.description, category: t.category, priority: t.priority, status: t.status,
     due_local: isoToLocalInput(t.due_at, tz), start_local: isoToLocalInput(t.start_at, tz), end_local: isoToLocalInput(t.end_at, tz),
     location: t.location, goal_id: t.goal_id, project_id: t.project_id, subject_id: t.subject_id,
+    recurrence: t.recurrence, remind: t.remind_before_minutes === null ? '' : String(t.remind_before_minutes),
   }
 
   return (
@@ -47,7 +48,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
       <BackLink href="/tugas">Tugas & Kegiatan</BackLink>
       <div className="page-head">
         <DetailTitle title={t.title} status={displayStatus(t)}
-          meta={[TASK_KIND[t.kind], when ? <span className={when.overdue ? 'overdue' : ''}>{when.text}</span> : null, t.kind === 'tugas' ? `Prioritas ${PRIORITY[t.priority]!.label.toLowerCase()}` : t.location || null]} />
+          meta={[TASK_KIND[t.kind], when ? <span className={when.overdue ? 'overdue' : ''}>{when.text}</span> : null, t.kind === 'tugas' ? `Prioritas ${PRIORITY[t.priority]!.label.toLowerCase()}` : t.location || null, RECURRENCE[t.recurrence]?.short ? `Berulang ${RECURRENCE[t.recurrence]!.short.toLowerCase()}` : null]} />
         <div className="control-row">
           <EditTaskButton initial={initial} options={options} />
           <ConfirmButton action={deleteTask.bind(null, t.id)} redirect="/tugas" title={`Hapus ${TASK_KIND[t.kind]!.toLowerCase()}?`}
@@ -93,6 +94,8 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
                 ? <div><dt>Tenggat</dt><dd>{formatDateTime(t.due_at, tz)}</dd></div>
                 : <div><dt>Jadwal</dt><dd>{formatDateTime(t.start_at, tz)}{t.end_at ? ` – ${formatDateTime(t.end_at, tz)}` : ''}</dd></div>}
               {t.kind === 'kegiatan' && <div><dt>Lokasi</dt><dd>{t.location || '—'}</dd></div>}
+              <div><dt>Ulangi</dt><dd>{RECURRENCE[t.recurrence]?.label ?? '—'}</dd></div>
+              <div><dt>Pengingat</dt><dd>{remindLabel(t.remind_before_minutes) ?? '—'}{t.reminded_at ? ` · terkirim ${formatDateTime(t.reminded_at, tz)}` : ''}</dd></div>
               <div><dt>Selesai pada</dt><dd>{formatDateTime(t.completed_at, tz)}</dd></div>
               <div><dt>Dibuat</dt><dd>{formatDateTime(t.created_at, tz)}</dd></div>
               <div><dt>Target</dt><dd>{goal ? <Link className="link" href={`/target/${goal.id}`}>{goal.title}</Link> : '—'}</dd></div>

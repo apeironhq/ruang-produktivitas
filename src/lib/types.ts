@@ -116,6 +116,8 @@ export interface Task {
   goal_id: string | null
   project_id: string | null
   subject_id: string | null
+  recurrence: 'tidak' | 'harian' | 'mingguan' | 'bulanan'
+  remind_before_minutes: number | null
   created_at: string
 }
 

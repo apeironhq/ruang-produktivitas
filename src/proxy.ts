@@ -56,5 +56,6 @@ function redirectWithCookies(url: URL, from: NextResponse) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|fonts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)'],
+  // api/telegram & api/cron: dipanggil mesin (Telegram, pg_cron) dengan header rahasia sendiri, tanpa sesi.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|fonts/|api/telegram/|api/cron/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)'],
 }

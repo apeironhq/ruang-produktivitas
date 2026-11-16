@@ -23,7 +23,7 @@ const TABS = [
   { key: 'semua', label: 'Semua' },
 ] as const
 
-const TASK_COLS = 'id, kind, title, description, category, priority, status, due_at, start_at, end_at, location, completed_at, goal_id, project_id, subject_id, created_at'
+const TASK_COLS = 'id, kind, title, description, category, priority, status, due_at, start_at, end_at, location, completed_at, goal_id, project_id, subject_id, recurrence, remind_before_minutes, created_at'
 
 export default async function Page({ searchParams }: PageProps<'/tugas'>) {
   const sp = await searchParams

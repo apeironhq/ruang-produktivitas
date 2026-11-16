@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { dbError, fail, ok, parseForm, zEnum, zOptLocalDateTime, zOptText, zOptUuid, zText, zUuid, type ActionState } from '@/lib/action'
+import { dbError, fail, ok, parseForm, zEnum, zInt, zOptLocalDateTime, zOptText, zOptUuid, zText, zUuid, type ActionState } from '@/lib/action'
 import { zonedToIso } from '@/lib/dates'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 
@@ -24,9 +24,14 @@ const taskSchema = z.object({
   project_id: zOptUuid,
   subject_id: zOptUuid,
   checklist: zOptText(4000),
+  recurrence: zEnum(['tidak', 'harian', 'mingguan', 'bulanan'] as const, 'Ulangi').default('tidak'),
+  remind: z.preprocess((v) => (v === '' || v == null ? undefined : v), zInt(0, 10080, 'Pengingat').optional()).transform((v) => v ?? null),
 }).superRefine((v, ctx) => {
   if (v.kind === 'kegiatan' && !v.start_at) ctx.addIssue({ code: 'custom', path: ['start_at'], message: 'Kegiatan wajib punya waktu mulai.' })
   if (v.start_at && v.end_at && v.end_at < v.start_at) ctx.addIssue({ code: 'custom', path: ['end_at'], message: 'Waktu selesai harus setelah waktu mulai.' })
+  const anchor = v.kind === 'kegiatan' ? v.start_at : v.due_at || v.start_at
+  if (v.remind !== null && !anchor) ctx.addIssue({ code: 'custom', path: ['remind'], message: v.kind === 'kegiatan' ? 'Isi waktu mulai agar bisa diingatkan.' : 'Isi tenggat atau waktu mulai agar bisa diingatkan.' })
+  if (v.recurrence !== 'tidak' && !anchor) ctx.addIssue({ code: 'custom', path: ['recurrence'], message: 'Jadwal berulang perlu tenggat atau waktu mulai.' })
 })
 
 function revalidateTasks(id?: string | null) {
@@ -58,6 +63,8 @@ export async function saveTask(_: ActionState, formData: FormData): Promise<Acti
     goal_id: v.goal_id,
     project_id: v.project_id,
     subject_id: v.subject_id,
+    recurrence: v.recurrence,
+    remind_before_minutes: v.remind,
   }
   const supabase = await createClient()
   if (v.id) {
@@ -81,10 +88,19 @@ export async function setTaskStatus(id: string, status: string): Promise<ActionS
   const p = z.object({ id: zUuid, status: z.enum(STATUSES) }).safeParse({ id, status })
   if (!p.success) return fail('Status tidak valid.')
   const supabase = await createClient()
-  const { error } = await supabase.from('tasks').update({ status: p.data.status }).eq('id', p.data.id)
+  const { data, error } = await supabase.from('tasks').update({ status: p.data.status }).eq('id', p.data.id).select('recurrence, next_spawned_at').maybeSingle()
   if (error) return dbError(error)
   revalidateTasks(p.data.id)
-  return ok(p.data.status === 'selesai' ? 'Ditandai selesai.' : 'Status diperbarui.')
+  if (p.data.status !== 'selesai') return ok('Status diperbarui.')
+  // Tugas berulang: trigger DB membuat jadwal berikutnya tepat sekali (TG-06).
+  // RETURNING dihitung sebelum trigger AFTER berjalan → baca ulang hanya untuk tugas berulang.
+  let spawned = false
+  if (data && data.recurrence !== 'tidak' && !data.next_spawned_at) {
+    const { data: again } = await supabase.from('tasks').select('next_spawned_at').eq('id', p.data.id).maybeSingle()
+    spawned = !!again?.next_spawned_at
+  }
+  // notify: centang optimistis biasanya diam; untuk tugas berulang beri tahu jadwal barunya.
+  return spawned ? { ...ok('Selesai. Jadwal berikutnya sudah dibuat.'), notify: true } : ok('Ditandai selesai.')
 }
 
 export async function deleteTask(id: string): Promise<ActionState> {
