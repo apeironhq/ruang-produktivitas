@@ -695,19 +695,20 @@ a.item-link:hover { background: var(--bg-subtle); }
 .act-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; flex-shrink: 0; }
 .tint-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r); flex-shrink: 0; }
 
-/* Tab bergaris bawah (components/DaftarHadiahTabs.vue). Garis via inset shadow → garis aktif menimpanya. */
-.tabs { display: flex; gap: 0.25rem; box-shadow: inset 0 -1px 0 var(--border); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+/* Tab saring/bagian: gaya pil, sama dengan pengalih tampilan (.seg). Angka = chip kecil. */
+.tabs { display: flex; align-items: center; gap: 0.35rem; padding: 2px 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  display: inline-flex; align-items: center; gap: 0.4rem; height: var(--h-control); padding: 0 0.75rem; flex-shrink: 0;
-  font-size: var(--fs-body); font-weight: var(--fw-medium); color: var(--text-muted); white-space: nowrap;
-  border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  display: inline-flex; align-items: center; gap: 0.45rem; height: var(--h-control-sm); padding: 0 0.9rem; flex-shrink: 0; border-radius: 999px;
+  font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-muted); white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.tab:hover { color: var(--text-heading); }
+.tab:hover { color: var(--text-heading); background: var(--bg-hover); }
+.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .tab.tab-end { margin-left: auto; }
-.tab.active { color: var(--text-heading); border-bottom-color: var(--brand); }
-.tab-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--n-100); font-size: var(--fs-micro); line-height: 18px; text-align: center; color: var(--text-muted); }
-.tab.active .tab-count { background: var(--brand-soft); color: var(--brand-ink); }
+.tab.active, .tab.active:hover { color: var(--brand-ink); background: var(--brand-soft); }
+.tab-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border); font-size: var(--fs-micro); font-weight: var(--fw-semibold); line-height: 16px; text-align: center; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tab.active .tab-count { border-color: transparent; color: var(--brand-ink); }
 
 /* Pengalih tampilan: tanpa bungkus. Pilihan = teks + ikon; yang aktif jadi pil biru lembut (seperti menu aktif di sidebar). */
 .seg { display: inline-flex; align-items: center; gap: 0.25rem; }
