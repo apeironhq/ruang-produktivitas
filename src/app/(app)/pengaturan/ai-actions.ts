@@ -5,12 +5,13 @@ import { dbError, fail, ok, type ActionState } from '@/lib/action'
 import { testGeminiKey } from '@/lib/ai/gemini'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 
-const KEY_RE = /^[A-Za-z0-9_-]{20,200}$/
+// Kunci AI Studio lama ("AIza…") maupun format baru ("AQ.Ab8…", mengandung titik).
+const KEY_RE = /^[A-Za-z0-9._-]{20,300}$/
 
 /** Uji kunci ke Gemini lalu simpan terenkripsi (Supabase Vault). Kunci tidak pernah dikirim balik ke browser. */
 export async function saveAiKey(_: ActionState, formData: FormData): Promise<ActionState> {
   const key = String(formData.get('key') ?? '').trim()
-  if (!KEY_RE.test(key)) return fail('Format kunci tidak valid.', { key: 'Tempel kunci API dari Google AI Studio (biasanya diawali “AIza”).' })
+  if (!KEY_RE.test(key)) return fail('Format kunci tidak valid.', { key: 'Tempel kunci API dari Google AI Studio (diawali “AIza” atau “AQ.”), tanpa spasi.' })
   const user = await getCurrentUser()
   if (!user) return fail('Sesi berakhir. Silakan masuk kembali.')
   const test = await testGeminiKey(key)

@@ -59,8 +59,8 @@ function KeyForm({ label, onDone }: { label: string; onDone?: () => void }) {
   const { onSubmit, pending, errors } = useFormAction(saveAiKey, { onSuccess: () => onDone?.() })
   return (
     <form onSubmit={onSubmit} className="form-stack" noValidate>
-      <Field label={label} name="ai-key" error={errors.key} hint="Biasanya diawali “AIza”. Kunci hanya dikirim ke Google untuk diuji, lalu disimpan terenkripsi.">
-        <input id="ai-key" name="key" type="password" autoComplete="off" spellCheck={false} placeholder="AIza…" className={`input${errClass(errors, 'key')}`} required />
+      <Field label={label} name="ai-key" error={errors.key} hint="Diawali “AIza” atau “AQ.”. Kunci hanya dikirim ke Google untuk diuji, lalu disimpan terenkripsi.">
+        <input id="ai-key" name="key" type="password" autoComplete="off" spellCheck={false} placeholder="AIza… atau AQ.…" className={`input${errClass(errors, 'key')}`} required />
       </Field>
       <div className="flex flex-wrap gap-2">
         <SubmitButton pending={pending} loadingText="Menguji kunci…">Simpan & aktifkan</SubmitButton>
