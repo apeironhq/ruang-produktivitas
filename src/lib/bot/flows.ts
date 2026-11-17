@@ -11,7 +11,9 @@ import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
  * telegram_pending (action 'alur') sehingga jawaban berupa ketikan bisa diteruskan ke langkah
  * berikutnya. Data baru ditulis ke database setelah pengguna menekan ✅ Simpan (BT-04).
  */
-export interface FlowState { f: string; s: number; d: Record<string, unknown>; l: Record<string, string>; m?: number; photo?: boolean }
+export interface FlowState { f: string; s: number; d: Record<string, unknown>; l: Record<string, string>; m?: number; photo?: boolean
+  /** kunci langkah yang sudah dijawab pengguna (untuk nomor "Langkah n") */
+  q?: string[] }
 interface Ask { q: string; hint?: string; choices?: Array<{ text: string; v: string }>; perRow?: number; optional?: boolean; typing?: boolean
   /** langkah tidak relevan (mis. belum punya proyek) → dilewati otomatis dengan nilai ini */
   autoSkip?: { value: unknown } }
@@ -349,12 +351,11 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
       if (!(accts ?? []).length) return { error: 'Belum ada rekening. Tambahkan rekening di menu Keuangan (web) dulu.' }
       const d: Record<string, unknown> = { type }, l: Record<string, string> = {}
       if (accts!.length === 1) { d.account = accts![0]!.id; l.account = cut(accts![0]!.name, 30) }
-      // "/keluar 25000 makan siang" → isi otomatis jumlah & keterangan.
-      const m = /^([\d.,]+(?:\s*(?:rb|ribu|k|jt|juta))?)\s*([\s\S]*)$/i.exec(arg.trim())
+      // "/keluar 25000 makan siang" atau "beli kopi 25rb" → isi otomatis jumlah & keterangan.
+      const m = splitMoney(arg)
       if (m) {
-        const amt = parseMoney(m[1]!)
-        if (amt) { d.amount = amt; l.amount = formatRupiah(amt) }
-        if (m[2]?.trim()) { d.note = m[2].trim().slice(0, 500); l.note = cut(m[2].trim(), 60) }
+        d.amount = m.amount; l.amount = formatRupiah(m.amount)
+        if (m.note) { d.note = m.note.slice(0, 500); l.note = cut(m.note, 60) }
       }
       return { d, l }
     },
@@ -402,6 +403,26 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
       return { lines: [`<b>${out ? 'Pengeluaran' : 'Pemasukan'} ${formatRupiah(Number(st.d.amount))} tercatat!</b>`], kb: NAV_AFTER('p:uang', '💰 Lihat keuangan') }
     },
   }
+}
+
+/**
+ * Cari nominal di mana pun dalam teks: "beli kopi 25rb", "Rp35.000 makan siang", "gaji 5 juta".
+ * Angka polos tanpa Rp/rb/jt baru dianggap nominal bila minimal 3 digit (hindari "2 buku"). Sisa teks = keterangan.
+ */
+export function splitMoney(raw: string): { amount: number; note: string } | null {
+  const text = raw.trim()
+  const re = /(^|\s)(rp\.?\s*)?(\d[\d.,]*)\s*(rb|ribu|k|jt|juta)?(?=\s|$|[!?;:])/gi
+  for (const m of text.matchAll(re)) {
+    const [whole, lead, rp, num, unit] = m
+    if (!rp && !unit && num!.replace(/\D/g, '').length < 3) continue
+    if (!rp && !unit && /^\d{1,2}[.:]\d{2}$/.test(num!)) continue // jam, mis. 14.30
+    const amount = parseMoney(`${num}${unit ?? ''}`)
+    if (!amount) continue
+    const start = m.index! + lead!.length
+    const note = `${text.slice(0, start)} ${text.slice(m.index! + whole.length)}`.replace(/\s+/g, ' ').trim()
+    return { amount, note }
+  }
+  return null
 }
 
 /** "25000", "25.000", "25rb", "1,5jt", "2 juta" → angka rupiah. */
@@ -473,12 +494,12 @@ async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
   }
   const step = flow.steps[st.s]!
   const a = await step.ask(ctx, st)
-  const total = flow.steps.filter((s) => !(s.key in st.d) || s.key === step.key).length
-  const n = flow.steps.slice(0, st.s + 1).filter((s) => !(s.key in st.d) || s.key === step.key).length
+  // Nomor langkah = langkah yang sudah dijawab pengguna + 1 (isian dari perintah cepat / yang dilewati otomatis tidak dihitung).
+  const n = (st.q ?? []).filter((k) => k !== step.key).length + 1
   const html = [
     `<b>${head[0]}</b>`, ...head.slice(1), '',
     ...(error ? [`${error}`, ''] : []),
-    `<i>Langkah ${Math.min(n, total)}</i>`,
+    `<i>Langkah ${n}</i>`,
     `<b>${a.q}</b>`,
     ...(a.hint ? [`<i>${a.hint}</i>`] : a.typing ? ['<i>Ketik jawabanmu di kolom pesan.</i>'] : []),
   ].join('\n')
@@ -541,6 +562,7 @@ export async function continueFlow(ctx: Ctx, st: FlowState, input: { text?: stri
     return true
   }
   const step = flow.steps[st.s]!
+  const answered = () => { st.q = [...(st.q ?? []).filter((k) => k !== step.key), step.key] }
   if (input.choice === 'skip') {
     st.d[step.key] = null
     st.l[step.key] = '—'
@@ -552,6 +574,7 @@ export async function continueFlow(ctx: Ctx, st: FlowState, input: { text?: stri
     st.d[step.key] = r.value
     st.l[step.key] = r.label
   }
+  answered()
   await advance(ctx, flow, st, st.s + 1)
   await show(ctx, flow, st, edit)
   await save(ctx, st)

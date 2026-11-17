@@ -3,7 +3,7 @@ import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '../dates'
 import { answerCallback, editMessageCaption, editMessageKb, editMessageReplyMarkup, editViaWebhookReply, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
-import { clearFlow, continueFlow, loadPending, startFlow, type FlowState } from './flows'
+import { clearFlow, continueFlow, loadPending, splitMoney, startFlow, type FlowState } from './flows'
 import {
   badgesPanel, calendarPanel, catatPanel, financePanel, goalDetailPanel, goalsPanel, habitsPanel, helpPanel, homePanel, journalDetailPanel,
   journalPanel, learningPanel, projectDetailPanel, projectsPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
@@ -86,6 +86,26 @@ async function sendWelcome(chatId: number) {
   if (!res.ok) await sendMessageKb(chatId, renderPanel(p, 4000), p.kb)
 }
 
+/** Sambutan setelah akun berhasil ditautkan: sapa dengan nama, perkenalkan Rupi & cara memakainya. */
+async function sendLinkedWelcome(ctx: Ctx) {
+  const first = ctx.name.split(' ')[0] || ctx.name
+  const p: Panel = {
+    head: [`<b>Halo ${esc(first)}, selamat! 🎉</b>`, '<i>Akun Ruang Produktivitas kamu sudah tertaut ke Telegram.</i>'],
+    sections: [
+      { lines: ['Aku <b>Rupi</b>, asisten produktivitas pribadimu. Mulai sekarang aku bantu kamu tetap teratur langsung dari chat ini.'] },
+      { title: 'Yang bisa aku bantu', quote: true, lines: FEATURES },
+      { title: 'Cara pakai', quote: true, lines: [
+        '• Tekan tombol di <b>menu</b> di bawah pesan berikutnya',
+        '• Atau langsung ketik apa saja, mis. <code>beli kopi 25rb</code> atau <code>rapat jam 3</code> — aku tanya mau disimpan sebagai apa',
+        '• Kirim <code>/menu</code> kapan saja untuk kembali ke beranda, <code>/bantuan</code> untuk daftar perintah',
+      ] },
+    ],
+    foot: ['<i>Ringkasan pagi & pengingat tugas akan dikirim otomatis ke sini.</i>'],
+    kb: [],
+  }
+  await sendMessageKb(ctx.chatId, renderPanel(p, 4000), p.kb)
+}
+
 /* ---------- Penautan (BT-01) ---------- */
 async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw: string) {
   const code = raw.trim().toUpperCase()
@@ -103,8 +123,9 @@ async function linkAccount(db: SupabaseClient, chatId: number, from: TgUser, raw
   if (error) throw error
   const ctx = await loadCtx(db, from.id, chatId)
   if (!ctx) return 'selesai' as const
-  // Langsung ke ringkasan dashboard, dengan satu baris sambutan.
-  await sendDashboard(ctx, '<b>Akun berhasil ditautkan!</b> <i>Pengingat & ringkasan harian akan dikirim ke sini.</i>')
+  // Pesan 1: sambutan & perkenalan Rupi. Pesan 2: dasbor yang bisa langsung dipakai.
+  await sendLinkedWelcome(ctx)
+  await sendDashboard(ctx)
   return 'selesai' as const
 }
 
@@ -169,7 +190,7 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate, user?: BotUs
 async function offerFreeText(ctx: Ctx, text: string) {
   const body = text.slice(0, 50000)
   await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'teks', payload: { text: body }, created_at: new Date().toISOString() })
-  const looksMoney = /^\s*(rp\s*)?[\d.,]+\s*(rb|ribu|k|jt|juta)?\b/i.test(text)
+  const looksMoney = !!splitMoney(text)
   await sendMessageKb(ctx.chatId, [
     '<b>Pesan diterima</b>',
     `<blockquote expandable>${esc(body.length > 700 ? `${body.slice(0, 700)}…` : body)}</blockquote>`,

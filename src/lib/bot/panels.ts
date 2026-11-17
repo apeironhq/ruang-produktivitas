@@ -2,7 +2,7 @@ import 'server-only'
 import { addDays, startOfDayIso, todayIn } from '../dates'
 import { formatDay, formatDuration, formatNumber, formatRupiah, formatShort, formatTime } from '../format'
 import { habitStats } from '../habits'
-import { JOURNAL_KIND, MOOD, PRIORITY, PROJECT_STATUS, RECURRENCE, TASK_STATUS, remindLabel } from '../labels'
+import { EVENT_STATUS, JOURNAL_KIND, MOOD, PRIORITY, PROJECT_STATUS, RECURRENCE, TASK_STATUS, remindLabel } from '../labels'
 import { projectProgress } from '../projects'
 import { GOAL_COLUMNS, mergeProgress } from '../queries'
 import type { Goal, GoalProgressRow } from '../types'
@@ -125,10 +125,14 @@ export async function tasksPanel(ctx: Ctx): Promise<Panel> {
   const numbered = [...late, ...todayL, ...next, ...none].slice(0, 10)
   const num = new Map(numbered.map((x, i) => [x.id, i + 1]))
   const line = (x: It) => `<b>${num.get(x.id) ? `${num.get(x.id)}.` : '•'}</b> ${cut(x.title, 40)}${x.when ? ` — <i>${x.when}</i>` : ''}${x.tag}`
-  const total = late.length + todayL.length + next.length + none.length
+  const all = [...late, ...todayL, ...next, ...none]
+  const nEvent = all.filter((x) => x.tag.includes('kegiatan')).length
+  const nTask = all.length - nEvent
+  // Hitungan dipisah agar cocok dengan "Tugas aktif" di beranda (yang hanya menghitung tugas).
+  const counts = [`${nTask} tugas`, ...(nEvent ? [`${nEvent} kegiatan`] : [])].join(' · ')
   return {
-    head: ['<b>Tugas & Kegiatan</b>', `<i>${total} belum selesai · ketuk nomor untuk membuka</i>`],
-    sections: total ? [
+    head: ['<b>Tugas & Kegiatan</b>', `<i>${counts} belum selesai · ketuk nomor untuk membuka</i>`],
+    sections: all.length ? [
       { title: `Terlambat (${late.length})`, lines: late.map(line), quote: true as Section['quote'] },
       { title: `Hari ini (${todayL.length})`, lines: todayL.map(line), quote: true as Section['quote'] },
       { title: `Mendatang (${next.length})`, lines: next.map(line), quote: (next.length > 4 ? 'expand' : true) as Section['quote'] },
@@ -156,7 +160,7 @@ export async function taskDetailPanel(ctx: Ctx, id: string): Promise<Panel | nul
   const isTask = t.kind === 'tugas'
   const late = isTask && t.due_at && new Date(t.due_at).getTime() < Date.now() && OPEN.includes(t.status)
   const info: Array<[string, string]> = [
-    ['Status', `${TASK_STATUS[t.status]?.label ?? t.status}${late ? ' (terlambat)' : ''}`],
+    ['Status', `${(isTask ? TASK_STATUS : EVENT_STATUS)[t.status]?.label ?? t.status}${late ? ' (terlambat)' : ''}`],
     isTask
       ? ['Tenggat', t.due_at ? formatShort(t.due_at, ctx.tz) : '—']
       : ['Jadwal', `${t.start_at ? formatShort(t.start_at, ctx.tz) : '—'}${t.end_at ? `–${formatTime(t.end_at, ctx.tz)}` : ''}`],
@@ -346,7 +350,7 @@ export async function financePanel(ctx: Ctx): Promise<Panel> {
       (accts.data ?? []).length
         ? { title: 'Saldo rekening', lines: [], table: [...(accts.data ?? []).map((a) => [plain(a.name, 16), formatRupiah(balance.get(a.id) ?? 0)] as [string, string]), ['Total', formatRupiah(total)]] }
         : { title: 'Saldo rekening', lines: ['<i>Belum ada rekening — tambahkan di web.</i>'] },
-      ...(by.size ? [{ title: 'Pengeluaran terbesar', lines: [], table: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => [plain(cat.get(k) ?? 'Tanpa kategori', 16), `${formatRupiah(v)} (${exp ? Math.round((v / exp) * 100) : 0}%)`] as [string, string]) }] : []),
+      ...(by.size ? [{ title: 'Pengeluaran terbesar', lines: [], table: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => [plain(cat.get(k) ?? 'Tanpa kategori', 16), `${formatRupiah(v)} (${exp ? (v / exp < 0.005 ? '<1' : Math.round((v / exp) * 100)) : 0}%)`] as [string, string]) }] : []),
       ...((recent.data ?? []).length ? [{ title: 'Transaksi terakhir', quote: 'expand' as const, lines: (recent.data ?? []).map((t) => `<b>${t.type === 'pemasukan' ? '+' : '−'}${formatRupiah(t.amount)}</b>  ${cut(t.note || cat.get(t.category_id ?? '') || '', 26)} <i>· ${formatDay(t.occurred_on)}</i>`) }] : []),
     ],
     kb: [[btn('💸 Pengeluaran', 'f:keluar'), btn('💵 Pemasukan', 'f:masuk')], navRow('p:home', '/keuangan')],
