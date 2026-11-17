@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy, Check } from 'lucide-react'
+import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint, solid } from '@/components/ui/display'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
@@ -8,7 +8,7 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Achievement, Goal } from '@/lib/types'
 import { hrefWith, str } from '@/lib/url'
-import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
+import { BADGE_COLOR, badgeIcon } from '@/lib/badges'
 import { ScrollRows } from '@/components/ui/ScrollRows'
 import { goalNumbers } from '../target/GoalCard'
 
@@ -106,12 +106,12 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
               const c = BADGE_COLOR[b.icon] ?? 'var(--brand)'
               return (
                 <div key={b.id} className={`badge-card${at ? ' earned' : ' locked'}`} style={{ '--badge-c': c } as React.CSSProperties}>
-                  <span className="badge-medal" style={at ? solid(c) : undefined} aria-hidden="true">{BADGE_ICON[b.icon] ?? <Award size={20} />}</span>
+                  <span className="badge-medal" style={at ? solid(c) : undefined} aria-hidden="true">{badgeIcon(b.code, b.icon)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="badge-name">{b.name}</span>
                     <span className="item-sub block">{b.description}</span>
                     {at ? (
-                      <span className="badge-earned"><Check size={12} strokeWidth={3} aria-hidden="true" />Diraih {formatDay(isoToDay(at, tz))}</span>
+                      <span className="badge-earned"><Award size={12} aria-hidden="true" />Diraih {formatDay(isoToDay(at, tz))}</span>
                     ) : (
                       <span className="block mt-1">
                         <ProgressBar percent={(val / b.min_value) * 100} label={`Progres lencana ${b.name}`} color={c} />

@@ -12,7 +12,7 @@ import { GOAL_COLUMNS, loadProgress, mergeProgress } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task, Transaction } from '@/lib/types'
 import { str } from '@/lib/url'
-import { BADGE_COLOR, BADGE_ICON } from '@/lib/badges'
+import { BADGE_COLOR, badgeIcon } from '@/lib/badges'
 import { BadgeStrip } from './BadgeStrip'
 import { NewGoalButton } from './target/GoalForm'
 import { goalNumbers } from './target/GoalCard'
@@ -50,7 +50,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
     supabase.from('journal_entries').select('id, title, kind, created_at').order('created_at', { ascending: false }).limit(6),
     supabase.from('tasks').select('id, title, completed_at').not('completed_at', 'is', null).order('completed_at', { ascending: false }).limit(6),
     supabase.from('learning_subjects').select('id, title').eq('status', 'aktif').order('updated_at', { ascending: false }),
-    supabase.from('achievements').select('id, name, description, icon'),
+    supabase.from('achievements').select('id, code, name, description, icon'),
     supabase.from('user_achievements').select('achievement_id, earned_at').order('earned_at', { ascending: false }),
     loadProgress(supabase),
     loadAccounts(supabase),
@@ -156,7 +156,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
             <div><h2 id="badge-home-title"><Award size={18} />Lencana terbaru</h2><p className="text-caption">{earnedBadges.length} lencana sudah Anda raih</p></div>
             <Link href="/pencapaian" className="link-sm">Lihat semua</Link>
           </div>
-          <BadgeStrip badges={earnedBadges.map((b) => ({ id: b.id, name: b.name, description: b.description, earned: formatDay(isoToDay(b.earned_at, tz)), icon: BADGE_ICON[b.icon] ?? <Award size={20} />, color: BADGE_COLOR[b.icon] ?? 'var(--brand)' }))} />
+          <BadgeStrip badges={earnedBadges.map((b) => ({ id: b.id, name: b.name, description: b.description, earned: formatDay(isoToDay(b.earned_at, tz)), icon: badgeIcon(b.code, b.icon), color: BADGE_COLOR[b.icon] ?? 'var(--brand)' }))} />
         </section>
       )}
 

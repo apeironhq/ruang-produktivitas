@@ -780,7 +780,6 @@ a.item-link:hover { background: var(--bg-subtle); }
 .scroll-rows .badges { scrollbar-gutter: stable; padding-right: 4px; }
 .scroll-rows-hint { display: flex; align-items: center; justify-content: center; gap: 0.3rem; margin-top: 0.6rem; font-size: var(--fs-caption); color: var(--text-muted); }
 .badge-card { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-surface); }
-.badge-card.earned { border-color: color-mix(in srgb, var(--badge-c) 35%, var(--border)); }
 .badge-card.locked .badge-medal { color: var(--n-400); background: var(--n-100); border: 1px dashed var(--n-300); }
 .badge-card.locked .item-sub { color: var(--text-muted); }
 .badge-earned { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; height: 22px; padding: 0 0.55rem; border-radius: 999px; font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--ok); background: var(--ok-soft); }
