@@ -38,7 +38,8 @@ export function ScrollRows({ rows = 2, className = '', children }: { rows?: numb
         onScroll={(e) => { const t = e.currentTarget; setAtEnd(t.scrollTop + t.clientHeight >= t.scrollHeight - 4) }}>
         {children}
       </div>
-      {scrollable && !atEnd && <p className="scroll-rows-hint"><ChevronDown size={14} aria-hidden="true" />Gulir untuk melihat lainnya</p>}
+      {/* Tetap dirender (hanya disembunyikan) di ujung daftar agar tinggi kotak tidak berubah dan halaman tidak meloncat. */}
+      {scrollable && <p className="scroll-rows-hint" aria-hidden={atEnd} style={atEnd ? { visibility: 'hidden' } : undefined}><ChevronDown size={14} aria-hidden="true" />Gulir untuk melihat lainnya</p>}
     </div>
   )
 }
