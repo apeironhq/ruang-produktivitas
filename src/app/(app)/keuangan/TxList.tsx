@@ -30,7 +30,38 @@ export function TxAmount({ r }: { r: TxRow }) {
 export function TxTable({ rows, accounts, categories, allAccounts }: { rows: TxRow[]; accounts: AccountWithBalance[]; categories: Category[]; allAccounts: AccountWithBalance[] }) {
   const cat = new Map(categories.map((c) => [c.id, c.name]))
   const acc = new Map(allAccounts.map((a) => [a.id, a.name]))
+  const actions = (r: TxRow) => (
+    <>
+      <EditTransactionButton accounts={accounts.length ? accounts : allAccounts} categories={categories} initial={{
+        id: r.kind === 'transfer' ? undefined : r.id, group_id: r.transfer_group_id, kind: r.kind, amount: r.amount, account_id: r.account_id,
+        to_account_id: r.to_account_id, category_id: r.category_id, occurred_on: r.occurred_on, note: r.note,
+      }} />
+      <ConfirmButton action={deleteTransaction.bind(null, r.id, r.transfer_group_id)} title={r.kind === 'transfer' ? 'Hapus transfer?' : 'Hapus transaksi?'}
+        message={r.kind === 'transfer' ? 'Kedua mutasi transfer ini dihapus dan saldo kedua rekening dihitung ulang.' : 'Transaksi dihapus dan saldo rekening dihitung ulang.'}
+        className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus transaksi"><Trash2 size={15} /></ConfirmButton>
+    </>
+  )
   return (
+    <div className="tx-wrap">
+    {/* Ponsel: baris ringkas (ikon · keterangan · tanggal & rekening · nominal) */}
+    <ul className="tx-list" aria-label="Daftar transaksi">
+      {rows.map((r) => {
+        const meta = [formatDay(r.occurred_on, { day: 'numeric', month: 'short' }), r.kind === 'transfer' ? 'Transfer' : r.note && r.category_id ? cat.get(r.category_id) : null, r.kind === 'transfer' ? null : acc.get(r.account_id)].filter(Boolean).join(' · ')
+        return (
+          <li key={r.id} className="tx-row">
+            <span className="act-icon" style={{ color: ICON[r.kind].color, background: `color-mix(in srgb, ${ICON[r.kind].color} 10%, transparent)` }} aria-hidden="true">{ICON[r.kind].icon}</span>
+            <span className="tx-main">
+              <span className="item-title block truncate">{txTitle(r, cat, acc)}</span>
+              <span className="item-sub block truncate">{meta}</span>
+            </span>
+            <span className="tx-side">
+              <TxAmount r={r} />
+              <span className="tx-acts">{actions(r)}</span>
+            </span>
+          </li>
+        )
+      })}
+    </ul>
     <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel transaksi">
       <table className="table table-stack">
         <thead>
@@ -54,20 +85,13 @@ export function TxTable({ rows, accounts, categories, allAccounts }: { rows: TxR
               <td data-label="Rekening">{acc.get(r.account_id) ?? '—'}</td>
               <td data-label="Nominal" className="num"><TxAmount r={r} /></td>
               <td data-label="" className="cell-actions">
-                <div className="flex gap-1 justify-end">
-                  <EditTransactionButton accounts={accounts.length ? accounts : allAccounts} categories={categories} initial={{
-                    id: r.kind === 'transfer' ? undefined : r.id, group_id: r.transfer_group_id, kind: r.kind, amount: r.amount, account_id: r.account_id,
-                    to_account_id: r.to_account_id, category_id: r.category_id, occurred_on: r.occurred_on, note: r.note,
-                  }} />
-                  <ConfirmButton action={deleteTransaction.bind(null, r.id, r.transfer_group_id)} title={r.kind === 'transfer' ? 'Hapus transfer?' : 'Hapus transaksi?'}
-                    message={r.kind === 'transfer' ? 'Kedua mutasi transfer ini dihapus dan saldo kedua rekening dihitung ulang.' : 'Transaksi dihapus dan saldo rekening dihitung ulang.'}
-                    className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus transaksi"><Trash2 size={15} /></ConfirmButton>
-                </div>
+                <div className="flex gap-1 justify-end">{actions(r)}</div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   )
 }

@@ -218,7 +218,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                             : t.due_at ? `${late ? 'Terlambat · ' : 'Tenggat '}${formatShort(t.due_at, tz)}` : ''}
                         </span>
                       </Link>
-                      <span className={`badge badge-dot ${displayStatus(t, nowIso).tone}`}>{displayStatus(t, nowIso).label}</span>
+                      <span className={`badge badge-dot hide-narrow ${displayStatus(t, nowIso).tone}`}>{displayStatus(t, nowIso).label}</span>
                     </li>
                   )
                 })}

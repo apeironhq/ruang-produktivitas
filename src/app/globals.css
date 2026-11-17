@@ -1153,3 +1153,48 @@ a.item-link:hover { background: var(--bg-subtle); }
 .chip.err { background: var(--err-soft); border-color: var(--err-border); color: var(--err); }
 .trade-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .trade-head strong { font-size: 1.125rem; color: var(--text-heading); }
+
+/* ---------- Transaksi: ponsel = baris ringkas, layar lebar = tabel ---------- */
+.tx-wrap { container: tx-wrap / inline-size; }
+.tx-list { display: none; list-style: none; margin: 0; padding: 0; }
+.tx-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+.tx-row:last-child { border-bottom: 0; }
+.tx-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tx-side { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.tx-acts { display: flex; margin: 0 -8px -6px 0; }
+@container tx-wrap (max-width: 799.98px) {
+  .tx-list { display: block; }
+  .tx-wrap > .table-wrap { display: none; }
+}
+
+/* ---------- Area sentuh minimal ±40px (tampilan tetap kecil) ---------- */
+.task-check { position: relative; }
+.task-check::after { content: ''; position: absolute; inset: -9px; border-radius: 999px; }
+.link-sm { display: inline-flex; align-items: center; min-height: 40px; padding: 0 0.5rem; margin: -9px -0.5rem; }
+.checkbox, .choice input { width: 20px; height: 20px; }
+
+/* ---------- Ponsel: teks lebih lega, padding kartu seragam 16px ---------- */
+@media (max-width: 639.98px) {
+  /* Jarak dalam kartu seragam 16px */
+  .card-header, .card-body, .card-foot, .card .card-filters, .cal-legend, .habit-row, .task-row { padding-left: 1rem; padding-right: 1rem; }
+  .badge-strip { padding-left: 1rem; padding-right: 1rem; }
+  .table thead th:first-child, .table tbody td:first-child { padding-left: 1rem; }
+  .table thead th:last-child, .table tbody td:last-child { padding-right: 1rem; }
+  .table-stack tbody tr { padding-left: 1rem; padding-right: 1rem; }
+  .table.table-stack tbody td.cell-check { right: 1rem; }
+  .panel-head { padding: 1rem 1rem 0.75rem; }
+  .panel-body { padding: 0.25rem 1rem 1rem; }
+  .kpi, .kpis-summary .kpi { padding: 1rem; }
+  /* Teks: label kartu angka 14px, keterangan berjarak baris lebih lega */
+  .kpis-summary .kpi-label { font-size: var(--fs-label); }
+  .kpi-delta, .item-sub, .text-caption { line-height: 1.5; }
+  /* Baris daftar sedikit lebih tinggi agar tidak berdempetan */
+  .item { padding: 0.8rem 0; gap: 0.85rem; }
+  .task-row { padding-top: 0.9rem; padding-bottom: 0.9rem; }
+  /* Titik agenda kalender terlalu kecil untuk diketuk: ketukan diteruskan ke tanggalnya */
+  .cal .cal-ev { pointer-events: none; }
+}
+
+/* Panel sempit (ponsel / 3 kolom di desktop): badge status di daftar disembunyikan agar judul tidak terpotong */
+.panel { container-type: inline-size; }
+@container (max-width: 440px) { .hide-narrow { display: none !important; } }
