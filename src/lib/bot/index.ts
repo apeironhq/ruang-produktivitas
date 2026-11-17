@@ -8,7 +8,7 @@ import {
   badgesPanel, calendarPanel, catatPanel, financePanel, goalDetailPanel, goalsPanel, habitsPanel, helpPanel, homePanel, journalDetailPanel,
   journalPanel, learningPanel, projectDetailPanel, projectsPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
 } from './panels'
-import { createTimer, eveningPanel, parseDuration, repeatText, splitReminder, timerPanel } from './timers'
+import { createTimer, eveningPanel, parseDuration, pomodoroStarted, repeatText, splitReminder, startPomodoro, timerPanel, type Pomo } from './timers'
 import { extractRepeat, extractWhen, minutesLabel, whenLabel } from './when'
 import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatTime } from '../format'
@@ -178,6 +178,7 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate, user?: BotUs
     case 'pengingat': await sendPanel(chatId, await timerPanel(ctx)); break
     case 'timer': await cmdTimer(ctx, arg); break
     case 'ingatkan': await cmdRemind(ctx, arg); break
+    case 'fokus': case 'pomodoro': await cmdFocus(ctx, arg); break
     case 'sore': await sendPanel(chatId, (await eveningPanel(ctx, true))!); break
     case 'pengaturan': await sendPanel(chatId, await settingsPanel(ctx)); break
     case 'tambah': await startFlow(ctx, 'tugas', arg, null); break
@@ -203,6 +204,9 @@ async function offerFreeText(ctx: Ctx, text: string) {
   const first = (body.split('\n')[0] ?? '').trim()
   const remind = /^(?:tolong\s+)?(?:ingatkan|ingetin|ingatin|ingetkan|remind(?:er)?)\b[\s,:]*/i.exec(first)
   if (remind) { await startFlow(ctx, 'ingat', first.slice(remind[0].length).slice(0, 300), null); return }
+  // "pomodoro", "mulai fokus skripsi", "fokus 50 menit" → mode pomodoro
+  const focusCmd = /^(?:pomodoro|mode fokus|mulai fokus)\b\s*/i.exec(first) ?? /^fokus(?=\s+\d)\s*/i.exec(first)
+  if (focusCmd) { await cmdFocus(ctx, first.slice(focusCmd[0].length)); return }
   // "tiap hari jam 7 minum obat" → pengingat berulang
   if (/^(tiap|setiap|saban)\b/i.test(first) && extractRepeat(first, ctx.tz)) { await startFlow(ctx, 'ingat', first.slice(0, 300), null); return }
   await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'teks', payload: { text: body }, created_at: new Date().toISOString() })
@@ -246,6 +250,23 @@ async function cmdTimer(ctx: Ctx, arg: string) {
     `<b>Timer ${minutesLabel(min)} dimulai.</b>`,
     `<i>Selesai pukul ${formatTime(at, ctx.tz)}${rest.length ? ` — ${esc(rest.join(' ').slice(0, 80))}` : ''}</i>`,
   ].join('\n'), [[btn('✖️ Batalkan', `tm:x:${r.id}`), btn('⏱ Timer lain', 'p:timer')]])
+}
+
+/** /fokus [menit] [keterangan] → mulai pomodoro (default 25 menit fokus, 5 menit istirahat, 4 sesi). */
+async function cmdFocus(ctx: Ctx, arg: string) {
+  // durasi di awal: "50", "50 menit", "1 jam"
+  const words = arg.trim().split(/\s+/).filter(Boolean)
+  let min: number | null = null, used = 0
+  for (const n of [2, 1]) {
+    const m = words.length >= n ? parseDuration(words.slice(0, n).join(' ')) : null
+    if (m) { min = m; used = n; break }
+  }
+  const focus = min && min >= 5 && min <= 120 ? min : 25
+  const label = words.slice(used).join(' ').trim().slice(0, 200)
+  const r = await startPomodoro(ctx, focus, label)
+  if ('error' in r) { await sendMessageKb(ctx.chatId, r.error, [[btn('⏱ Timer & Pengingat', 'p:timer')]]); return }
+  const m = pomodoroStarted(r, label, ctx.tz)
+  await sendMessageKb(ctx.chatId, m.html, m.kb)
 }
 
 /** /ingatkan 30m minum obat · /ingatkan 14.30 rapat · /ingatkan besok 08.00 bayar listrik. */
@@ -419,6 +440,22 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
     }
     case 'tm': { // timer & pengingat bebas
       const [act, arg = '', opt = ''] = rest.split(':')
+      if (act === 'p') { // mulai pomodoro
+        const focus = Number(arg) >= 5 && Number(arg) <= 120 ? Number(arg) : 25
+        const r = await startPomodoro(ctx, focus)
+        if ('error' in r) { toast = r.error; break }
+        answerNow('Pomodoro dimulai')
+        const m = pomodoroStarted(r, '', ctx.tz)
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]])
+        await sendMessageKb(ctx.chatId, m.html, m.kb)
+        return 'selesai'
+      }
+      if (act === 'q') { // hentikan pomodoro
+        const { data: gone } = await db.from('bot_timers').delete().eq('user_id', ctx.userId).in('kind', ['fokus', 'rehat']).is('sent_at', null).select('id')
+        answerNow(gone?.length ? 'Pomodoro dihentikan' : 'Pomodoro sudah tidak berjalan')
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🍅 Mulai lagi', 'tm:p:25'), btn('🏠 Menu', 'p:home')]])
+        return 'selesai'
+      }
       if (act === 'ok') { answerNow('Oke'); await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
       if (act === 'n') { // mulai timer preset
         const min = Number(arg)
@@ -438,6 +475,20 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
         await db.from('bot_timers').delete().eq('id', arg).eq('user_id', ctx.userId).is('sent_at', null)
         answerNow('Dibatalkan')
         await showPanel(ctx, await timerPanel(ctx), msg)
+        return 'selesai'
+      }
+      if (act === 'k') { // lewati istirahat → langsung fokus sesi berikutnya
+        const { data: gone } = await db.from('bot_timers').delete().eq('id', arg).eq('user_id', ctx.userId).eq('kind', 'rehat').is('sent_at', null).select('pomo, label')
+        const rehat = gone?.[0] as { pomo: Pomo | null; label: string } | undefined
+        if (!rehat?.pomo) { toast = 'Istirahat ini sudah selesai.'; break }
+        const p = rehat.pomo
+        const np: Pomo = p.n >= p.of ? { ...p, n: 1 } : { ...p, n: p.n + 1 }
+        const at = new Date(Date.now() + p.focus * 60_000).toISOString()
+        const r = await createTimer(ctx, 'fokus', at, rehat.label, p.focus, null, np)
+        if ('error' in r) { toast = r.error; break }
+        answerNow(`Fokus sesi ${np.n}/${np.of} dimulai`)
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('⏹ Hentikan', 'tm:q'), btn('🏠 Menu', 'p:home')]])
+        await sendMessageKb(ctx.chatId, `🍅 <b>Fokus sesi ${np.n}/${np.of} dimulai.</b>\n<i>${minutesLabel(p.focus)} sampai pukul ${formatTime(at, ctx.tz)}.</i>`, [[btn('⏹ Hentikan', 'tm:q'), btn('🏠 Menu', 'p:home')]])
         return 'selesai'
       }
       if (act === 's') { // hentikan pengulangan: hapus jadwal berikutnya yang belum terkirim

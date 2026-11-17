@@ -1,6 +1,7 @@
 import 'server-only'
 import { addDays, startOfDayIso, todayIn } from '../dates'
 import { formatShort, formatTime } from '../format'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Keyboard } from '../telegram'
 import { OPEN, btn, cut, esc, navRow, rows, type Ctx, type Panel } from './ui'
 import { cleanReminderLabel, extractRepeat, extractWhen, hhmmIn, minutesLabel, nextOccurrence, repeatLabel, whenLabel } from './when'
@@ -57,11 +58,11 @@ export function parseReminder(arg: string, tz: string): { at: string; label: str
 /** "Tiap hari 07.00" untuk pengingat berulang. */
 export const repeatText = (repeat: string, iso: string, tz: string) => `${repeatLabel(repeat)} ${formatTime(iso, tz)}`
 
-export async function createTimer(ctx: Ctx, kind: 'timer' | 'ingat', fireAt: string, label: string, minutes: number | null, repeat: string | null = null): Promise<{ error: string } | { id: string }> {
+export async function createTimer(ctx: Ctx, kind: 'timer' | 'ingat' | 'fokus' | 'rehat', fireAt: string, label: string, minutes: number | null, repeat: string | null = null, pomo: Pomo | null = null): Promise<{ error: string } | { id: string }> {
   const { count } = await ctx.db.from('bot_timers').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).is('sent_at', null)
   if ((count ?? 0) >= MAX_ACTIVE) return { error: `Maksimal ${MAX_ACTIVE} timer & pengingat aktif. Batalkan salah satu dulu.` }
   const { data, error } = await ctx.db.from('bot_timers')
-    .insert({ user_id: ctx.userId, kind, label: label.trim().slice(0, 200), minutes, fire_at: fireAt, ...(repeat && kind === 'ingat' ? { repeat } : {}) }).select('id').single()
+    .insert({ user_id: ctx.userId, kind, label: label.trim().slice(0, 200), minutes, fire_at: fireAt, ...(repeat && kind === 'ingat' ? { repeat } : {}), ...(pomo ? { pomo } : {}) }).select('id').single()
   if (error) throw error
   return { id: data.id as string }
 }
@@ -73,12 +74,21 @@ const left = (iso: string) => {
 
 /** Panel "Timer & Pengingat": timer aktif, pengingat bebas, dan pengingat tugas 24 jam ke depan. */
 export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
-  const [{ data: timers }, { data: tasks }] = await Promise.all([
-    ctx.db.from('bot_timers').select('id, kind, label, minutes, fire_at, repeat').eq('user_id', ctx.userId).is('sent_at', null).order('fire_at').limit(MAX_ACTIVE),
+  const [{ data: timers }, { data: tasks }, focus] = await Promise.all([
+    ctx.db.from('bot_timers').select('id, kind, label, minutes, fire_at, repeat, pomo').eq('user_id', ctx.userId).is('sent_at', null).order('fire_at').limit(MAX_ACTIVE),
     ctx.db.from('tasks').select('id, kind, title, due_at, start_at, remind_before_minutes')
       .eq('user_id', ctx.userId).in('status', OPEN).not('remind_before_minutes', 'is', null).is('reminded_at', null).limit(200),
+    focusToday(ctx.db, ctx.userId, ctx.tz),
   ])
   const list = timers ?? []
+  const pomoOn = list.some((t) => t.kind === 'fokus' || t.kind === 'rehat')
+  const what = (t: (typeof list)[number]) => {
+    const p = t.pomo as Pomo | null
+    if (t.kind === 'fokus') return `🍅 Fokus ${p ? `${p.n}/${p.of}` : ''} · ${minutesLabel(t.minutes ?? 0)}`
+    if (t.kind === 'rehat') return `☕ Istirahat · ${minutesLabel(t.minutes ?? 0)}`
+    if (t.kind === 'timer') return `Timer ${minutesLabel(t.minutes ?? 0)}`
+    return t.repeat ? '🔁 Ingatkan' : 'Ingatkan'
+  }
   const now = Date.now()
   const taskSoon = (tasks ?? []).map((t) => ({ ...t, at: t.kind === 'kegiatan' ? t.start_at : t.due_at ?? t.start_at })).filter((t) => t.at)
     .map((t) => ({ ...t, fire: new Date(t.at!).getTime() - t.remind_before_minutes! * 60_000 }))
@@ -91,9 +101,10 @@ export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
         title: `Aktif (${list.length})`,
         quote: list.length ? true : false,
         lines: list.length
-          ? list.map((t, i) => `<b>${i + 1}.</b> ${t.kind === 'timer' ? `Timer ${minutesLabel(t.minutes ?? 0)}` : t.repeat ? '🔁 Ingatkan' : 'Ingatkan'}${t.label ? ` — ${cut(t.label, 36)}` : ''}\n    <i>${t.repeat ? `${repeatText(t.repeat, t.fire_at, ctx.tz)} · berikutnya ${whenLabel(t.fire_at, ctx.tz)}` : `${whenLabel(t.fire_at, ctx.tz, { bare: true })} · ${left(t.fire_at)}`}</i>`)
+          ? list.map((t, i) => `<b>${i + 1}.</b> ${what(t)}${t.label ? ` — ${cut(t.label, 36)}` : ''}\n    <i>${t.repeat ? `${repeatText(t.repeat, t.fire_at, ctx.tz)} · berikutnya ${whenLabel(t.fire_at, ctx.tz)}` : `${whenLabel(t.fire_at, ctx.tz, { bare: true })} · ${left(t.fire_at)}`}</i>`)
           : ['<i>Belum ada timer. Pilih durasi di bawah, atau kirim</i> <code>/timer 25 fokus</code>'],
       },
+      ...(focus.n ? [{ lines: [`🍅 <b>Fokus hari ini:</b> ${focus.n} sesi · ${minutesLabel(focus.minutes)}`] }] : []),
       {
         title: 'Pengingat tugas (24 jam)',
         lines: taskSoon.length ? taskSoon.map((t) => `• <b>${whenLabel(new Date(t.fire).toISOString(), ctx.tz, { bare: true })}</b>  ${cut(t.title, 40)}`) : ['<i>Tidak ada. Atur lewat kolom "Ingatkan" saat menambah tugas.</i>'],
@@ -103,7 +114,7 @@ export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
     kb: [
       PRESETS.map((m) => btn(`⏱ ${m} menit`, `tm:n:${m}`)).slice(0, 2),
       PRESETS.map((m) => btn(`⏱ ${m} menit`, `tm:n:${m}`)).slice(2),
-      [btn('🔔 Ingatkan saya…', 'f:ingat')],
+      [btn('🔔 Ingatkan saya…', 'f:ingat'), pomoOn ? btn('⏹ Hentikan pomodoro', 'tm:q') : btn('🍅 Pomodoro 25/5', 'tm:p:25')],
       ...rows(list.slice(0, 8).map((t, i) => btn(`✖️ Batal ${i + 1}`, `tm:x:${t.id}`)), 4),
       navRow(),
     ],
@@ -129,6 +140,90 @@ export function firedMessage(t: { id: string; kind: string; label: string; minut
       ...(t.repeat && next ? [[btn('⏹ Hentikan pengulangan', `tm:s:${next.id}`)]] : []),
       [btn('🏠 Menu', 'p:home')],
     ],
+  }
+}
+
+/* ---------- Pomodoro: fokus → istirahat → fokus … (4 sesi, istirahat panjang di akhir) ---------- */
+export interface Pomo { n: number; of: number; focus: number; rest: number; long: number }
+
+/** Jumlah & total menit sesi fokus yang selesai hari ini. */
+export async function focusToday(db: SupabaseClient, userId: string, tz: string): Promise<{ n: number; minutes: number }> {
+  const { data } = await db.from('bot_timers').select('minutes').eq('user_id', userId).eq('kind', 'fokus')
+    .not('sent_at', 'is', null).gte('sent_at', startOfDayIso(todayIn(tz), tz)).limit(200)
+  return { n: data?.length ?? 0, minutes: (data ?? []).reduce((a, r) => a + (r.minutes ?? 0), 0) }
+}
+
+/** Mulai siklus baru (siklus lama yang masih berjalan dihentikan). */
+export async function startPomodoro(ctx: Ctx, focus = 25, label = ''): Promise<{ error: string } | { id: string; at: string; pomo: Pomo }> {
+  await ctx.db.from('bot_timers').delete().eq('user_id', ctx.userId).in('kind', ['fokus', 'rehat']).is('sent_at', null)
+  const pomo: Pomo = { n: 1, of: 4, focus, rest: focus >= 45 ? 10 : 5, long: focus >= 45 ? 20 : 15 }
+  const at = new Date(Date.now() + focus * 60_000).toISOString()
+  const r = await createTimer(ctx, 'fokus', at, label, focus, null, pomo)
+  return 'error' in r ? r : { id: r.id, at, pomo }
+}
+
+/** Pesan saat pomodoro dimulai. */
+export function pomodoroStarted(r: { id: string; at: string; pomo: Pomo }, label: string, tz: string): { html: string; kb: Keyboard } {
+  return {
+    html: [
+      `🍅 <b>Pomodoro dimulai — sesi 1/${r.pomo.of}</b>`,
+      `<i>Fokus ${minutesLabel(r.pomo.focus)} sampai pukul ${formatTime(r.at, tz)}, lalu istirahat ${minutesLabel(r.pomo.rest)}.</i>`,
+      ...(label ? [`<blockquote>${esc(label)}</blockquote>`] : []),
+      '<i>Rupi akan memberi tahu setiap pergantian sesi.</i>',
+    ].join('\n'),
+    kb: [[btn('⏹ Hentikan', 'tm:q'), btn('⏱ Timer & Pengingat', 'p:timer')]],
+  }
+}
+
+/**
+ * Dipanggil cron saat sesi fokus / istirahat berbunyi: jadwalkan langkah berikutnya lalu susun pesannya.
+ * `schedule` false (percobaan kirim ulang) → langkah berikutnya sudah dibuat, jangan dobel.
+ */
+export async function pomodoroStep(db: SupabaseClient, t: { user_id: string; kind: string; label: string; minutes: number | null; fire_at: string; pomo: Pomo | null }, tz: string, schedule: boolean): Promise<{ html: string; kb: Keyboard }> {
+  const p: Pomo = t.pomo ?? { n: 1, of: 4, focus: t.minutes ?? 25, rest: 5, long: 15 }
+  const base = Math.max(Date.now(), new Date(t.fire_at).getTime())
+  const add = async (kind: 'fokus' | 'rehat', minutes: number, pomo: Pomo) => {
+    if (!schedule) return null
+    const at = new Date(base + minutes * 60_000).toISOString()
+    const { data } = await db.from('bot_timers').insert({ user_id: t.user_id, kind, label: t.label, minutes, fire_at: at, pomo }).select('id').single()
+    return data ? { id: data.id as string, at } : null
+  }
+  const quote = t.label ? [`<blockquote>${esc(t.label)}</blockquote>`] : []
+  if (t.kind === 'fokus') {
+    const last = p.n >= p.of
+    const rest = last ? p.long : p.rest
+    const [next, today] = await Promise.all([add('rehat', rest, p), focusToday(db, t.user_id, tz)])
+    return {
+      html: [
+        `🍅 <b>Sesi fokus ${p.n}/${p.of} selesai!</b>${last ? ' 🎉' : ''}`, ...quote,
+        `☕ Istirahat ${last ? 'panjang ' : ''}${minutesLabel(rest)}${next ? ` — sampai pukul ${formatTime(next.at, tz)}` : ''}. Regangkan badan & minum air.`,
+        `📊 <i>Fokus hari ini: ${today.n} sesi · ${minutesLabel(today.minutes)}</i>`,
+      ].join('\n'),
+      kb: [
+        ...(next ? [[btn('⏭ Lewati istirahat', `tm:k:${next.id}`), btn('⏹ Hentikan', 'tm:q')]] : []),
+        [btn('🏠 Menu', 'p:home')],
+      ],
+    }
+  }
+  // istirahat selesai
+  if (p.n >= p.of) {
+    const today = await focusToday(db, t.user_id, tz)
+    return {
+      html: [
+        '☕ <b>Istirahat selesai — satu siklus pomodoro tuntas!</b>', ...quote,
+        `📊 <i>Fokus hari ini: ${today.n} sesi · ${minutesLabel(today.minutes)}</i>`,
+      ].join('\n'),
+      kb: [[btn('🍅 Mulai siklus baru', `tm:p:${p.focus}`), btn('🏠 Menu', 'p:home')]],
+    }
+  }
+  const np: Pomo = { ...p, n: p.n + 1 }
+  const next = await add('fokus', p.focus, np)
+  return {
+    html: [
+      `⏰ <b>Istirahat selesai — fokus sesi ${np.n}/${np.of} dimulai.</b>`, ...quote,
+      `<i>Fokus ${minutesLabel(p.focus)}${next ? ` sampai pukul ${formatTime(next.at, tz)}` : ''}.</i>`,
+    ].join('\n'),
+    kb: [[btn('⏹ Hentikan', 'tm:q'), btn('🏠 Menu', 'p:home')]],
   }
 }
 

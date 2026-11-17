@@ -98,6 +98,7 @@ await tg('setMyCommands', {
     { command: 'masuk', description: '💵 Catat pemasukan' },
     { command: 'belajar', description: '📚 Catat sesi belajar' },
     { command: 'timer', description: '⏱ Timer, mis. /timer 25 fokus' },
+    { command: 'fokus', description: '🍅 Pomodoro 25/5, mis. /fokus 50 skripsi' },
     { command: 'ingatkan', description: '🔔 Ingatkan saya, mis. /ingatkan tiap hari jam 7 minum obat' },
     { command: 'sore', description: '🌙 Tugas hari ini yang belum selesai' },
     { command: 'kalender', description: '📅 Agenda 7 hari' },

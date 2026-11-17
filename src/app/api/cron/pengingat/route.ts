@@ -1,7 +1,7 @@
 import '@/lib/http-agent'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reminderKeyboard, reminderText, sendDashboard } from '@/lib/bot'
-import { eveningPanel, firedMessage } from '@/lib/bot/timers'
+import { eveningPanel, firedMessage, pomodoroStep, type Pomo } from '@/lib/bot/timers'
 import { hhmmIn, nextOccurrence } from '@/lib/bot/when'
 import { renderPanel } from '@/lib/bot/ui'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
@@ -39,7 +39,7 @@ async function run(req: NextRequest) {
 
   /* ---- 0. Timer & "ingatkan saya" (paling sensitif waktu → paling awal) ---- */
   const { data: due } = await db.rpc('claim_due_timers', { p_limit: 200 })
-  const timers = (due ?? []) as Array<{ id: string; user_id: string; kind: string; label: string; minutes: number | null; fire_at: string; attempts: number; repeat?: string | null; chat_id: number | null; timezone: string }>
+  const timers = (due ?? []) as Array<{ id: string; user_id: string; kind: string; label: string; minutes: number | null; fire_at: string; attempts: number; repeat?: string | null; pomo?: Pomo | null; chat_id: number | null; timezone: string }>
   stats.timers = timers.length
   await Promise.all(timers.map(async (t) => {
     if (!t.chat_id) { logs.push({ user_id: t.user_id, task_id: null, kind: 'timer', status: 'dilewati', detail: 'Telegram belum ditautkan' }); return }
@@ -53,7 +53,9 @@ async function run(req: NextRequest) {
         if (row) next = { id: row.id as string, at }
       }
     }
-    const m = firedMessage(t, tz, next)
+    const m = t.kind === 'fokus' || t.kind === 'rehat'
+      ? await pomodoroStep(db, { ...t, pomo: t.pomo ?? null }, tz, t.attempts === 0)
+      : firedMessage(t, tz, next)
     const res = await sendMessageKb(t.chat_id, m.html, m.kb)
     if (res.ok) { logs.push({ user_id: t.user_id, task_id: null, kind: 'timer', status: 'terkirim', detail: '' }); return }
     // Gagal sementara → lepaskan klaim agar dicoba lagi menit berikutnya (maks. 5×).
@@ -189,7 +191,9 @@ async function run(req: NextRequest) {
       }))
     }
     await Promise.all([
-      db.from('bot_timers').delete().not('sent_at', 'is', null).lt('sent_at', new Date(Date.now() - 2 * 86_400_000).toISOString()),
+      // sesi fokus disimpan 8 hari untuk rekap; sisanya 2 hari
+      db.from('bot_timers').delete().not('sent_at', 'is', null).neq('kind', 'fokus').lt('sent_at', new Date(Date.now() - 2 * 86_400_000).toISOString()),
+      db.from('bot_timers').delete().not('sent_at', 'is', null).eq('kind', 'fokus').lt('sent_at', new Date(Date.now() - 8 * 86_400_000).toISOString()),
       db.from('telegram_updates').delete().lt('processed_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),
       db.from('telegram_link_codes').delete().lt('expires_at', new Date(Date.now() - 86_400_000).toISOString()),
       db.from('telegram_pending').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString()),
