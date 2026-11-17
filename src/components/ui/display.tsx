@@ -153,7 +153,7 @@ export function PageHead({ title, description, actions }: { title: string; descr
     <div className="page-head">
       <div className="min-w-0">
         <h1>{title}</h1>
-        {description && <p className="text-caption">{description}</p>}
+        {description && <p className="text-caption page-desc">{description}</p>}
       </div>
       {actions && <div className="control-row">{actions}</div>}
     </div>
@@ -186,12 +186,13 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
 }
 
 /** Kepala kartu seragam: ikon 18px + judul + keterangan, aksi di kanan (card-header MDUNDIG). */
-export function SectionHead({ id, icon, title, desc, children }: { id?: string; icon?: React.ReactNode; title: string; desc?: React.ReactNode; children?: React.ReactNode }) {
+/** `quiet`: keterangan hanya petunjuk statis → disembunyikan di ponsel agar isi naik ke atas. */
+export function SectionHead({ id, icon, title, desc, quiet, children }: { id?: string; icon?: React.ReactNode; title: string; desc?: React.ReactNode; quiet?: boolean; children?: React.ReactNode }) {
   return (
     <div className="card-header">
       <div className="min-w-0">
         <h2 id={id}>{icon}{title}</h2>
-        {desc && <p className="text-caption">{desc}</p>}
+        {desc && <p className={`text-caption${quiet ? ' desc-quiet' : ''}`}>{desc}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </div>

@@ -95,7 +95,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
       </section>
 
       <section className="card" aria-labelledby="badge-title">
-        <SectionHead id="badge-title" icon={<Award size={18} />} title="Lencana" desc="Diberikan otomatis saat syaratnya terpenuhi, masing-masing sekali">
+        <SectionHead quiet id="badge-title" icon={<Award size={18} />} title="Lencana" desc="Diberikan otomatis saat syaratnya terpenuhi, masing-masing sekali">
           <span className="badge">{earnedCount} dari {badges.length} diraih</span>
         </SectionHead>
         <div className="card-body">

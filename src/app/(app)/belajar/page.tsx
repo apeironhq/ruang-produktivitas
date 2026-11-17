@@ -77,7 +77,7 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
       </nav>
 
       <section className="card" aria-labelledby="subj-title">
-        <SectionHead id="subj-title" icon={<BookOpen size={18} />} title="Bidang belajar" desc="Progres = modul selesai ÷ modul yang berlaku">
+        <SectionHead quiet id="subj-title" icon={<BookOpen size={18} />} title="Bidang belajar" desc="Progres = modul selesai ÷ modul yang berlaku">
           {shown.length > 0 && <span className="badge">{shown.length} bidang</span>}
         </SectionHead>
       {shown.length === 0 ? (

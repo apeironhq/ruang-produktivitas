@@ -57,7 +57,7 @@ export default async function Page({ searchParams }: PageProps<'/target'>) {
       </nav>
 
       <section className="card" aria-labelledby="goal-title">
-        <SectionHead id="goal-title" icon={<Target size={18} />} title={`Target ${tab.label.toLowerCase()}`}
+        <SectionHead quiet id="goal-title" icon={<Target size={18} />} title={`Target ${tab.label.toLowerCase()}`}
           desc={tab.status === 'aktif' ? 'Progres dihitung dari satu sumber data' : tab.status === 'tercapai' ? 'Tercatat sekali saat syaratnya terpenuhi' : 'Target yang disimpan tanpa dipantau'}>
           {shown.length > 0 && <span className="badge">{shown.length} target</span>}
         </SectionHead>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Receipt } from 'lucide-react'
 import { EmptyState, PageHead, SectionHead } from '@/components/ui/display'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { todayIn } from '@/lib/dates'
 import { TX_COLS, loadAccounts, loadCategories, monthLabel, monthRange, sumFlow, toRows } from '@/lib/finance'
@@ -61,12 +62,12 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/transa
         <SectionHead id="tx-title" icon={<Receipt size={18} />} title="Transaksi" desc={<>Bulan <span className="capitalize">{label}</span> · transfer digabung menjadi satu baris</>}>
           <MonthNav base="/keuangan/transaksi" label={label} prev={r.prev} next={r.next} isCurrent={month === today.slice(0, 7)} />
         </SectionHead>
-        <div className="card-filters">
+        <FilterBar>
           <SearchParamInput label="Cari transaksi" placeholder="Cari catatan transaksi" />
           <ParamSelect param="jenis" label="Jenis" options={[{ value: '', label: 'Semua jenis' }, { value: 'pemasukan', label: 'Pemasukan' }, { value: 'pengeluaran', label: 'Pengeluaran' }, { value: 'transfer', label: 'Transfer' }]} />
           <ParamSelect param="rekening" label="Rekening" options={[{ value: '', label: 'Semua rekening' }, ...allAccounts.map((a) => ({ value: a.id, label: a.name }))]} />
           <ParamSelect param="kategori" label="Kategori" options={[{ value: '', label: 'Semua kategori' }, ...categories.map((c) => ({ value: c.id, label: `${c.name} (${c.type === 'pemasukan' ? 'masuk' : 'keluar'})` }))]} />
-        </div>
+        </FilterBar>
         {shown.length === 0 ? (
           <EmptyState icon={<Receipt size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : 'Belum ada transaksi bulan ini'}
             description={filtered ? 'Coba ubah saringan atau bulan.' : 'Catat pemasukan, pengeluaran, atau transfer.'}

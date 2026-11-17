@@ -162,7 +162,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
       )}
 
       {accounts.length > 0 ? (
-        <div className="kpis kpis-3">
+        <div className="kpis kpis-3 kpis-money">
           <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color={C.blue} href="/keuangan/rekening"
             series={fin?.balanceSeries} thisWeek={totalBalance} lastWeek={fin?.balanceBefore} money compare={['30 hari lalu', '30 hari lalu']} />
           <KpiCard label="Pemasukan bulan ini" value={null} display={formatRupiah(flow.income)} icon={<ArrowDownLeft size={20} strokeWidth={1.9} />} color="var(--ok)" href="/keuangan/transaksi?jenis=pemasukan"
@@ -193,7 +193,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           <div className="panel-head">
             <div><h2 id="status-title"><PieChart size={18} />Status tugas</h2><p className="text-caption">Sebaran seluruh tugas & kegiatan</p></div>
           </div>
-          <div className="panel-body center"><DonutChart segments={segments} centerLabel="Tugas" /></div>
+          <div className="panel-body center donut-side"><DonutChart segments={segments} centerLabel="Tugas" /></div>
         </section>
       </div>
 

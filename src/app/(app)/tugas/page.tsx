@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CheckSquare, Columns3, List } from 'lucide-react'
 import { CountFoot, EmptyState, PageHead, SectionHead } from '@/components/ui/display'
 import { ScrollRows } from '@/components/ui/ScrollRows'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { addDays, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
@@ -110,18 +111,18 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
       )}
 
       <section className="card" aria-labelledby="task-title">
-        <SectionHead id="task-title" icon={<CheckSquare size={18} />} title={view === 'papan' ? 'Papan tugas' : 'Daftar tugas & kegiatan'}
+        <SectionHead quiet id="task-title" icon={<CheckSquare size={18} />} title={view === 'papan' ? 'Papan tugas' : 'Daftar tugas & kegiatan'}
           desc={view === 'papan' ? 'Tugas dikelompokkan menurut status' : 'Centang lingkaran untuk menandai tugas selesai'}>
           <div className="seg" role="group" aria-label="Tampilan">
             <Link href={hrefWith('/tugas', sp, { tampilan: null })} className={view === 'daftar' ? 'on' : ''} aria-current={view === 'daftar' ? 'page' : undefined}><List size={15} />Daftar</Link>
             <Link href={hrefWith('/tugas', sp, { tampilan: 'papan', tab: null, jenis: null })} className={view === 'papan' ? 'on' : ''} aria-current={view === 'papan' ? 'page' : undefined}><Columns3 size={15} />Papan</Link>
           </div>
         </SectionHead>
-        <div className="card-filters">
+        <FilterBar>
           <SearchParamInput label="Cari tugas" placeholder="Cari judul tugas atau kegiatan" />
           {view === 'daftar' && <ParamSelect param="jenis" label="Jenis" options={[{ value: '', label: 'Semua jenis' }, { value: 'tugas', label: 'Tugas' }, { value: 'kegiatan', label: 'Kegiatan' }]} />}
           <ParamSelect param="prioritas" label="Prioritas" options={[{ value: '', label: 'Semua prioritas' }, ...Object.entries(PRIORITY).map(([k, v]) => ({ value: k, label: v.label }))]} />
-        </div>
+        </FilterBar>
 
         {view === 'daftar' ? (
           tasks.length === 0 ? (

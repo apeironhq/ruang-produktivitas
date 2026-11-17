@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Archive, ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react'
 import { EmptyState, PageHead, SectionHead } from '@/components/ui/display'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { todayIn } from '@/lib/dates'
 import { formatDay, formatNumber } from '@/lib/format'
@@ -76,15 +77,15 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
       </nav>
 
       <section className="card" aria-labelledby="note-title">
-        <SectionHead id="note-title" icon={<NotebookPen size={18} />} title={archived ? 'Arsip' : kind ? JOURNAL_KIND[kind]!.label : 'Semua catatan'}
+        <SectionHead quiet id="note-title" icon={<NotebookPen size={18} />} title={archived ? 'Arsip' : kind ? JOURNAL_KIND[kind]!.label : 'Semua catatan'}
           desc={archived ? 'Catatan yang diarsipkan — kembalikan kapan saja' : 'Terbaru di atas'}>
           {total > 0 && <span className="badge">{formatNumber(total)} catatan</span>}
         </SectionHead>
-        <div className="card-filters">
+        <FilterBar>
           <SearchParamInput label="Cari catatan" placeholder="Cari judul atau isi catatan" />
           <ParamSelect param="periode" label="Bulan" options={[{ value: '', label: 'Semua tanggal' }, ...months]} />
           {tag && <span className="text-caption w-full">Menyaring tag <span className="tag">#{tag}</span> · <Link href={hrefWith('/jurnal', sp, { tag: null })} className="link">hapus saringan</Link></span>}
-        </div>
+        </FilterBar>
         {entries.length === 0 ? (
           <EmptyState icon={<NotebookPen size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : archived ? 'Arsip kosong' : 'Belum ada catatan'}
             description={filtered ? 'Coba kata kunci atau saringan lain.' : 'Tulis catatan atau jurnal pertama Anda.'}

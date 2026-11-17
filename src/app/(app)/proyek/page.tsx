@@ -65,7 +65,7 @@ export default async function Page({ searchParams }: PageProps<'/proyek'>) {
       </nav>
 
       <section className="card" aria-labelledby="proj-title">
-        <SectionHead id="proj-title" icon={<FolderKanban size={18} />} title={`Proyek ${tab.label.toLowerCase()}`}
+        <SectionHead quiet id="proj-title" icon={<FolderKanban size={18} />} title={`Proyek ${tab.label.toLowerCase()}`}
           desc={tab.key === '' ? 'Rencana, berjalan, dan ditunda' : tab.key === 'selesai' ? 'Proyek yang sudah rampung' : 'Disimpan tanpa dipantau'}>
           {shown.length > 0 && <span className="badge">{shown.length} proyek</span>}
         </SectionHead>

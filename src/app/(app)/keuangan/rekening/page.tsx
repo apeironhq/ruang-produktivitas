@@ -40,15 +40,13 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/rekeni
         </>} />
       <FinanceTabs />
 
-      <nav className="tabs" aria-label="Saring rekening">
-        <Link href={hrefWith('/keuangan/rekening', sp, { arsip: null })} className={`tab${!showArchived ? ' active' : ''}`}>Aktif<span className="tab-count">{active.length}</span></Link>
-        <Link href={hrefWith('/keuangan/rekening', sp, { arsip: '1' })} className={`tab${showArchived ? ' active' : ''}`}>Diarsipkan<span className="tab-count">{all.length - active.length}</span></Link>
-      </nav>
-
       <section className="card" aria-labelledby="acc-title">
         <SectionHead id="acc-title" icon={<Landmark size={18} />} title={showArchived ? 'Rekening diarsipkan' : 'Rekening & dompet'}
           desc={showArchived ? 'Tidak tampil di pilihan transaksi; riwayatnya tetap utuh' : `Total saldo ${formatRupiah(total)}${allocated ? ` · ${formatRupiah(allocated)} dialokasikan ke target` : ''}`}>
-          {shown.length > 0 && <span className="badge">{shown.length} rekening</span>}
+          <div className="seg" role="group" aria-label="Saring rekening">
+            <Link href={hrefWith('/keuangan/rekening', sp, { arsip: null })} className={!showArchived ? 'on' : ''} aria-current={!showArchived ? 'page' : undefined}>Aktif<span className="tab-count">{active.length}</span></Link>
+            <Link href={hrefWith('/keuangan/rekening', sp, { arsip: '1' })} className={showArchived ? 'on' : ''} aria-current={showArchived ? 'page' : undefined}>Diarsipkan<span className="tab-count">{all.length - active.length}</span></Link>
+          </div>
         </SectionHead>
         {shown.length === 0 ? (
           <EmptyState icon={<Landmark size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada rekening diarsipkan' : 'Belum ada rekening'}
@@ -72,11 +70,11 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/rekeni
                       {a.allocated ? <>Untuk target {formatRupiah(a.allocated)} · bebas {formatRupiah(a.balance - a.allocated)}</> : <>Saldo awal {formatRupiah(a.opening_balance)}</>}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="acct-actions flex items-center gap-2 flex-wrap">
                     <Link href={`/keuangan/transaksi?rekening=${a.id}`} className="btn btn-secondary btn-sm"><ArrowLeftRight size={15} />Mutasi</Link>
                     <AccountButton initial={{ id: a.id, name: a.name, kind: a.kind, opening_balance: a.opening_balance }} />
                     <ActionButton action={setAccountArchived.bind(null, a.id, !a.is_archived)} className={`btn btn-secondary btn-sm${a.is_archived ? '' : ' is-warn'}`}>
-                      {a.is_archived ? <><ArchiveRestore size={15} />Aktifkan</> : <><Archive size={15} />Arsipkan</>}
+                      {a.is_archived ? <><ArchiveRestore size={15} /><span className="btn-text">Aktifkan</span></> : <><Archive size={15} /><span className="btn-text">Arsipkan</span></>}
                     </ActionButton>
                     <ConfirmButton action={deleteAccount.bind(null, a.id)} title="Hapus rekening?" message={`"${a.name}" dihapus. Rekening yang masih punya transaksi tidak bisa dihapus — arsipkan saja.`}
                       className="btn btn-secondary btn-sm btn-icon is-danger ml-auto" ariaLabel={`Hapus ${a.name}`}><Trash2 size={15} /></ConfirmButton>

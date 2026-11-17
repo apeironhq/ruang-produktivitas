@@ -179,9 +179,25 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
 
   const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !BOTTOM_ITEMS.includes(i.href)) })).filter((g) => g.items.length)
 
+  // Sembunyikan menu bawah saat pengguna menggulir ke bawah (membaca), tampilkan lagi saat menggulir ke atas.
+  const [hidden, setHidden] = useState(false)
+  useEffect(() => {
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      const atEnd = y + window.innerHeight >= document.documentElement.scrollHeight - 8
+      if (y < 80 || atEnd) setHidden(false)
+      else if (y > last + 6) setHidden(true)
+      else if (y < last - 6) setHidden(false)
+      last = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
     <>
-      <nav className="bnav" aria-label="Menu utama" data-testid="bottom-nav"
+      <nav className={`bnav${hidden && !sheetOpen ? ' is-hidden' : ''}`} aria-label="Menu utama" data-testid="bottom-nav"
         style={{ '--i': Math.max(active, 0), '--n': slots } as React.CSSProperties}>
         {BubbleIcon && (
           <span className="bnav-bubble" aria-hidden="true">
