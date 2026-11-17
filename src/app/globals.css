@@ -681,8 +681,9 @@
 .panel-head h2 svg { color: var(--text-muted); flex-shrink: 0; }
 .panel-body { flex: 1; display: flex; flex-direction: column; padding: 0.25rem 1.25rem 1.25rem; min-height: 0; }
 .panel-body.center { align-items: center; justify-content: center; }
-.row-3 { align-items: start; }
-.row-3 > .panel { max-height: 440px; height: auto; }
+/* Kartu dalam satu baris sama tinggi (mengikuti yang terpanjang, maks. 440px); isi yang lebih panjang digulir. */
+.row-3 { align-items: stretch; }
+.row-3 > .panel { max-height: 440px; }
 /* Yang menggulir hanya daftarnya; jarak bawah panel tetap terlihat sehingga isi tidak terpotong di tepi kartu. */
 .row-3 .panel-body { overflow: hidden; }
 /* Scrollbar ditaruh di ruang padding panel: isi tetap sejajar dengan judul, tapi ada jarak 12px dari scrollbar. */
