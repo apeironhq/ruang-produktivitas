@@ -13,6 +13,7 @@ import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import type { Goal, Task, Transaction } from '@/lib/types'
 import { str } from '@/lib/url'
 import { BADGE_COLOR, badgeIcon } from '@/lib/badges'
+import { LimitList } from '@/components/ui/LimitList'
 import { BadgeStrip } from './BadgeStrip'
 import { NewGoalButton } from './target/GoalForm'
 import { goalNumbers } from './target/GoalCard'
@@ -132,9 +133,9 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           <h1>{greet}, {user.displayName}</h1>
           <p className="text-caption">{formatDayLong(today)} · {openToday ? `${openToday} agenda untuk hari ini` : 'Tidak ada agenda tersisa hari ini'}</p>
         </div>
-        <div className="control-row">
+        <div className="control-row head-chips">
           {overdueCount > 0 && <Link href="/tugas?tab=terlambat" className="head-chip warn"><AlertCircle size={14} aria-hidden="true" />{overdueCount} terlambat</Link>}
-          <Link href="/tugas?tab=hari-ini" className="head-chip"><CalendarClock size={14} aria-hidden="true" />{openToday} agenda hari ini</Link>
+          <Link href="/tugas?tab=hari-ini" className="head-chip"><CalendarClock size={14} aria-hidden="true" />{openToday} agenda<span className="long"> hari ini</span></Link>
           <Link href="/pencapaian" className="head-chip accent"><Award size={14} aria-hidden="true" />{earnedBadges.length} lencana</Link>
         </div>
       </div>
@@ -258,7 +259,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           </div>
           <div className="panel-body">
             {activity.length === 0 ? <EmptyState title="Belum ada aktivitas" description="Aktivitas akan muncul di sini." className="fill" /> : (
-              <ul className="items">
+              <LimitList>
                 {activity.map((a, i) => (
                   <li key={`${a.at}-${i}`} className="item">
                     <span className="act-icon" style={tint(a.color)} aria-hidden="true">{a.icon}</span>
@@ -269,7 +270,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                     <span className="item-meta">{formatShort(a.at, tz)}</span>
                   </li>
                 ))}
-              </ul>
+              </LimitList>
             )}
           </div>
         </section>

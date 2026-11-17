@@ -593,7 +593,7 @@
 .trend svg:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: var(--r-sm); }
 .trend .grid { stroke: var(--n-100); stroke-width: 1; }
 .trend .cross { stroke: var(--n-300); stroke-width: 1; }
-.trend .axis { fill: var(--text-muted); font-size: 11px; font-family: var(--font-sans); }
+.trend .axis { fill: var(--text-muted); font-size: 12px; font-family: var(--font-sans); }
 .tip {
   position: absolute; transform: translate(-50%, -100%); pointer-events: none; white-space: nowrap;
   padding: 0.4rem 0.6rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-sm);
@@ -1198,3 +1198,27 @@ a.item-link:hover { background: var(--bg-subtle); }
 /* Panel sempit (ponsel / 3 kolom di desktop): badge status di daftar disembunyikan agar judul tidak terpotong */
 .panel { container-type: inline-size; }
 @container (max-width: 440px) { .hide-narrow { display: none !important; } }
+
+/* Daftar terbatas: tombol "Tampilkan lainnya" hanya di ponsel */
+.limit-more { display: none; }
+@media (max-width: 639.98px) {
+  .limit-list:not(.open) > li:nth-child(n+6) { display: none; }
+  .limit-more { display: flex; align-items: center; justify-content: center; gap: 0.35rem; width: 100%; min-height: 40px; margin-top: 0.5rem; border: 1px solid var(--border-strong); border-radius: var(--r); background: var(--bg-surface); font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-body); cursor: pointer; }
+  .limit-more:hover { background: var(--bg-subtle); }
+
+  /* Tab yang lebih panjang dari layar: tepi kanan memudar sebagai tanda bisa digeser */
+  .tabs { padding-right: 28px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+
+  /* Saringan: tiap pilihan selebar penuh agar teksnya tidak terpotong */
+  .card .card-filters { grid-template-columns: minmax(0, 1fr); }
+
+  /* Chip ringkasan Beranda: satu baris, teks dipendekkan */
+  .head-chips { flex-wrap: nowrap; gap: 0.5rem; }
+  .head-chips .head-chip { flex-shrink: 0; padding: 0 0.7rem; }
+  .head-chips .long { display: none; }
+
+  /* Baris keterangan halaman detail: tanpa pemisah "·" agar tidak ada titik di awal baris */
+  .detail-meta { gap: 0.3rem 0.9rem; }
+  .detail-meta > span + span::before { content: none; }
+  .detail-meta > .meta-status + span::before { content: none; }
+}

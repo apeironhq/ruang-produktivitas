@@ -100,8 +100,8 @@ export default async function Page({ searchParams }: PageProps<'/proyek'>) {
                     </div>
                     <div className="meta-row justify-between">
                       <span className="flex items-center gap-3">
-                        <span><CheckSquare size={13} aria-hidden="true" />{t.done}/{t.total}</span>
-                        <span><Milestone size={13} aria-hidden="true" />{m.done}/{m.total}</span>
+                        <span className="inline-flex items-center gap-1"><CheckSquare size={13} aria-hidden="true" />{t.done}/{t.total} tugas</span>
+                        <span className="inline-flex items-center gap-1"><Milestone size={13} aria-hidden="true" />{m.done}/{m.total} tahapan</span>
                       </span>
                       {p.due_date && <span className={late ? 'overdue' : ''}><CalendarDays size={13} aria-hidden="true" />{formatDay(p.due_date)}</span>}
                     </div>
