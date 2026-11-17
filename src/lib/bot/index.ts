@@ -1,15 +1,15 @@
 import 'server-only'
 import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { DEFAULT_TZ, isValidTimeZone, todayIn } from '../dates'
+import { DEFAULT_TZ, addDays, isValidTimeZone, todayIn, zonedToIso } from '../dates'
 import { answerCallback, editMessageCaption, editMessageKb, editMessageReplyMarkup, editViaWebhookReply, sendMessage, sendMessageKb, sendPhoto, type Keyboard } from '../telegram'
 import { clearFlow, continueFlow, loadPending, splitMoney, startFlow, type FlowState } from './flows'
 import {
   badgesPanel, calendarPanel, catatPanel, financePanel, goalDetailPanel, goalsPanel, habitsPanel, helpPanel, homePanel, journalDetailPanel,
   journalPanel, learningPanel, projectDetailPanel, projectsPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
 } from './panels'
-import { createTimer, eveningPanel, parseDuration, splitReminder, timerPanel } from './timers'
-import { extractWhen, minutesLabel, whenLabel } from './when'
+import { createTimer, eveningPanel, parseDuration, repeatText, splitReminder, timerPanel } from './timers'
+import { extractRepeat, extractWhen, minutesLabel, whenLabel } from './when'
 import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatTime } from '../format'
 
@@ -202,6 +202,8 @@ async function offerFreeText(ctx: Ctx, text: string) {
   const first = (body.split('\n')[0] ?? '').trim()
   const remind = /^(?:tolong\s+)?(?:ingatkan|ingetin|ingatin|ingetkan|remind(?:er)?)\b[\s,:]*/i.exec(first)
   if (remind) { await startFlow(ctx, 'ingat', first.slice(remind[0].length).slice(0, 300), null); return }
+  // "tiap hari jam 7 minum obat" → pengingat berulang
+  if (/^(tiap|setiap|saban)\b/i.test(first) && extractRepeat(first, ctx.tz)) { await startFlow(ctx, 'ingat', first.slice(0, 300), null); return }
   await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'teks', payload: { text: body }, created_at: new Date().toISOString() })
   const looksMoney = !!splitMoney(text)
   const w = looksMoney ? null : extractWhen(first, ctx.tz, { defaultTime: '09:00' })
@@ -240,12 +242,12 @@ async function cmdRemind(ctx: Ctx, arg: string) {
   const p = arg ? splitReminder(arg, ctx.tz) : null
   // Waktu atau pesan belum lengkap → lanjutkan lewat isian (yang sudah terbaca langsung terisi).
   if (!p?.at || !p.label) { await startFlow(ctx, 'ingat', arg, null); return }
-  const r = await createTimer(ctx, 'ingat', p.at, p.label, null)
+  const r = await createTimer(ctx, 'ingat', p.at, p.label, null, p.repeat)
   if ('error' in r) { await sendMessageKb(ctx.chatId, r.error, [[btn('⏱ Timer & Pengingat', 'p:timer')]]); return }
   await sendMessageKb(ctx.chatId, [
-    '<b>Pengingat dijadwalkan.</b>',
+    p.repeat ? '<b>Pengingat berulang dijadwalkan.</b>' : '<b>Pengingat dijadwalkan.</b>',
     `<blockquote>${esc(p.label.slice(0, 200))}</blockquote>`,
-    `<i>${whenLabel(p.at, ctx.tz)}</i>`,
+    p.repeat ? `🔁 <i>${repeatText(p.repeat, p.at, ctx.tz)} · pertama ${whenLabel(p.at, ctx.tz)}</i>` : `<i>${whenLabel(p.at, ctx.tz)}</i>`,
   ].join('\n'), [[btn('✖️ Batalkan', `tm:x:${r.id}`), btn('⏱ Timer & Pengingat', 'p:timer')]])
 }
 
@@ -405,7 +407,7 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       return 'selesai'
     }
     case 'tm': { // timer & pengingat bebas
-      const [act, arg = ''] = rest.split(':')
+      const [act, arg = '', opt = ''] = rest.split(':')
       if (act === 'ok') { answerNow('Oke'); await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
       if (act === 'n') { // mulai timer preset
         const min = Number(arg)
@@ -427,13 +429,21 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
         await showPanel(ctx, await timerPanel(ctx), msg)
         return 'selesai'
       }
-      // r = ulangi timer, z = tunda pengingat 10 menit (dari pesan yang sudah berbunyi)
+      if (act === 's') { // hentikan pengulangan: hapus jadwal berikutnya yang belum terkirim
+        const { data: gone } = await db.from('bot_timers').delete().eq('id', arg).eq('user_id', ctx.userId).is('sent_at', null).select('id')
+        answerNow(gone?.length ? 'Pengulangan dihentikan' : 'Pengulangan sudah tidak aktif')
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]])
+        return 'selesai'
+      }
+      // r = ulangi timer, z = tunda pengingat (+10/+30/+60 menit atau besok pagi) dari pesan yang sudah berbunyi
       const { data: t } = await db.from('bot_timers').select('kind, label, minutes').eq('id', arg).eq('user_id', ctx.userId).maybeSingle()
       if (!t) { toast = 'Timer tidak ditemukan.'; break }
-      const min = act === 'r' ? (t.minutes ?? 25) : 10
-      const r = await createTimer(ctx, act === 'r' ? 'timer' : 'ingat', new Date(Date.now() + min * 60_000).toISOString(), t.label, act === 'r' ? min : null)
+      const snooze = act === 'z' ? (opt === 'bp' ? -1 : [5, 10, 15, 30, 60, 120].includes(Number(opt)) ? Number(opt) : 10) : 0
+      const min = act === 'r' ? (t.minutes ?? 25) : snooze
+      const fireAt = snooze === -1 ? zonedToIso(`${addDays(todayIn(ctx.tz), 1)}T08:00`, ctx.tz)! : new Date(Date.now() + min * 60_000).toISOString()
+      const r = await createTimer(ctx, act === 'r' ? 'timer' : 'ingat', fireAt, t.label, act === 'r' ? min : null)
       if ('error' in r) { toast = r.error; break }
-      answerNow(act === 'r' ? `Timer ${minutesLabel(min)} dimulai lagi` : 'Ditunda 10 menit')
+      answerNow(act === 'r' ? `Timer ${minutesLabel(min)} dimulai lagi` : snooze === -1 ? `Ditunda sampai ${whenLabel(fireAt, ctx.tz)}` : `Ditunda ${minutesLabel(min)}`)
       await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]])
       return 'selesai'
     }

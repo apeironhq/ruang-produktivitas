@@ -3,7 +3,7 @@ import { addDays, startOfDayIso, todayIn } from '../dates'
 import { formatShort, formatTime } from '../format'
 import type { Keyboard } from '../telegram'
 import { OPEN, btn, cut, esc, navRow, rows, type Ctx, type Panel } from './ui'
-import { cleanReminderLabel, extractWhen, minutesLabel, whenLabel } from './when'
+import { cleanReminderLabel, extractRepeat, extractWhen, hhmmIn, minutesLabel, nextOccurrence, repeatLabel, whenLabel } from './when'
 
 /* Timer hitung mundur, "ingatkan saya", dan cek sore — semuanya dikirim cron setiap menit. */
 
@@ -25,7 +25,14 @@ const within = (n: number) => (Number.isInteger(n) && n >= 1 && n <= 1440 ? n : 
  * "30m minum obat", "2 jam lagi angkat jemuran", "aku jam 4 sore jemput adik", "besok pagi bayar listrik".
  * `at` null bila waktunya tidak terbaca atau sudah lewat.
  */
-export function splitReminder(arg: string, tz: string): { at: string | null; label: string } {
+export function splitReminder(arg: string, tz: string): { at: string | null; label: string; repeat: string | null } {
+  // berulang: "tiap hari jam 7 minum obat", "setiap senin & kamis 06.00 olahraga", "tiap malam baca buku"
+  const r = extractRepeat(arg, tz)
+  if (r) {
+    const w = extractWhen(r.rest, tz, { defaultTime: '08:00', part: r.part ?? undefined, timeOnly: true })
+    const hhmm = w ? hhmmIn(w.iso, tz) : '08:00'
+    return { at: nextOccurrence(r.repeat, hhmm, tz, new Date()), label: cleanReminderLabel(w ? w.rest : r.rest), repeat: r.repeat }
+  }
   const words = arg.trim().split(/\s+/).filter(Boolean)
   // durasi di awal: "30m", "45 menit", "1 jam", "1j 30m" (boleh diikuti "lagi")
   for (const n of [2, 1]) {
@@ -33,25 +40,28 @@ export function splitReminder(arg: string, tz: string): { at: string | null; lab
     if (min) {
       const rest = words.slice(n)
       if (/^(lagi|kemudian)$/i.test(rest[0] ?? '')) rest.shift()
-      return { at: new Date(Date.now() + min * 60_000).toISOString(), label: cleanReminderLabel(rest.join(' ')) }
+      return { at: new Date(Date.now() + min * 60_000).toISOString(), label: cleanReminderLabel(rest.join(' ')), repeat: null }
     }
   }
   const w = extractWhen(arg, tz, { defaultTime: '09:00', future: true })
-  if (w && new Date(w.iso).getTime() > Date.now()) return { at: w.iso, label: cleanReminderLabel(w.rest) }
-  return { at: null, label: cleanReminderLabel(w ? w.rest : arg) }
+  if (w && new Date(w.iso).getTime() > Date.now()) return { at: w.iso, label: cleanReminderLabel(w.rest), repeat: null }
+  return { at: null, label: cleanReminderLabel(w ? w.rest : arg), repeat: null }
 }
 
 /** Pengingat lengkap (waktu + pesan) dari "/ingatkan …", atau null. */
-export function parseReminder(arg: string, tz: string): { at: string; label: string } | null {
+export function parseReminder(arg: string, tz: string): { at: string; label: string; repeat: string | null } | null {
   const p = splitReminder(arg, tz)
-  return p.at && p.label ? { at: p.at, label: p.label } : null
+  return p.at && p.label ? { at: p.at, label: p.label, repeat: p.repeat } : null
 }
 
-export async function createTimer(ctx: Ctx, kind: 'timer' | 'ingat', fireAt: string, label: string, minutes: number | null): Promise<{ error: string } | { id: string }> {
+/** "Tiap hari 07.00" untuk pengingat berulang. */
+export const repeatText = (repeat: string, iso: string, tz: string) => `${repeatLabel(repeat)} ${formatTime(iso, tz)}`
+
+export async function createTimer(ctx: Ctx, kind: 'timer' | 'ingat', fireAt: string, label: string, minutes: number | null, repeat: string | null = null): Promise<{ error: string } | { id: string }> {
   const { count } = await ctx.db.from('bot_timers').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).is('sent_at', null)
   if ((count ?? 0) >= MAX_ACTIVE) return { error: `Maksimal ${MAX_ACTIVE} timer & pengingat aktif. Batalkan salah satu dulu.` }
   const { data, error } = await ctx.db.from('bot_timers')
-    .insert({ user_id: ctx.userId, kind, label: label.trim().slice(0, 200), minutes, fire_at: fireAt }).select('id').single()
+    .insert({ user_id: ctx.userId, kind, label: label.trim().slice(0, 200), minutes, fire_at: fireAt, ...(repeat && kind === 'ingat' ? { repeat } : {}) }).select('id').single()
   if (error) throw error
   return { id: data.id as string }
 }
@@ -64,7 +74,7 @@ const left = (iso: string) => {
 /** Panel "Timer & Pengingat": timer aktif, pengingat bebas, dan pengingat tugas 24 jam ke depan. */
 export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
   const [{ data: timers }, { data: tasks }] = await Promise.all([
-    ctx.db.from('bot_timers').select('id, kind, label, minutes, fire_at').eq('user_id', ctx.userId).is('sent_at', null).order('fire_at').limit(MAX_ACTIVE),
+    ctx.db.from('bot_timers').select('id, kind, label, minutes, fire_at, repeat').eq('user_id', ctx.userId).is('sent_at', null).order('fire_at').limit(MAX_ACTIVE),
     ctx.db.from('tasks').select('id, kind, title, due_at, start_at, remind_before_minutes')
       .eq('user_id', ctx.userId).in('status', OPEN).not('remind_before_minutes', 'is', null).is('reminded_at', null).limit(200),
   ])
@@ -81,14 +91,14 @@ export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
         title: `Aktif (${list.length})`,
         quote: list.length ? true : false,
         lines: list.length
-          ? list.map((t, i) => `<b>${i + 1}.</b> ${t.kind === 'timer' ? `Timer ${minutesLabel(t.minutes ?? 0)}` : 'Ingatkan'}${t.label ? ` — ${cut(t.label, 36)}` : ''}\n    <i>${whenLabel(t.fire_at, ctx.tz, { bare: true })} · ${left(t.fire_at)}</i>`)
+          ? list.map((t, i) => `<b>${i + 1}.</b> ${t.kind === 'timer' ? `Timer ${minutesLabel(t.minutes ?? 0)}` : t.repeat ? '🔁 Ingatkan' : 'Ingatkan'}${t.label ? ` — ${cut(t.label, 36)}` : ''}\n    <i>${t.repeat ? `${repeatText(t.repeat, t.fire_at, ctx.tz)} · berikutnya ${whenLabel(t.fire_at, ctx.tz)}` : `${whenLabel(t.fire_at, ctx.tz, { bare: true })} · ${left(t.fire_at)}`}</i>`)
           : ['<i>Belum ada timer. Pilih durasi di bawah, atau kirim</i> <code>/timer 25 fokus</code>'],
       },
       {
         title: 'Pengingat tugas (24 jam)',
         lines: taskSoon.length ? taskSoon.map((t) => `• <b>${whenLabel(new Date(t.fire).toISOString(), ctx.tz, { bare: true })}</b>  ${cut(t.title, 40)}`) : ['<i>Tidak ada. Atur lewat kolom "Ingatkan" saat menambah tugas.</i>'],
       },
-      { lines: ['<i>Ingatkan bebas:</i> <code>/ingatkan 30m minum obat</code> · <code>/ingatkan jam 4 sore angkat jemuran</code>'] },
+      { lines: ['<i>Ingatkan bebas:</i> <code>/ingatkan 30m minum obat</code> · <code>/ingatkan jam 4 sore angkat jemuran</code>', '<i>Berulang:</i> <code>/ingatkan tiap hari jam 7 minum obat</code>'] },
     ],
     kb: [
       PRESETS.map((m) => btn(`⏱ ${m} menit`, `tm:n:${m}`)).slice(0, 2),
@@ -100,8 +110,8 @@ export async function timerPanel(ctx: Ctx, notice?: string): Promise<Panel> {
   }
 }
 
-/** Pesan saat timer / pengingat berbunyi. */
-export function firedMessage(t: { id: string; kind: string; label: string; minutes: number | null; fire_at: string }, tz: string): { html: string; kb: Keyboard } {
+/** Pesan saat timer / pengingat berbunyi. `next`: jadwal berikutnya bila pengingatnya berulang. */
+export function firedMessage(t: { id: string; kind: string; label: string; minutes: number | null; fire_at: string; repeat?: string | null }, tz: string, next?: { id: string; at: string }): { html: string; kb: Keyboard } {
   if (t.kind === 'timer') {
     return {
       html: [`<b>Waktu habis!</b>`, `<i>Timer ${minutesLabel(t.minutes ?? 0)} selesai pukul ${formatTime(t.fire_at, tz)}</i>`, ...(t.label ? ['', `<blockquote>${esc(t.label)}</blockquote>`] : [])].join('\n'),
@@ -109,8 +119,16 @@ export function firedMessage(t: { id: string; kind: string; label: string; minut
     }
   }
   return {
-    html: ['<b>Pengingat</b>', `<blockquote>${esc(t.label || 'Waktunya!')}</blockquote>`, `<i>Dijadwalkan pukul ${formatTime(t.fire_at, tz)}</i>`].join('\n'),
-    kb: [[btn('⏰ Tunda 10 menit', `tm:z:${t.id}`), btn('✅ Oke', 'tm:ok')], [btn('🏠 Menu', 'p:home')]],
+    html: [
+      '<b>Pengingat</b>', `<blockquote>${esc(t.label || 'Waktunya!')}</blockquote>`, `<i>Dijadwalkan pukul ${formatTime(t.fire_at, tz)}</i>`,
+      ...(t.repeat && next ? [`🔁 <i>${repeatText(t.repeat, t.fire_at, tz)} · berikutnya ${whenLabel(next.at, tz)}</i>`] : []),
+    ].join('\n'),
+    kb: [
+      [btn('⏰ +10 menit', `tm:z:${t.id}:10`), btn('+30 menit', `tm:z:${t.id}:30`), btn('+1 jam', `tm:z:${t.id}:60`)],
+      [btn('🌅 Besok pagi', `tm:z:${t.id}:bp`), btn('✅ Oke', 'tm:ok')],
+      ...(t.repeat && next ? [[btn('⏹ Hentikan pengulangan', `tm:s:${next.id}`)]] : []),
+      [btn('🏠 Menu', 'p:home')],
+    ],
   }
 }
 

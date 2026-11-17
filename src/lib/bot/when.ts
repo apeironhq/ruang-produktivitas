@@ -51,7 +51,7 @@ function withPart(h: number, m: number, part: string): [number, number] {
   return [h, m]
 }
 
-export function extractWhen(text: string, tz: string, opts: { defaultTime?: string; future?: boolean; now?: Date } = {}): When | null {
+export function extractWhen(text: string, tz: string, opts: { defaultTime?: string; future?: boolean; now?: Date; part?: string; timeOnly?: boolean } = {}): When | null {
   const now = opts.now ?? new Date()
   const today = todayIn(tz, now)
   const raw = text.trim().split(/\s+/).filter(Boolean)
@@ -108,6 +108,14 @@ export function extractWhen(text: string, tz: string, opts: { defaultTime?: stri
   for (let i = 0; i < low.length; i++) {
     if (used[i]) continue
     const w = low[i]!, w1 = low[i + 1], w2 = low[i + 2]
+
+    // `timeOnly` (pengingat berulang): harinya sudah dari pola, jadi hanya baca jam — "sholat jumat" tetap utuh.
+    if (opts.timeOnly) {
+      if (CLOCK_WORDS.has(w) && takeClock(i, 1)) continue
+      if (/^\d{1,2}[.:]\d{2}$/.test(w) && takeClock(i, 0)) continue
+      if ((num(w, 12) !== null || w === 'setengah') && takeClock(i, 0, true)) continue
+      continue
+    }
 
     // relatif: "2 jam lagi", "30 menit lagi", "3 hari lagi", "2 minggu lagi", "sejam lagi", "setengah jam lagi"
     if (w === 'sejam' && lagi(w1)) { relMs = 3_600_000; mark(i, 2); continue }
@@ -175,7 +183,8 @@ export function extractWhen(text: string, tz: string, opts: { defaultTime?: stri
   }
 
   const c = clock as Clock | null
-  const p = part as string | null
+  // `opts.part`: bagian hari dari luar (mis. "tiap malam") bila teks tidak menyebutnya sendiri
+  const p = (part as string | null) ?? (opts.part && PARTS[opts.part] ? opts.part : null)
   const hasTime = relMs !== null || c !== null || p !== null
   if (!day && !hasTime) return null
 
@@ -282,4 +291,96 @@ export function guessCategory<T extends { id: string; name: string }>(note: stri
     if (c) return c
   }
   return null
+}
+
+/* ---------- Pengingat berulang: "tiap hari", "tiap senin & kamis", "tiap hari kerja", "tiap malam" ---------- */
+const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+const JOIN = new Set(['dan', '&', ',', 'serta'])
+const RANGE = new Set(['sampai', 's/d', 'sd', 'hingga', '-'])
+
+/** Jam-menit "HH:MM" dari ISO di zona `tz`. */
+export function hhmmIn(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
+}
+
+/** Hari yang diizinkan pola (0 = Senin … 6 = Minggu). */
+export function repeatDays(repeat: string): number[] {
+  if (repeat === 'harian') return [0, 1, 2, 3, 4, 5, 6]
+  if (repeat === 'kerja') return [0, 1, 2, 3, 4]
+  const m = /^mingguan:([0-6](?:,[0-6])*)$/.exec(repeat)
+  return m ? [...new Set(m[1]!.split(',').map(Number))].sort() : []
+}
+
+/** "Tiap hari", "Tiap hari kerja", "Tiap akhir pekan", "Tiap Senin & Kamis". */
+export function repeatLabel(repeat: string): string {
+  if (repeat === 'harian') return 'Tiap hari'
+  if (repeat === 'kerja') return 'Tiap hari kerja'
+  const days = repeatDays(repeat)
+  if (days.join() === '5,6') return 'Tiap akhir pekan'
+  const names = days.map((d) => DAY_NAMES[d]!)
+  return `Tiap ${names.length > 1 ? `${names.slice(0, -1).join(', ')} & ${names.at(-1)}` : names[0] ?? ''}`
+}
+
+/** Kejadian berikutnya pola `repeat` pada jam `hhmm` (zona `tz`) yang jatuh setelah `after`. */
+export function nextOccurrence(repeat: string, hhmm: string, tz: string, after: Date): string | null {
+  const allowed = new Set(repeatDays(repeat))
+  if (!allowed.size) return null
+  const start = todayIn(tz, after)
+  for (let d = 0; d <= 8; d++) {
+    const day = addDays(start, d)
+    if (!allowed.has(weekdayMon0(day))) continue
+    const iso = zonedToIso(`${day}T${hhmm}`, tz)
+    if (iso && new Date(iso).getTime() > after.getTime()) return iso
+  }
+  return null
+}
+
+/**
+ * Cari pola pengulangan yang diawali "tiap"/"setiap"/"saban". Kata polanya dibuang dari teks.
+ * `part` diisi bila polanya bagian hari ("tiap malam" → harian, malam).
+ */
+export function extractRepeat(text: string, tz: string, now = new Date()): { repeat: string; rest: string; part: string | null } | null {
+  const raw = text.trim().split(/\s+/).filter(Boolean)
+  const low = raw.map((w) => w.toLowerCase().replace(/[,.!?;]+$/, ''))
+  const i = low.findIndex((w) => w === 'tiap' || w === 'setiap' || w === 'saban')
+  if (i < 0) return null
+  const w1 = low[i + 1], w2 = low[i + 2]
+  let repeat: string | null = null, part: string | null = null, end = i + 1
+  const daysToRepeat = (set: Set<number>) => set.size === 7 ? 'harian' : [...set].sort().join() === '0,1,2,3,4' ? 'kerja' : `mingguan:${[...set].sort().join(',')}`
+
+  if (w1 === 'hari' && w2 === 'kerja') { repeat = 'kerja'; end = i + 3 }
+  else if (w1 === 'akhir' && (w2 === 'pekan' || w2 === 'minggu')) { repeat = 'mingguan:5,6'; end = i + 3 }
+  else if (w1 === 'weekend') { repeat = 'mingguan:5,6'; end = i + 2 }
+  else if (w1 && PARTS[w1]) { repeat = 'harian'; part = w1; end = i + 2 }
+  else if ((w1 === 'minggu' || w1 === 'pekan') && !(w2 && (JOIN.has(w2) || RANGE.has(w2) || DAYS[w2] !== undefined))) {
+    // "tiap minggu" = seminggu sekali, pada hari yang sama dengan hari ini
+    repeat = `mingguan:${weekdayMon0(todayIn(tz, now))}`; end = i + 2
+  } else {
+    // daftar hari: "senin", "hari senin", "senin dan kamis", "senin, rabu, jumat", "senin-jumat", "senin sampai jumat"
+    let j = i + 1
+    if (low[j] === 'hari' && low[j + 1] && (DAYS[low[j + 1]!] !== undefined || /-/.test(low[j + 1]!))) j++
+    const days = new Set<number>()
+    let last: number | null = null, range = false, lastIdx = -1
+    const addRange = (a: number, b: number) => { for (let d = a; ; d = (d + 1) % 7) { days.add(d); if (d === b) break } }
+    while (j < low.length) {
+      const t = low[j]!
+      const rng = /^([a-z']+)-([a-z']+)$/.exec(t)
+      if (rng && DAYS[rng[1]!] !== undefined && DAYS[rng[2]!] !== undefined) { addRange(DAYS[rng[1]!]!, DAYS[rng[2]!]!); last = DAYS[rng[2]!]!; lastIdx = j; j++; continue }
+      if (DAYS[t] !== undefined) {
+        if (range && last !== null) addRange(last, DAYS[t]!); else days.add(DAYS[t]!)
+        last = DAYS[t]!; range = false; lastIdx = j; j++; continue
+      }
+      if (last !== null && JOIN.has(t)) { j++; continue }
+      if (last !== null && RANGE.has(t)) { range = true; j++; continue }
+      break
+    }
+    if (days.size) { repeat = daysToRepeat(days); end = lastIdx + 1 }
+    else if (w1 === 'hari') { repeat = 'harian'; end = i + 2 }
+    else if (w1 === 'harinya') { repeat = 'harian'; end = i + 2 }
+  }
+  if (!repeat) return null
+  // "tiap senin pagi" → bagian hari tepat setelah pola
+  if (!part && low[end] && PARTS[low[end]!]) { part = low[end]!; end++ }
+  const rest = [...raw.slice(0, i), ...raw.slice(end)].join(' ').replace(/\s+/g, ' ').trim()
+  return { repeat, rest, part }
 }

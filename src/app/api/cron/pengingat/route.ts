@@ -2,6 +2,7 @@ import '@/lib/http-agent'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reminderKeyboard, reminderText, sendDashboard } from '@/lib/bot'
 import { eveningPanel, firedMessage } from '@/lib/bot/timers'
+import { hhmmIn, nextOccurrence } from '@/lib/bot/when'
 import { renderPanel } from '@/lib/bot/ui'
 import { DEFAULT_TZ, isValidTimeZone, todayIn } from '@/lib/dates'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -35,11 +36,21 @@ async function run(req: NextRequest) {
 
   /* ---- 0. Timer & "ingatkan saya" (paling sensitif waktu → paling awal) ---- */
   const { data: due } = await db.rpc('claim_due_timers', { p_limit: 200 })
-  const timers = (due ?? []) as Array<{ id: string; user_id: string; kind: string; label: string; minutes: number | null; fire_at: string; attempts: number; chat_id: number | null; timezone: string }>
+  const timers = (due ?? []) as Array<{ id: string; user_id: string; kind: string; label: string; minutes: number | null; fire_at: string; attempts: number; repeat?: string | null; chat_id: number | null; timezone: string }>
   stats.timers = timers.length
   await Promise.all(timers.map(async (t) => {
     if (!t.chat_id) { logs.push({ user_id: t.user_id, task_id: null, kind: 'timer', status: 'dilewati', detail: 'Telegram belum ditautkan' }); return }
-    const m = firedMessage(t, isValidTimeZone(t.timezone) ? t.timezone : DEFAULT_TZ)
+    const tz = isValidTimeZone(t.timezone) ? t.timezone : DEFAULT_TZ
+    // Berulang → jadwalkan kejadian berikutnya (sekali saja, pada klaim pertama).
+    let next: { id: string; at: string } | undefined
+    if (t.repeat && t.attempts === 0) {
+      const at = nextOccurrence(t.repeat, hhmmIn(t.fire_at, tz), tz, new Date(Math.max(Date.now(), new Date(t.fire_at).getTime())))
+      if (at) {
+        const { data: row } = await db.from('bot_timers').insert({ user_id: t.user_id, kind: 'ingat', label: t.label, fire_at: at, repeat: t.repeat }).select('id').single()
+        if (row) next = { id: row.id as string, at }
+      }
+    }
+    const m = firedMessage(t, tz, next)
     const res = await sendMessageKb(t.chat_id, m.html, m.kb)
     if (res.ok) { logs.push({ user_id: t.user_id, task_id: null, kind: 'timer', status: 'terkirim', detail: '' }); return }
     // Gagal sementara → lepaskan klaim agar dicoba lagi menit berikutnya (maks. 5×).
@@ -156,6 +167,18 @@ async function run(req: NextRequest) {
   if (logs.length) await db.from('reminder_logs').insert(logs)
   // Bersihkan jejak lama sekali per jam (cron berjalan tiap menit).
   if (new Date().getUTCMinutes() === 0) {
+    // Pengingat berulang yang terlewat > 6 jam (mis. server mati) → geser ke kejadian berikutnya agar rantainya tidak putus.
+    const { data: stale } = await db.from('bot_timers').select('id, user_id, fire_at, repeat')
+      .is('sent_at', null).not('repeat', 'is', null).lt('fire_at', new Date(Date.now() - 6 * 3_600_000).toISOString()).limit(200)
+    if (stale?.length) {
+      const { data: tzs } = await db.from('profiles').select('id, timezone').in('id', [...new Set(stale.map((s) => s.user_id))])
+      const tzOf = new Map((tzs ?? []).map((p) => [p.id as string, isValidTimeZone(p.timezone) ? p.timezone : DEFAULT_TZ]))
+      await Promise.all(stale.map(async (s) => {
+        const tz = tzOf.get(s.user_id) ?? DEFAULT_TZ
+        const at = nextOccurrence(s.repeat!, hhmmIn(s.fire_at, tz), tz, new Date())
+        if (at) await db.from('bot_timers').update({ fire_at: at, attempts: 0 }).eq('id', s.id)
+      }))
+    }
     await Promise.all([
       db.from('bot_timers').delete().not('sent_at', 'is', null).lt('sent_at', new Date(Date.now() - 2 * 86_400_000).toISOString()),
       db.from('telegram_updates').delete().lt('processed_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),

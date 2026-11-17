@@ -3,7 +3,7 @@ import { addDays, todayIn, zonedToIso } from '../dates'
 import { formatNumber, formatRupiah, parseIdNumber } from '../format'
 import { JOURNAL_KIND, MOOD } from '../labels'
 import { editMessageCaption, editMessageKb, editMessageReplyMarkup, sendMessageKb, type Keyboard } from '../telegram'
-import { createTimer, splitReminder } from './timers'
+import { createTimer, repeatText, splitReminder } from './timers'
 import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
 import { extractWhen, guessCategory, minutesLabel, whenLabel } from './when'
 
@@ -257,19 +257,23 @@ export const FLOWS: Record<string, Flow> = {
       const d: Record<string, unknown> = {}, l: Record<string, string> = {}
       if (p.label) { d.label = p.label.slice(0, 200); l.label = cut(p.label, 60) }
       if (p.at) { d.at = p.at; l.at = whenLabel(p.at, ctx.tz) }
+      if (p.at && p.repeat) { d.repeat = p.repeat; l.repeat = repeatText(p.repeat, p.at, ctx.tz) }
       return { d, l }
     },
     steps: [
       textStep('label', 'Pesan', 'Ingatkan tentang apa?', 'Mis. <i>Minum obat</i>, <i>Telepon ibu</i>, <i>Angkat jemuran</i>'),
       {
         key: 'at', label: 'Waktu',
-        ask: () => ({ q: 'Kapan diingatkan?', hint: 'Pilih tombol, atau ketik mis. <code>45 menit</code>, <code>jam 4 sore</code>, <code>besok pagi</code>', choices: [{ text: '15 menit lagi', v: 'r15' }, { text: '30 menit lagi', v: 'r30' }, { text: '1 jam lagi', v: 'r60' }, { text: '3 jam lagi', v: 'r180' }, { text: 'Besok 09.00', v: 'b09' }], perRow: 2, typing: true }),
-        accept: (ctx, _s, { text, choice }) => {
+        ask: () => ({ q: 'Kapan diingatkan?', hint: 'Pilih tombol, atau ketik mis. <code>45 menit</code>, <code>jam 4 sore</code>, <code>besok pagi</code>, <code>tiap hari jam 7</code>', choices: [{ text: '15 menit lagi', v: 'r15' }, { text: '30 menit lagi', v: 'r30' }, { text: '1 jam lagi', v: 'r60' }, { text: '3 jam lagi', v: 'r180' }, { text: 'Besok 09.00', v: 'b09' }], perRow: 2, typing: true }),
+        accept: (ctx, st, { text, choice }) => {
           let iso: string | null = null
+          delete st.d.repeat; delete st.l.repeat
           if (choice?.startsWith('r')) iso = new Date(Date.now() + Number(choice.slice(1)) * 60_000).toISOString()
           else if (choice === 'b09') iso = zonedToIso(`${addDays(todayIn(ctx.tz), 1)}T09:00`, ctx.tz)
           else if (text) {
-            iso = splitReminder(text, ctx.tz).at
+            const p = splitReminder(text, ctx.tz)
+            iso = p.at
+            if (p.at && p.repeat) { st.d.repeat = p.repeat; st.l.repeat = repeatText(p.repeat, p.at, ctx.tz) }
             if (!iso && extractWhen(text, ctx.tz)) return { error: 'Waktunya sudah lewat. Pilih waktu yang akan datang.' }
           }
           if (!iso) return { error: 'Waktunya belum terbaca. Contoh: <code>45 menit</code>, <code>jam 4 sore</code>, <code>besok jam 8</code>.' }
@@ -279,9 +283,10 @@ export const FLOWS: Record<string, Flow> = {
       },
     ],
     commit: async (ctx, st) => {
-      const r = await createTimer(ctx, 'ingat', String(st.d.at), String(st.d.label), null)
+      const repeat = typeof st.d.repeat === 'string' ? st.d.repeat : null
+      const r = await createTimer(ctx, 'ingat', String(st.d.at), String(st.d.label), null, repeat)
       if ('error' in r) return { lines: [`<b>Belum disimpan.</b> ${r.error}`], kb: [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]] }
-      return { lines: ['<b>Pengingat dijadwalkan.</b> Rupi akan mengirim notifikasi tepat waktunya.'], kb: [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]] }
+      return { lines: [repeat ? '<b>Pengingat berulang dijadwalkan.</b> Hentikan kapan saja dari menu Timer & Pengingat.' : '<b>Pengingat dijadwalkan.</b> Rupi akan mengirim notifikasi tepat waktunya.'], kb: [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]] }
     },
   },
 
@@ -477,7 +482,7 @@ async function advance(ctx: Ctx, flow: Flow, st: FlowState, from: number) {
 function summary(flow: Flow, st: FlowState) {
   const order = [...flow.steps.map((s) => s.key), ...Object.keys(st.l)]
   const seen = new Set<string>()
-  const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ project: 'Proyek', goal: 'Target', task: 'Tugas', account: 'Rekening', amount: 'Jumlah', note: 'Keterangan', kind: 'Jenis', body: 'Isi' } as Record<string, string>)[k] ?? k
+  const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ repeat: 'Berulang', project: 'Proyek', goal: 'Target', task: 'Tugas', account: 'Rekening', amount: 'Jumlah', note: 'Keterangan', kind: 'Jenis', body: 'Isi' } as Record<string, string>)[k] ?? k
   // Tabel monospace: label tanpa ikon, titik dua sejajar. Nilai disimpan ter-escape → kembalikan ke teks polos.
   const unesc = (v: string) => v.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
   const rows_ = order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined))
