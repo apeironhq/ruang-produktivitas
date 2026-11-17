@@ -349,8 +349,13 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
     }
     case 'ai': { // usulan Asisten AI
       const pend = await loadPending(ctx)
-      const pl = pend?.action === 'ai' ? (pend.payload as { items?: AiItem[]; text?: string }) : null
-      if (!pl?.items?.length) { toast = 'Usulan ini sudah tidak aktif.'; break }
+      const pl = pend?.action === 'ai' ? (pend.payload as { items?: AiItem[]; text?: string; mid?: number }) : null
+      // Usulan sudah diganti pesan yang lebih baru (atau kedaluwarsa) → tombol di pesan ini tidak berlaku lagi.
+      if (!pl?.items?.length || (pl.mid && pl.mid !== msg.message_id)) {
+        toast = 'Usulan ini sudah tidak aktif.'
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [])
+        break
+      }
       answerNow(rest === 'ok' ? 'Menyimpan…' : undefined)
       await clearFlow(ctx)
       if (rest === 'ok') {

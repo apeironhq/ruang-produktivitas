@@ -155,7 +155,7 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   const saved = await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
   // Usulan tidak bisa disimpan → jangan tampilkan tombol yang tidak akan berfungsi.
   if (saved.error) return { note: '⚠️ <i>Rupi AI belum bisa menyimpan usulan. Memakai mode biasa.</i>' }
-  await sendMessageKb(ctx.chatId, [
+  const sent = await sendMessageKb(ctx.chatId, [
     `✨ <b>Rupi AI memahami ${items.length > 1 ? `${items.length} hal` : 'ini'}:</b>`,
     '',
     ...items.map((i, n) => `${items.length > 1 ? `${n + 1}. ` : ''}${describe(i, ctx.tz)}`),
@@ -165,6 +165,9 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
     [btn(items.length > 1 ? `✅ Simpan semua (${items.length})` : '✅ Simpan', 'ai:ok', 'success')],
     [btn('✏️ Atur manual', 'ai:man'), btn('✖️ Batal', 'ai:x')],
   ])
+  // Tandai usulan dengan nomor pesannya: tombol di usulan lama tidak boleh bekerja atas usulan baru.
+  const mid = sent.ok ? (sent.result as { message_id?: number }).message_id : undefined
+  if (mid) await ctx.db.from('telegram_pending').update({ payload: { items, text: text.slice(0, 50000), mid } }).eq('chat_id', ctx.chatId).eq('action', 'ai')
   return 'done'
 }
 
