@@ -90,8 +90,8 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           progress={sources.length ? (sources.filter((x) => x.position).length / sources.length) * 100 : 0} />
       </div>
 
-      <div className="row-2">
-        <section className="card h-fit" aria-labelledby="mod-title">
+      <div className="row-2 cols-even">
+        <section className="card" aria-labelledby="mod-title">
           <SectionHead id="mod-title" icon={<ListChecks size={18} />} title="Modul & materi" desc={`${done} dari ${applicable.length} modul selesai`}>
             <AddModulesButton subjectId={subject.id} />
           </SectionHead>
@@ -103,7 +103,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           )}
         </section>
 
-        <section className="card h-fit" aria-labelledby="src-title">
+        <section className="card" aria-labelledby="src-title">
           <SectionHead id="src-title" icon={<Library size={18} />} title="Sumber belajar" desc="Posisi terakhir ikut diperbarui dari sesi">
             <SourceButton subjectId={subject.id} />
           </SectionHead>

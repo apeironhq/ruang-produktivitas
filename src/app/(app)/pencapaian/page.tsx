@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Award, BarChart3, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
+import { Award, CheckCircle2, Clock, Flag, NotebookPen, Repeat, Trophy } from 'lucide-react'
 import { EmptyState, KpiCard, PageHead, ProgressBar, SectionHead, tint, solid } from '@/components/ui/display'
 import { addDays, dayRange, isoToDay, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatDuration, formatNumber } from '@/lib/format'
@@ -76,23 +76,21 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
 
   return (
     <div className="page">
-      <PageHead title="Pencapaian" description="Lencana, statistik perkembangan, dan riwayat target — dicatat sekali saat syaratnya terpenuhi." />
-
-      <section className="card" aria-labelledby="stat-title">
-        <SectionHead id="stat-title" icon={<BarChart3 size={18} />} title="Statistik perkembangan" desc={`${formatDay(curFrom)} – ${formatDay(today)} dibanding ${period.days} hari sebelumnya`}>
-          <div className="seg" role="group" aria-label="Periode">
+      {/* Sama seperti Beranda: kartu angka langsung di halaman (tanpa dibungkus kartu lagi); periode di kepala halaman. */}
+      <PageHead title="Pencapaian"
+        description={`Statistik ${formatDay(curFrom)} – ${formatDay(today)} dibanding ${period.days} hari sebelumnya, lencana, dan riwayat target.`}
+        actions={
+          <div className="seg" role="group" aria-label="Periode statistik">
             {PERIODS.map((p) => <Link key={p.key} href={hrefWith('/pencapaian', sp, { periode: p.key === '7' ? null : p.key })} className={period.key === p.key ? 'on' : ''} scroll={false}>{p.days} hari</Link>)}
           </div>
-        </SectionHead>
-        <div className="card-body">
-          <div className="kpis kpis-4 kpis-summary">
+        } />
+
+          <div className="kpis kpis-4 kpis-summary" aria-label="Statistik perkembangan">
             <KpiCard label="Tugas selesai" value={sDone.cur} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" series={sDone.series} thisWeek={sDone.cur} lastWeek={sDone.prev} compare={cmp} />
             <KpiCard label="Waktu belajar" value={sMin.cur} display={formatDuration(sMin.cur)} duration icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={sMin.series} thisWeek={sMin.cur} lastWeek={sMin.prev} compare={cmp} />
             <KpiCard label="Catatan ditulis" value={sNote.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color="var(--c-rose)" series={sNote.series} thisWeek={sNote.cur} lastWeek={sNote.prev} compare={cmp} />
             <KpiCard label="Check-in kebiasaan" value={sCheck.cur} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" series={sCheck.series} thisWeek={sCheck.cur} lastWeek={sCheck.prev} compare={cmp} />
           </div>
-        </div>
-      </section>
 
       <section className="card" aria-labelledby="badge-title">
         <SectionHead quiet id="badge-title" icon={<Award size={18} />} title="Lencana" desc="Diberikan otomatis saat syaratnya terpenuhi, masing-masing sekali">
@@ -126,7 +124,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
         </div>
       </section>
 
-      <div className="row-2">
+      <div className="row-2 cols-even">
         <section className="card" aria-labelledby="ach-title">
           <SectionHead id="ach-title" icon={<Trophy size={18} />} title="Target tercapai" desc="Terbaru di atas">
             {achieved.length > 0 && <span className="badge">{achieved.length} target</span>}
@@ -151,12 +149,23 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
               })}
             </ul>
           )}
+          {achieved.length > 0 && (() => {
+            // Rata-rata lama mencapai target: dari tanggal mulai sampai tercapai.
+            const spans = achieved.filter((g) => g.achieved_at && g.start_date).map((g) => (new Date(g.achieved_at!).getTime() - new Date(`${g.start_date}T00:00:00Z`).getTime()) / 86_400_000)
+            const avgDays = spans.length ? Math.max(1, Math.round(spans.reduce((x, y) => x + y, 0) / spans.length)) : null
+            return (
+              <div className="card-foot">
+                <span><strong>{achieved.length}</strong> target tercapai</span>
+                {avgDays && <span>Rata-rata <strong>{avgDays} hari</strong> per target</span>}
+              </div>
+            )
+          })()}
         </section>
 
-        <section className="card h-fit" aria-labelledby="ms-title">
+        <section className="card" aria-labelledby="ms-title">
           <SectionHead id="ms-title" icon={<Flag size={18} />} title="Tahapan terbaru" desc="Langkah-langkah yang sudah dilewati" />
-          <div className="card-body pt-1">
-            {(ms.data ?? []).length === 0 ? <p className="text-caption py-3">Belum ada tahapan tercapai.</p> : (
+          <div className="card-body pt-1 flex flex-col">
+            {(ms.data ?? []).length === 0 ? <EmptyState icon={<Flag size={20} strokeWidth={1.75} />} title="Belum ada tahapan tercapai" description="Tahapan target yang terlewati muncul di sini." className="fill" /> : (
               <ul className="items">
                 {(ms.data ?? []).map((m) => (
                   <li key={m.id} className="item">
@@ -169,6 +178,12 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
                   </li>
                 ))}
               </ul>
+            )}
+            {(ms.data ?? []).length > 0 && (
+              <div className="panel-foot">
+                <span><strong>{(ms.data ?? []).length}{(ms.data ?? []).length >= 20 ? '+' : ''}</strong> tahapan tercapai</span>
+                <Link href="/target" className="link-sm">Lihat target</Link>
+              </div>
             )}
           </div>
         </section>

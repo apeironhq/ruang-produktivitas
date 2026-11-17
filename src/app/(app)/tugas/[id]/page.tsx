@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AlignLeft, Info, ListChecks, Trash2 } from 'lucide-react'
+import { AlignLeft, CalendarClock, Info, ListChecks, MapPin, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
 import { BackLink, DetailTitle, EmptyState, InfoList, ProgressBar, SectionHead } from '@/components/ui/display'
-import { formatDateTime } from '@/lib/format'
+import { isoToDay } from '@/lib/dates'
+import { formatDateTime, formatDayLong, formatDuration, formatTime } from '@/lib/format'
 import { PRIORITY, RECURRENCE, TASK_KIND, displayStatus, remindLabel } from '@/lib/labels'
 import { loadLinkOptions } from '@/lib/queries'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
@@ -50,12 +51,34 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
         </div>
       </div>
 
-      <div className="row-2" style={{ alignItems: 'start' }}>
+      <div className="row-2 cols-even">
         <div className="flex flex-col gap-4 min-w-0">
+          {t.kind === 'kegiatan' && t.start_at && (() => {
+            const d = isoToDay(t.start_at, tz)
+            const mins = t.end_at ? Math.round((new Date(t.end_at).getTime() - new Date(t.start_at).getTime()) / 60_000) : 0
+            return (
+              <section className="card" aria-labelledby="sched-title">
+                <SectionHead id="sched-title" icon={<CalendarClock size={18} />} title="Jadwal" />
+                <div className="card-body">
+                  <div className="sched">
+                    <div className="sched-date" aria-hidden="true">
+                      <span className="sched-day">{Number(d.slice(8))}</span>
+                      <span>{new Intl.DateTimeFormat('id-ID', { month: 'short', timeZone: 'UTC' }).format(new Date(`${d}T00:00:00Z`))}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="item-title">{formatDayLong(d)}</p>
+                      <p className="item-sub">{formatTime(t.start_at, tz)}{t.end_at ? `–${formatTime(t.end_at, tz)}` : ''}{mins > 0 ? ` · ${formatDuration(mins)}` : ''}</p>
+                      {t.location && <p className="item-sub inline-flex items-center gap-1"><MapPin size={13} aria-hidden="true" />{t.location}</p>}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )
+          })()}
           <section className="card" aria-labelledby="desc-title">
             <SectionHead id="desc-title" icon={<AlignLeft size={18} />} title="Deskripsi" />
             <div className="card-body">
-              {t.description ? <p className="prose-plain">{t.description}</p> : <p className="text-caption">Belum ada deskripsi.</p>}
+              {t.description ? <p className="prose-plain">{t.description}</p> : <p className="text-caption">Belum ada deskripsi. Tekan <strong>Ubah</strong> di atas untuk menambahkan.</p>}
             </div>
           </section>
           {t.kind === 'tugas' && (
@@ -84,11 +107,8 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
             <InfoList items={[
               t.kind === 'tugas' ? ['Prioritas', PRIORITY[t.priority]!.label] : null,
               ['Kategori', t.category || '—'],
-              t.kind === 'tugas'
-                ? ['Tenggat', t.due_at ? formatDateTime(t.due_at, tz) : '—']
-                : ['Mulai', formatDateTime(t.start_at, tz)],
-              t.kind === 'kegiatan' && t.end_at ? ['Selesai', formatDateTime(t.end_at, tz)] : null,
-              t.kind === 'kegiatan' ? ['Lokasi', t.location || '—'] : null,
+              t.kind === 'tugas' ? ['Tenggat', t.due_at ? formatDateTime(t.due_at, tz) : '—'] : null,
+              t.kind === 'kegiatan' && !t.start_at ? ['Mulai', '—'] : null,
               ['Ulangi', RECURRENCE[t.recurrence]?.label ?? '—'],
               ['Pengingat', remindLabel(t.remind_before_minutes) ?? '—'],
               t.reminded_at ? ['Pengingat terkirim', formatDateTime(t.reminded_at, tz)] : null,

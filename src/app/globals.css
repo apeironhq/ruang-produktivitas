@@ -691,6 +691,30 @@
 .row-3 .panel-body > .items:has(> :nth-child(5)) { border-bottom: 1px solid var(--border); }
 @media (max-width: 1023.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; margin-right: 0; padding-right: 0; } }
 .fill { flex: 1; justify-content: center; }
+/* Ringkasan di dasar kartu (mis. Total saldo): selalu di bawah, mengisi ruang kosong dengan info berguna. */
+.panel-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: auto; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--text-muted); min-width: 0; }
+.panel-foot strong { color: var(--text-heading); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.panel-foot-sub { font-weight: 400; color: var(--text-muted); }
+.sched { display: flex; align-items: center; gap: 1rem; }
+.sched-date { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; width: 64px; height: 64px; border-radius: var(--r); background: var(--brand-soft); color: var(--brand-ink); font-size: var(--fs-caption); font-weight: var(--fw-medium); text-transform: uppercase; }
+.sched-day { font-size: 1.5rem; font-weight: var(--fw-semibold); line-height: 1.1; text-transform: none; }
+.card-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: auto; padding: 0.8rem 1.25rem; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--text-muted); min-width: 0; }
+.card-foot strong { color: var(--text-heading); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.panel-body > .items + .panel-foot, .panel-body > .empty + .panel-foot { margin-top: 0.75rem; }
+.row-3 .panel-body > .items:has(> :nth-child(5)) + .panel-foot { border-top: 0; }
+
+/* Kolom rata bawah (layar lebar): kartu terakhir di kolom yang lebih pendek dipanjangkan sampai
+   sejajar dengan kolom sebelahnya; keadaan kosong ditengahkan. */
+@media (min-width: 1024px) {
+  .row-2.cols-even { align-items: stretch; }
+  .cols-even > .card { height: auto; display: flex; flex-direction: column; position: static; }
+  .cols-even > div { display: flex; flex-direction: column; }
+  .cols-even > div > .card:last-child { flex: 1; display: flex; flex-direction: column; }
+  .cols-even .card > .card-body, .cols-even .card > .panel-body { flex: 1; display: flex; flex-direction: column; }
+  .cols-even .card-body > .empty, .cols-even .panel-body > .empty, .cols-even .card > .empty { flex: 1; justify-content: center; }
+  /* daftar info penutup kartu menempel di dasar (mis. Perkembangan target) */
+  .cols-even .panel > .card-body > .info-list:last-child { margin-top: auto; }
+}
 
 /* ---------- Pengaturan: tab pil di atas (sama seperti halaman lain) + isi selebar halaman ---------- */
 .settings-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
@@ -724,6 +748,7 @@
 .settings-main .card-body > form > div:last-child:has(> button),
 .settings-main .card-body > div.flex-col > div:last-child:has(> button) { margin-top: auto; }
 .settings-main .card-body > a.btn:only-child { margin-top: auto; align-self: flex-start; }
+.settings-main .card-body > div.flex-col > label.choice:last-child, .settings-main .card-body > p:last-child { margin-top: auto; }
 /* Kartu selebar halaman + baris pengaturan (keterangan kiri, kontrol kanan). */
 .settings-main > .settings-wide { grid-column: 1 / -1; }
 .set-body { gap: 0; }
@@ -866,7 +891,7 @@ a.item-link:hover { background: var(--bg-subtle); }
 .badge-card { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-surface); }
 .badge-card.locked .badge-medal { color: var(--n-400); background: var(--n-100); border: 1px dashed var(--n-300); }
 .badge-card.locked .item-sub { color: var(--text-muted); }
-.badge-earned { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; height: 22px; padding: 0 0.55rem; border-radius: 999px; font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--ok); background: var(--ok-soft); }
+.badge-earned { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; height: 22px; padding: 0 0.55rem; border-radius: 999px; font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--brand-ink); background: var(--brand-soft); }
 .badge-card.locked .badge-name { color: var(--text-body); }
 .badge-medal { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 999px; }
 .badge-name { display: block; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-heading); }
@@ -1215,11 +1240,13 @@ a.item-link:hover { background: var(--bg-subtle); }
 .stat-label { font-size: var(--fs-micro); color: var(--text-muted); }
 .stat-value { font-size: clamp(0.8125rem, 12.5cqi, 1.125rem); font-weight: var(--fw-medium); color: var(--text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat-sub { font-size: var(--fs-micro); color: var(--text-muted); }
-.stat-tile.ok { background: var(--ok-soft); border-color: var(--ok-border); }
-.stat-tile.ok .stat-label, .stat-tile.ok .stat-value, .stat-tile.ok .stat-sub { color: var(--ok); }
+/* Nilai positif memakai warna brand (palet biru), bukan hijau. */
+.stat-tile.ok { background: var(--brand-soft); border-color: var(--brand-border); }
+.stat-tile.ok .stat-label { color: var(--brand-ink); }
+.stat-tile.ok .stat-value, .stat-tile.ok .stat-sub { color: var(--brand-ink); }
 .stat-tile.err { background: var(--err-soft); border-color: var(--err-border); }
 .stat-tile.err .stat-label, .stat-tile.err .stat-value, .stat-tile.err .stat-sub { color: var(--err); }
-.up-text { color: var(--ok); }
+.up-text { color: var(--brand); }
 .down-text { color: var(--err); }
 
 /* Kutipan berlabel (evaluasi, ringkasan) */
@@ -1233,6 +1260,8 @@ a.item-link:hover { background: var(--bg-subtle); }
 .chips { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 0.6rem; border-radius: 999px; font-size: var(--fs-caption); font-weight: var(--fw-medium); border: 1px solid var(--border-strong); color: var(--text-body); background: var(--bg-surface); }
 .chip.ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.chip.up { background: var(--brand-soft); border-color: var(--brand-border); color: var(--brand-ink); }
+.chip.down { background: var(--err-soft); border-color: var(--err-border); color: var(--err); }
 .chip.err { background: var(--err-soft); border-color: var(--err-border); color: var(--err); }
 .trade-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .trade-head strong { font-size: 1.125rem; color: var(--text-heading); }

@@ -106,6 +106,12 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
 
   // ----- Agenda hari ini -----
   const agenda = (agendaRes.data ?? []) as Task[]
+  // Ringkasan dasar kartu: agenda besok & target dengan tenggat terdekat.
+  const dayAfterIso = startOfDayIso(addDays(today, 2), tz)
+  const { count: tomorrowCount } = await supabase.from('tasks').select('id', { count: 'exact', head: true })
+    .in('status', [...OPEN_STATUSES])
+    .or(`and(kind.eq.tugas,due_at.gte.${tomorrowIso},due_at.lt.${dayAfterIso}),and(kind.eq.kegiatan,start_at.gte.${tomorrowIso},start_at.lt.${dayAfterIso})`)
+  const nearestGoal = goals.filter((g) => g.due_date).sort((a, b) => a.due_date!.localeCompare(b.due_date!))[0]
   const overdueCount = agenda.filter((t) => t.kind === 'tugas' && t.due_at && t.due_at < startOfDayIso(today, tz)).length
 
   // ----- Aktivitas terbaru -----
@@ -225,6 +231,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                 })}
               </ul>
             )}
+            <div className="panel-foot"><span>Besok</span><strong>{tomorrowCount ? `${tomorrowCount} agenda` : 'Belum ada agenda'}</strong></div>
           </div>
         </section>
 
@@ -249,6 +256,12 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
                   )
                 })}
               </ul>
+            )}
+            {goals.length > 0 && (
+              <div className="panel-foot">
+                <span>Rata-rata progres <strong>{formatNumber(Math.round(avg))}%</strong></span>
+                {nearestGoal && <span className="truncate">Tenggat terdekat <strong>{formatDay(nearestGoal.due_date!)}</strong></span>}
+              </div>
             )}
           </div>
         </section>

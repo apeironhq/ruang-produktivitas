@@ -125,6 +125,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
                     </li>
                   ))}</ul>
                 )}
+                {recent.length > 0 && <div className="panel-foot"><span>Selisih bulan ini</span><strong style={{ color: flow.net < 0 ? 'var(--err)' : 'var(--ok)' }}>{flow.net > 0 ? '+' : ''}{formatRupiah(flow.net)}</strong></div>}
               </div>
             </section>
 
@@ -145,6 +146,10 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
                     )
                   })}</ul>
                 )}
+                {budgets.length > 0 && (() => {
+                  const spent = budgets.reduce((n, b) => n + b.spent, 0), limit = budgets.reduce((n, b) => n + b.limit, 0)
+                  return <div className="panel-foot"><span>Total terpakai</span><strong style={{ color: spent > limit ? 'var(--err)' : undefined }}>{formatRupiah(spent)} <span className="panel-foot-sub">dari {formatRupiah(limit)}</span></strong></div>
+                })()}
               </div>
             </section>
 
@@ -161,6 +166,10 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
                     <span className="cell-strong whitespace-nowrap" style={{ color: a.balance < 0 ? 'var(--err)' : 'var(--text-heading)' }}>{formatRupiah(a.balance)}</span>
                   </li>
                 ))}</ul>
+                {accounts.length > 0 && (() => {
+                  const total = accounts.reduce((n, a) => n + a.balance, 0)
+                  return <div className="panel-foot"><span>Total saldo</span><strong style={{ color: total < 0 ? 'var(--err)' : undefined }}>{formatRupiah(total)}</strong></div>
+                })()}
               </div>
             </section>
           </div>

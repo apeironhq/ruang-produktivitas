@@ -36,6 +36,9 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
   // Perubahan harga sesuai arah posisi (jual/short untung saat harga turun).
   const move = t && t.entry_price && t.exit_price ? ((t.exit_price - t.entry_price) / t.entry_price) * 100 * (t.side === 'jual' ? -1 : 1) : null
   const pctFmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 })
+  // Ringkasan dasar kartu Informasi: panjang catatan & perkiraan waktu baca (±200 kata/menit).
+  const words = `${e.title} ${e.content} ${t?.evaluation ?? ''}`.trim().split(/\s+/).filter(Boolean).length
+  const readMin = Math.max(1, Math.round(words / 200))
 
   return (
     <div className="page">
@@ -54,7 +57,7 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
         </div>
       </div>
 
-      <div className="row-2" style={{ alignItems: 'start' }}>
+      <div className="row-2 cols-even">
         <div className="flex flex-col gap-4 min-w-0">
           {t && (
             <section className="card" aria-labelledby="trade-title">
@@ -63,7 +66,7 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
                 <div className="trade-head">
                   <strong>{t.instrument || 'Tanpa instrumen'}</strong>
                   <div className="chips">
-                    {t.side && <span className={`chip ${t.side === 'beli' ? 'ok' : 'err'}`}>{t.side === 'beli' ? 'Beli / long' : 'Jual / short'}</span>}
+                    {t.side && <span className={`chip ${t.side === 'beli' ? 'up' : 'down'}`}>{t.side === 'beli' ? 'Beli / long' : 'Jual / short'}</span>}
                     {t.strategy && <span className="chip">{t.strategy}</span>}
                   </div>
                 </div>
@@ -84,7 +87,7 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
           <article className="card" aria-labelledby="isi-title">
             <SectionHead id="isi-title" icon={<NotebookPen size={18} />} title="Isi catatan" />
             <div className="card-body">
-              {e.content ? <div className="prose-plain text-[1rem]">{e.content}</div> : <p className="text-caption">Belum ada isi.</p>}
+              {e.content ? <div className="prose-plain text-[1rem]">{e.content}</div> : <p className="text-caption">Belum ada isi. Tekan <strong>Ubah</strong> di atas untuk menulis.</p>}
             </div>
           </article>
         </div>
@@ -104,6 +107,7 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
               ['Diperbarui', formatDateTime(e.updated_at, user.timezone)],
               ['Dibuat', formatDateTime(e.created_at, user.timezone)],
             ]} />
+            <div className="panel-foot"><span>Panjang catatan</span><strong>{formatNumber(words)} kata · ±{readMin} menit baca</strong></div>
           </div>
         </aside>
       </div>

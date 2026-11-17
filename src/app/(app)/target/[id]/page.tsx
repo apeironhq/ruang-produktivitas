@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, Trophy } from 'lucide-react'
+import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, TrendingUp, Trophy } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint, InfoList, StatTile } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
@@ -10,7 +10,7 @@ import { deleteAllocation } from '../../keuangan/actions'
 import { Rabbit } from 'lucide-react'
 import type { Allocation } from '@/lib/types'
 import { loadAccounts } from '@/lib/finance'
-import { todayIn } from '@/lib/dates'
+import { addDays, todayIn } from '@/lib/dates'
 import { formatDateTime, formatDay, formatMetric, formatNumber } from '@/lib/format'
 import { GOAL_STATUS, PRIORITY, PROGRESS_SOURCE, displayStatus } from '@/lib/labels'
 import { GOAL_COLUMNS, loadLinkOptions, loadProgress, mergeProgress } from '@/lib/queries'
@@ -61,6 +61,14 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
   const binary = goal.metric_type === 'biner'
   const today = todayIn(tz)
   const fmt = (v: number) => (valued ?formatMetric(v, goal.metric_type, goal.unit_label) : `${formatNumber(v)} ${goal.unit_label}`)
+  // Statistik kontribusi (target manual): rata-rata 90 hari terakhir & perkiraan tanggal tercapai.
+  const since = addDays(today, -90)
+  const recent90 = events.filter((e) => e.occurred_on >= since).reduce((s, e) => s + Number(e.value), 0)
+  const perMonth = recent90 / 3
+  const biggest = events.length ? Math.max(...events.map((e) => Number(e.value))) : 0
+  const remainingNum = Math.max(0, (goal.direction === 'turun' ? goal.current - goal.effTarget : goal.effTarget - goal.current))
+  const eta = remainingNum > 0 && perMonth > 0 ? addDays(today, Math.ceil((remainingNum / perMonth) * 30.4)) : null
+  const showStats = manual && !binary && events.length > 0 && goal.status === 'aktif'
   const initial: GoalFormValues = {
     id: goal.id, title: goal.title, description: goal.description, category: goal.category, metric_type: goal.metric_type, unit_label: goal.unit_label,
     direction: goal.direction, progress_source: goal.progress_source, start_value: String(goal.start_value), target_value: String(goal.target_value),
@@ -95,7 +103,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
         </div>
       )}
 
-      <div className="row-2">
+      <div className="row-2 cols-even">
         <section className="card panel" aria-labelledby="prog-title">
           <SectionHead id="prog-title" icon={<Gauge size={18} />} title="Perkembangan" desc={PROGRESS_SOURCE[goal.progress_source]!.hint} />
           <div className="card-body flex flex-col gap-5">
@@ -114,6 +122,8 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             </div>
             <InfoList items={[
               ['Periode', `${formatDay(goal.start_date)} – ${goal.due_date ? formatDay(goal.due_date) : 'tanpa tenggat'}`],
+              ['Sumber progres', PROGRESS_SOURCE[goal.progress_source]?.label ?? '—'],
+              ['Kategori', goal.category || '—'],
               ['Prioritas', PRIORITY[goal.priority]?.label ?? '—'],
             ]} />
           </div>
@@ -139,11 +149,20 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                 ))}
               </ul>
             )}
+            {(() => {
+              const next = milestones.find((m) => !m.reached_at)
+              return milestones.length > 0 && (
+                <div className="panel-foot">
+                  <span>{next ? 'Tahapan berikutnya' : 'Semua tahapan tercapai'}</span>
+                  {next && <strong className="truncate">{fmt(Number(next.threshold))}{next.title ? ` · ${next.title}` : ''}</strong>}
+                </div>
+              )
+            })()}
           </div>
         </section>
       </div>
 
-      <div className="row-2">
+      <div className="row-2 cols-even">
         {alokasi ? (
           <section className="card" aria-labelledby="alloc-title">
             <SectionHead id="alloc-title" icon={<Rabbit size={18} />} title="Riwayat alokasi"
@@ -202,6 +221,10 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                 </ul>
               </div>
             )}
+            {events.length > 0 && (() => {
+              const total = events.reduce((n, e) => n + Number(e.value), 0)
+              return <div className="card-foot"><span>Total kontribusi</span><strong style={{ color: total < 0 ? 'var(--err)' : undefined }}>{total > 0 ? '+' : total < 0 ? '−' : ''}{formatMetric(Math.abs(total), goal.metric_type, goal.unit_label)}</strong></div>
+            })()}
           </section>
         ) : (
           <section className="card" aria-labelledby="src-title">
@@ -228,7 +251,21 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           </section>
         )}
 
-        <section className="card h-fit" aria-labelledby="rel-title">
+        <div className="flex flex-col gap-4 min-w-0">
+        {showStats && (
+          <section className="card" aria-labelledby="stat-title">
+            <SectionHead id="stat-title" icon={<TrendingUp size={18} />} title="Statistik kontribusi" desc="Dihitung dari 90 hari terakhir" />
+            <div className="card-body">
+              <InfoList items={[
+                ['Rata-rata per bulan', perMonth > 0 ? fmt(Math.round(perMonth)) : '—'],
+                ['Kontribusi terbesar', biggest > 0 ? fmt(biggest) : '—'],
+                ['Sisa menuju target', fmt(remainingNum)],
+                ['Perkiraan tercapai', eta ? <span key="eta">{formatDay(eta)}{goal.due_date ? <span className={eta <= goal.due_date ? 'up-text' : 'overdue'}> · {eta <= goal.due_date ? 'sebelum tenggat' : 'lewat tenggat'}</span> : null}</span> : '—'],
+              ]} />
+            </div>
+          </section>
+        )}
+        <section className="card" aria-labelledby="rel-title">
           <SectionHead id="rel-title" icon={<Link2 size={18} />} title="Terkait" desc="Tugas & catatan yang ditautkan ke target ini">
             <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} preset={{ goal_id: goal.id }} label="Catatan" className="btn btn-secondary btn-sm" />
           </SectionHead>
@@ -249,6 +286,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             )}
           </div>
         </section>
+        </div>
       </div>
     </div>
   )

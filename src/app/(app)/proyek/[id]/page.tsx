@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Archive, Check, CheckSquare, Gauge, Milestone, NotebookPen, RotateCcw, Target, Trash2 } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { BackLink, DetailTitle, EmptyState, KpiCard, SectionHead } from '@/components/ui/display'
-import { todayIn } from '@/lib/dates'
+import { todayIn, isoToDay } from '@/lib/dates'
 import { formatDay, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND, PROJECT_STATUS } from '@/lib/labels'
 import { projectProgress } from '@/lib/projects'
@@ -51,6 +51,11 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
   const st = PROJECT_STATUS[p.status]!
   const goal = options.goals.find((g) => g.id === p.goal_id)
   const late = p.due_date && p.due_date < today && p.status !== 'selesai'
+  // Ringkasan dasar kartu Tugas proyek
+  const nowIso = new Date().toISOString()
+  const openTasks = counted.filter((x) => x.status !== 'selesai')
+  const lateTasks = openTasks.filter((x) => x.due_at && x.due_at < nowIso).length
+  const nextDue = openTasks.filter((x) => x.due_at && x.due_at >= nowIso).sort((a, b) => a.due_at!.localeCompare(b.due_at!))[0]
 
   return (
     <div className="page">
@@ -83,7 +88,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
           caption={m.total ? `${m.total - m.done} tahapan tersisa` : 'Belum ada tahapan'} progress={m.total ? (m.done / m.total) * 100 : undefined} />
       </div>
 
-      <div className="row-2" style={{ alignItems: 'start' }}>
+      <div className="row-2 cols-even">
         <section className="card" aria-labelledby="ptask-title">
           <SectionHead id="ptask-title" icon={<CheckSquare size={18} />} title="Tugas proyek" desc="Tugas yang ditautkan ke proyek ini">
             <NewTaskButton options={options} preset={{ project_id: p.id, goal_id: p.goal_id }} label="Tugas" className="btn btn-secondary btn-sm" />
@@ -92,6 +97,12 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
             <EmptyState icon={<CheckSquare size={20} strokeWidth={1.75} />} title="Belum ada tugas" description="Tambahkan tugas dari sini, atau pilih proyek ini saat membuat tugas." />
           ) : (
             <ul className="items">{tasks.map((x) => <TaskRow key={x.id} t={x} meta={meta.get(x.id)} tz={tz} />)}</ul>
+          )}
+          {tasks.length > 0 && (
+            <div className="card-foot">
+              <span>Belum selesai <strong>{openTasks.length}</strong>{lateTasks ? <> · <span className="overdue">{lateTasks} terlambat</span></> : null}</span>
+              {nextDue && <span className="truncate">Tenggat berikutnya <strong>{formatDay(isoToDay(nextDue.due_at!, tz))}</strong></span>}
+            </div>
           )}
         </section>
 
