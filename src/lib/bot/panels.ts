@@ -88,7 +88,7 @@ export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>,
     // Hanya tugas terlambat (tanpa agenda hari ini) → tetap tunjukkan agenda terdekat berikutnya.
     ...(!items.length && late.length && laterLine ? ['', laterLine] : []),
     // Semua agenda hari ini sudah lewat → beri tahu, lalu tunjukkan agenda terdekat berikutnya.
-    ...(items.length && !upcoming.length ? ['', '<i>Semua agenda hari ini sudah lewat.</i>', ...(laterLine ? [laterLine] : [])] : []),
+    ...(items.length && !upcoming.length ? ['', '<i>Semua agenda hari ini sudah lewat.</i>', laterLine ?? 'Belum ada agenda untuk hari-hari berikutnya — ketik <code>rapat besok jam 9</code> untuk menambah.'] : []),
   ]
   // Saran singkat Rupi sesuai keadaan hari ini.
   const doneHabits = new Set((checks.data ?? []).map((c) => c.habit_id))
