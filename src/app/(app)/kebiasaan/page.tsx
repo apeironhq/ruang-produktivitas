@@ -65,8 +65,7 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
         </SectionHead>
         {shown.length === 0 ? (
           <EmptyState icon={<Repeat size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada kebiasaan diarsipkan' : 'Belum ada kebiasaan'}
-            description={showArchived ? undefined : 'Mulai dari satu kebiasaan kecil, mis. "Baca 10 halaman" atau "Olahraga 3× per minggu".'}
-            action={showArchived ? undefined : <NewHabitButton />} />
+            description={showArchived ? undefined : 'Mulai dari satu kebiasaan kecil, mis. "Baca 10 halaman" atau "Olahraga 3× per minggu".'} />
         ) : (
           <ul className="items">
             {shown.map((h) => {

@@ -82,8 +82,7 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
         </SectionHead>
       {shown.length === 0 ? (
           <EmptyState icon={<BookOpen size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada bidang diarsipkan' : 'Belum ada bidang belajar'}
-            description={showArchived ? undefined : 'Mulai dengan satu bidang, mis. "Next.js", lalu tambahkan modul dan sumbernya.'}
-            action={showArchived ? undefined : <NewSubjectButton goals={goals} />} />
+            description={showArchived ? undefined : 'Mulai dengan satu bidang, mis. "Next.js", lalu tambahkan modul dan sumbernya.'} />
       ) : (
         <div className="card-body"><div className="grid-cards">
           {shown.map((s) => {

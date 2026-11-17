@@ -50,8 +50,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/rekeni
         </SectionHead>
         {shown.length === 0 ? (
           <EmptyState icon={<Landmark size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada rekening diarsipkan' : 'Belum ada rekening'}
-            description={showArchived ? undefined : 'Tambahkan tunai, rekening bank, atau dompet digital beserta saldo awalnya.'}
-            action={showArchived ? undefined : <AccountButton />} />
+            description={showArchived ? undefined : 'Tambahkan tunai, rekening bank, atau dompet digital beserta saldo awalnya.'} />
         ) : (
           <div className="card-body">
             <div className="grid-cards">

@@ -131,7 +131,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
             <section className="card panel" aria-labelledby="budget-title">
               <div className="panel-head"><div><h2 id="budget-title"><Rabbit size={18} />Anggaran</h2><p className="text-caption">Terpakai bulan <span className="capitalize">{label}</span></p></div><Link href={`/keuangan/anggaran?bulan=${month}`} className="link-sm">Atur</Link></div>
               <div className="panel-body">
-                {budgets.length === 0 ? <EmptyState title="Belum ada anggaran" description="Tetapkan batas pengeluaran per kategori agar mudah dikendalikan." className="fill" action={<Link href={`/keuangan/anggaran?bulan=${month}`} className="btn btn-secondary">Atur anggaran</Link>} /> : (
+                {budgets.length === 0 ? <EmptyState title="Belum ada anggaran" description="Tetapkan batas pengeluaran per kategori agar mudah dikendalikan." className="fill" /> : (
                   <ul className="items">{budgets.map((b) => {
                     const pct = (b.spent / b.limit) * 100
                     return (

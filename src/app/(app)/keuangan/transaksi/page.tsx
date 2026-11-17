@@ -70,8 +70,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/transa
         </FilterBar>
         {shown.length === 0 ? (
           <EmptyState icon={<Receipt size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : 'Belum ada transaksi bulan ini'}
-            description={filtered ? 'Coba ubah saringan atau bulan.' : 'Catat pemasukan, pengeluaran, atau transfer.'}
-            action={!filtered && accounts.length ? <TransactionButton accounts={accounts} categories={categories} today={today} /> : undefined} />
+            description={filtered ? 'Coba ubah saringan atau bulan.' : 'Catat pemasukan, pengeluaran, atau transfer.'} />
         ) : (
           <>
             <TxTable rows={shown} accounts={accounts} categories={categories} allAccounts={allAccounts} />

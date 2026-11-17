@@ -128,8 +128,7 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
           tasks.length === 0 ? (
             <EmptyState icon={<CheckSquare size={20} strokeWidth={1.75} />}
               title={q || priority || kind ? 'Tidak ada yang cocok' : tab === 'selesai' ? 'Belum ada yang selesai' : 'Belum ada tugas di sini'}
-              description={q || priority || kind ? 'Coba ubah kata kunci atau saringan.' : 'Tambahkan tugas atau kegiatan pertama Anda.'}
-              action={!q && !priority && !kind && tab !== 'selesai' ? <NewTaskButton options={options} /> : undefined} />
+              description={q || priority || kind ? 'Coba ubah kata kunci atau saringan.' : 'Tambahkan tugas atau kegiatan pertama Anda.'} />
           ) : (
             <>
               <ul className="items">{tasks.map((t) => <TaskRow key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}</ul>

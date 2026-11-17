@@ -88,8 +88,7 @@ export default async function Page({ searchParams }: PageProps<'/jurnal'>) {
         </FilterBar>
         {entries.length === 0 ? (
           <EmptyState icon={<NotebookPen size={20} strokeWidth={1.75} />} title={filtered ? 'Tidak ada yang cocok' : archived ? 'Arsip kosong' : 'Belum ada catatan'}
-            description={filtered ? 'Coba kata kunci atau saringan lain.' : 'Tulis catatan atau jurnal pertama Anda.'}
-            action={!filtered && !archived ? <NewJournalButton today={today} goals={options.goals} subjects={options.subjects} projects={options.projects} /> : undefined} />
+            description={filtered ? 'Coba kata kunci atau saringan lain.' : 'Tulis catatan atau jurnal pertama Anda.'} />
         ) : (
           <>
             <ul className="items">

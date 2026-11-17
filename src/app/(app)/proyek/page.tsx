@@ -71,8 +71,7 @@ export default async function Page({ searchParams }: PageProps<'/proyek'>) {
         </SectionHead>
         {shown.length === 0 ? (
           <EmptyState icon={<FolderKanban size={20} strokeWidth={1.75} />} title={tab.key === '' ? 'Belum ada proyek berjalan' : tab.key === 'selesai' ? 'Belum ada proyek selesai' : 'Tidak ada proyek diarsipkan'}
-            description={tab.key === '' ? 'Contoh: Aplikasi Ruang Produktivitas v1, Skripsi, Renovasi rumah.' : undefined}
-            action={tab.key === '' ? <NewProjectButton today={today} goals={goals} /> : undefined} />
+            description={tab.key === '' ? 'Contoh: Aplikasi Ruang Produktivitas v1, Skripsi, Renovasi rumah.' : undefined} />
         ) : (
           <div className="card-body">
             <div className="grid-cards">

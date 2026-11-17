@@ -555,7 +555,7 @@
 .kpi-progress { margin-top: auto; }
 .kpi-progress .bar { margin: 0; height: 8px; }
 .kpi .short { display: none; }
-@container (max-width: 210px) {
+@container (max-width: 250px) {
   .kpi-top { gap: 0.6rem; align-items: flex-start; }
   .kpi-icon { width: 32px; height: 32px; }
   .kpi-icon svg { width: 17px; height: 17px; }
@@ -580,8 +580,9 @@
 .donut-center strong.long { font-size: 1.125rem; }
 .donut-center { padding: 0 22px; }
 .donut-center span { font-size: var(--fs-caption); color: var(--text-muted); }
-.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; min-width: 180px; flex: 1; }
-.legend li { display: grid; grid-template-columns: 10px 1fr auto 3rem; align-items: center; gap: 0.6rem; font-size: var(--fs-label); }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; min-width: min(180px, 100%); flex: 1; }
+.legend li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center; gap: 0.6rem; font-size: var(--fs-label); }
+.legend .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swatch { width: 10px; height: 10px; border-radius: 999px; }
 .legend .name { color: var(--text-body); }
 .legend .val { color: var(--text-heading); font-weight: var(--fw-medium); text-align: right; }
@@ -677,13 +678,14 @@
 .panel-head h2 svg { color: var(--text-muted); flex-shrink: 0; }
 .panel-body { flex: 1; display: flex; flex-direction: column; padding: 0.25rem 1.25rem 1.25rem; min-height: 0; }
 .panel-body.center { align-items: center; justify-content: center; }
-.row-3 > .panel { max-height: 440px; }
+.row-3 { align-items: start; }
+.row-3 > .panel { max-height: 440px; height: auto; }
 /* Yang menggulir hanya daftarnya; jarak bawah panel tetap terlihat sehingga isi tidak terpotong di tepi kartu. */
 .row-3 .panel-body { overflow: hidden; }
 /* Scrollbar ditaruh di ruang padding panel: isi tetap sejajar dengan judul, tapi ada jarak 12px dari scrollbar. */
 .row-3 .panel-body > .items { flex: 1; min-height: 0; overflow-y: auto; margin-right: -0.75rem; padding-right: 0.75rem; }
 .row-3 .panel-body > .items:has(> :nth-child(5)) { border-bottom: 1px solid var(--border); }
-@media (max-width: 767.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; margin-right: 0; padding-right: 0; } }
+@media (max-width: 1023.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; margin-right: 0; padding-right: 0; } }
 .fill { flex: 1; justify-content: center; }
 .link-sm { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--brand); white-space: nowrap; }
 .link-sm:hover { color: var(--brand-hover); }
@@ -1201,7 +1203,7 @@ a.item-link:hover { background: var(--bg-subtle); }
 
 /* Daftar terbatas: tombol "Tampilkan lainnya" hanya di ponsel */
 .limit-more { display: none; }
-@media (max-width: 639.98px) {
+@media (max-width: 1023.98px) {
   .limit-list:not(.open) > li:nth-child(n+6) { display: none; }
   .limit-more { display: flex; align-items: center; justify-content: center; gap: 0.35rem; width: 100%; min-height: 40px; margin-top: 0.5rem; border: 1px solid var(--border-strong); border-radius: var(--r); background: var(--bg-surface); font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-body); cursor: pointer; }
   .limit-more:hover { background: var(--bg-subtle); }
@@ -1269,3 +1271,14 @@ a.item-link:hover { background: var(--bg-subtle); }
 }
 .seg .tab-count { margin-left: 0.15rem; }
 .seg > .on .tab-count { border-color: transparent; color: var(--brand-ink); }
+
+/* Form: bagian "Opsi lainnya" yang bisa dibuka */
+.form-more { border: 1px solid var(--border); border-radius: var(--r); }
+.form-more > summary { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 0.75rem 2.75rem 0.75rem 1rem; cursor: pointer; list-style: none; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-heading); }
+.form-more > summary::-webkit-details-marker { display: none; }
+.form-more > summary::after { content: ""; position: absolute; right: 1.15rem; top: 50%; width: 7px; height: 7px; margin-top: -6px; border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); transform: rotate(45deg); transition: transform var(--dur) var(--ease); }
+.form-more[open] > summary::after { transform: rotate(-135deg); margin-top: -2px; }
+.form-more > summary span { font-size: var(--fs-caption); font-weight: 400; color: var(--text-muted); }
+.form-more > summary:hover { background: var(--bg-subtle); }
+.form-more[open] > summary { border-bottom: 1px solid var(--border); }
+.form-more > .form-stack { padding: 1rem; }

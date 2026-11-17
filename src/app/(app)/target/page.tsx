@@ -64,8 +64,7 @@ export default async function Page({ searchParams }: PageProps<'/target'>) {
         {shown.length === 0 ? (
           <EmptyState icon={<Target size={20} strokeWidth={1.75} />}
             title={tab.status === 'aktif' ? 'Belum ada target aktif' : tab.status === 'tercapai' ? 'Belum ada target tercapai' : 'Tidak ada target diarsipkan'}
-            description={tab.status === 'aktif' ? 'Contoh: Tabungan Rp100.000.000, Menyelesaikan 10 modul Next.js, atau Membaca 12 buku.' : undefined}
-            action={tab.status === 'aktif' ? <NewGoalButton today={today} /> : undefined} />
+            description={tab.status === 'aktif' ? 'Contoh: Tabungan Rp100.000.000, Menyelesaikan 10 modul Next.js, atau Membaca 12 buku.' : undefined} />
         ) : (
           <div className="card-body"><div className="grid-cards">{shown.map((g) => <GoalCard key={g.id} g={g} />)}</div></div>
         )}

@@ -49,10 +49,11 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
   let delta: { up: boolean; text: string; flat: boolean } | null = null
   if (thisWeek !== undefined && lastWeek !== undefined) {
     const diff = thisWeek - lastWeek
-    if (lastWeek === 0) {
+    // Persen tidak bermakna bila pembanding 0 atau nilai uang berganti tanda (mis. saldo jadi minus) → tampilkan selisihnya.
+    if (lastWeek === 0 || (money && (lastWeek < 0 || thisWeek < 0))) {
       const abs = Math.abs(diff)
       const amt = duration ? formatDuration(abs) : money ? `Rp${formatCompact(abs)}` : formatNumber(abs)
-      delta = { up: diff >= 0, text: diff > 0 ? (duration || money ? `+${amt}` : `+${amt} baru`) : diff < 0 ? `−${amt}` : 'Tidak berubah', flat: diff === 0 }
+      delta = { up: diff >= 0, text: diff > 0 ? (duration || money ? `+${amt}` : `+${amt} baru`) : diff < 0 ? `−${amt}` : 'Tetap', flat: diff === 0 }
     }
     else {
       const pct = Math.round((diff / Math.abs(lastWeek)) * 100)

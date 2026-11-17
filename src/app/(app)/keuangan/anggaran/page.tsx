@@ -68,10 +68,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
         {budgets.length === 0 ? (
           <EmptyState icon={<Rabbit size={20} strokeWidth={1.75} />} title="Belum ada anggaran bulan ini"
             description="Tetapkan batas pengeluaran per kategori, mis. Makan & minum Rp1.500.000."
-            action={<div className="flex gap-2 flex-wrap justify-center">
-              <BudgetButton categories={categories} month={month} monthLabel={label} />
-              {(prevBudgets.count ?? 0) > 0 && <ActionButton action={copyBudgets.bind(null, r.prev, month)}><Copy size={16} />Salin dari bulan lalu</ActionButton>}
-            </div>} />
+            action={(prevBudgets.count ?? 0) > 0 ? <ActionButton action={copyBudgets.bind(null, r.prev, month)}><Copy size={16} />Salin dari bulan lalu</ActionButton> : undefined} />
         ) : (
           <ul className="items">
             {budgets.map((b) => {

@@ -29,6 +29,8 @@ export interface TaskFormValues {
   remind: string
 }
 
+const ADV_FIELDS = ['recurrence', 'remind', 'category', 'goal_id', 'subject_id', 'project_id', 'description']
+
 export const emptyTask = (kind: 'tugas' | 'kegiatan' = 'tugas', preset: Partial<TaskFormValues> = {}): TaskFormValues => ({
   kind, title: '', description: '', category: '', priority: 'sedang', status: 'belum',
   due_local: '', start_local: '', end_local: '', location: '', goal_id: null, project_id: null, subject_id: null,
@@ -68,6 +70,7 @@ export function TaskFormModal({ open, onClose, initial, options }: {
   const [kind, setKind] = useState(initial.kind)
   const editing = !!initial.id
   const noun = kind === 'kegiatan' ? 'kegiatan' : 'tugas'
+    const hasAdvanced = initial.recurrence !== 'tidak' || initial.remind !== '' || !!initial.category || !!initial.goal_id || !!initial.subject_id || !!initial.project_id || !!initial.description
   return (
     <FormModal open={open} onClose={onClose} action={saveTask} size="lg" icon={kind === 'kegiatan' ? <CalendarClock size={18} /> : <CheckSquare size={18} />}
       title={editing ? `Ubah ${noun}` : `Tambah ${noun}`}
@@ -112,6 +115,22 @@ export function TaskFormModal({ open, onClose, initial, options }: {
                 </Field>
               </>
             )}
+            <Field label="Prioritas" name="priority" error={errors.priority}>
+              <select id="priority" name="priority" className="select" defaultValue={initial.priority}>
+                {Object.entries(PRIORITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Status" name="status" error={errors.status}>
+              <select id="status" name="status" className="select" defaultValue={initial.status}>
+                {TASK_STATUS_ORDER.filter((s) => kind === 'tugas' || s !== 'dikerjakan').map((s) => <option key={s} value={s}>{(kind === 'kegiatan' ? EVENT_STATUS : TASK_STATUS)[s]!.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          {/* Isian tambahan dilipat agar form tidak panjang; terbuka otomatis bila sudah berisi atau ada galat. */}
+          <details className="form-more" open={hasAdvanced || ADV_FIELDS.some((k) => errors[k]) || undefined}>
+            <summary>Opsi lainnya<span>Ulangi, pengingat, kategori, tautan, deskripsi{!editing && kind === 'tugas' ? ', daftar periksa' : ''}</span></summary>
+            <div className="form-stack">
+          <div className="form-grid form-grid-2">
             <Field label="Ulangi" name="recurrence" error={errors.recurrence} hint="Saat selesai, jadwal berikutnya dibuat otomatis">
               <select id="recurrence" name="recurrence" className={`select${errClass(errors, 'recurrence')}`} defaultValue={initial.recurrence}>
                 {Object.entries(RECURRENCE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -122,16 +141,6 @@ export function TaskFormModal({ open, onClose, initial, options }: {
                 <option value="">Tanpa pengingat</option>
                 {REMIND_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 {initial.remind !== '' && !REMIND_OPTIONS.some((o) => String(o.value) === initial.remind) && <option value={initial.remind}>{initial.remind} menit sebelumnya</option>}
-              </select>
-            </Field>
-            <Field label="Prioritas" name="priority" error={errors.priority}>
-              <select id="priority" name="priority" className="select" defaultValue={initial.priority}>
-                {Object.entries(PRIORITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </Field>
-            <Field label="Status" name="status" error={errors.status}>
-              <select id="status" name="status" className="select" defaultValue={initial.status}>
-                {TASK_STATUS_ORDER.filter((s) => kind === 'tugas' || s !== 'dikerjakan').map((s) => <option key={s} value={s}>{(kind === 'kegiatan' ? EVENT_STATUS : TASK_STATUS)[s]!.label}</option>)}
               </select>
             </Field>
             <Field label="Kategori" name="category" error={errors.category} hint="Mis. Kuliah, Kantor, Rumah">
@@ -147,6 +156,8 @@ export function TaskFormModal({ open, onClose, initial, options }: {
               <textarea id="checklist" name="checklist" className="textarea" rows={3} placeholder={'Baca dokumentasi\nPraktik middleware\nTulis ringkasan'} />
             </Field>
           )}
+            </div>
+          </details>
         </div>
       )}
     </FormModal>
