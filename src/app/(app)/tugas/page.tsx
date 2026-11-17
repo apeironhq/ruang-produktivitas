@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckSquare, Columns3, List } from 'lucide-react'
 import { CountFoot, EmptyState, PageHead, SectionHead } from '@/components/ui/display'
+import { ScrollRows } from '@/components/ui/ScrollRows'
 import { ParamSelect, SearchParamInput } from '@/components/ui/filters'
 import { addDays, startOfDayIso, todayIn } from '@/lib/dates'
 import { formatNumber } from '@/lib/format'
@@ -138,15 +139,16 @@ export default async function Page({ searchParams }: PageProps<'/tugas'>) {
           <div className="card-body">
             <div className="board" aria-label="Papan tugas">
               {columns.map((c) => (
-                <section key={c.status} className={`board-col st-${c.status}`} aria-label={TASK_STATUS[c.status]!.label}>
+                <section key={c.status} className="board-col" aria-label={TASK_STATUS[c.status]!.label}>
                   <div className="board-head">
-                    <span className={`badge badge-dot ${TASK_STATUS[c.status]!.tone}`}>{TASK_STATUS[c.status]!.label}</span>
-                    <span className="text-caption">{c.items.length}</span>
+                    <span className={`board-title ${TASK_STATUS[c.status]!.tone}`}>{TASK_STATUS[c.status]!.label}</span>
+                    <span className="board-count">{c.items.length}</span>
                   </div>
-                  <div className="board-list">
-                    {c.items.length === 0 ? <p className="text-caption text-center py-4">Kosong</p>
-                      : c.items.map((t) => <TaskCard key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}
-                  </div>
+                  {c.items.length === 0 ? <p className="board-empty">Belum ada tugas</p> : (
+                    <ScrollRows rows={3} className="board-list">
+                      {c.items.map((t) => <TaskCard key={t.id} t={t} meta={meta.get(t.id)} tz={tz} />)}
+                    </ScrollRows>
+                  )}
                 </section>
               ))}
             </div>

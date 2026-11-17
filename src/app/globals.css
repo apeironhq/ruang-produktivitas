@@ -803,15 +803,17 @@ a.item-link:hover { background: var(--bg-subtle); }
 .menu-desc { display: block; font-size: var(--fs-micro); color: var(--text-muted); }
 
 /* Papan (kanban) tugas */
-.board { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(240px, 1fr)); overflow-x: auto; padding-bottom: 0.25rem; }
+.board { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(240px, 1fr)); align-items: start; overflow-x: auto; padding-bottom: 0.25rem; }
+/* Kolom netral (tanpa latar berwarna); status cukup ditandai titik kecil di judul kolom */
 .board-col { display: flex; flex-direction: column; min-width: 0; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--r); }
-/* Kolom papan bernada per status (seperti referensi), tetap dari palet */
-.board-col.st-belum { background: #f3f5f7; }
-.board-col.st-dikerjakan { background: #eaf5fa; border-color: #cfe8f2; }
-.board-col.st-tertunda { background: #fff8e6; border-color: #ffe6a8; }
-.board-col.st-selesai { background: #ebf7f1; border-color: #c7ead8; }
-.board-head { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--border); }
-.board-list { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.75rem; min-height: 80px; }
+.board-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.7rem 0.9rem; }
+.board-title { display: inline-flex; align-items: center; gap: 0.45rem; font-size: var(--fs-label); font-weight: var(--fw-semibold); color: var(--text-heading); }
+.board-title::before { content: ''; width: 8px; height: 8px; border-radius: 999px; background: var(--tone-fg, var(--n-400)); }
+.board-title.tone-neutral::before { background: var(--n-400); }
+.board-count { min-width: 1.5rem; padding: 0 0.4rem; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border); font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--text-muted); text-align: center; line-height: 1.25rem; }
+.board-empty { margin: 0 0.75rem 0.75rem; padding: 1.25rem 0.5rem; border: 1px dashed var(--border-strong); border-radius: var(--r-sm); font-size: var(--fs-caption); color: var(--text-faint); text-align: center; }
+.board-list { display: flex; flex-direction: column; gap: 0.6rem; padding: 0 0.75rem 0.75rem; scrollbar-gutter: stable; }
+.board-col .scroll-rows-hint { margin: 0 0 0.7rem; }
 .task-card { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.8rem 0.9rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--sh-card); }
 .task-card:hover { border-color: var(--border-strong); }
 
