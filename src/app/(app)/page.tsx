@@ -233,7 +233,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
             <Link href="/target" className="link-sm">Lihat semua</Link>
           </div>
           <div className="panel-body">
-            {goals.length === 0 ? <EmptyState icon={<Target size={20} strokeWidth={1.75} />} title="Belum ada target" description="Mis. Tabungan Rp100 juta atau 10 modul Next.js." className="fill" action={<NewGoalButton today={today} className="btn btn-secondary btn-sm" />} /> : (
+            {goals.length === 0 ? <EmptyState icon={<Target size={20} strokeWidth={1.75} />} title="Belum ada target" description="Mis. Tabungan Rp100 juta atau 10 modul Next.js." className="fill" action={<NewGoalButton today={today} className="btn btn-secondary" />} /> : (
               <ul className="items">
                 {goals.slice(0, 8).map((g) => {
                   const n = goalNumbers(g)

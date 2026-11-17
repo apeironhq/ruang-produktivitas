@@ -226,6 +226,9 @@
   .btn-icon { width: var(--h-control); padding: 0; flex-shrink: 0; }
   .btn-icon.btn-sm { width: var(--h-control-sm); }
   .btn-block { width: 100%; }
+  /* Ikon di tombol berteks selalu seukuran: 16px (biasa), 15px (kecil). */
+  .btn:not(.btn-icon) > svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-sm:not(.btn-icon) > svg { width: 15px; height: 15px; }
 
   .field { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
   .field-label { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-heading); }
@@ -668,9 +671,10 @@
 .row-3 > .panel { max-height: 440px; }
 /* Yang menggulir hanya daftarnya; jarak bawah panel tetap terlihat sehingga isi tidak terpotong di tepi kartu. */
 .row-3 .panel-body { overflow: hidden; }
-.row-3 .panel-body > .items { flex: 1; min-height: 0; overflow-y: auto; }
+/* Scrollbar ditaruh di ruang padding panel: isi tetap sejajar dengan judul, tapi ada jarak 12px dari scrollbar. */
+.row-3 .panel-body > .items { flex: 1; min-height: 0; overflow-y: auto; margin-right: -0.75rem; padding-right: 0.75rem; }
 .row-3 .panel-body > .items:has(> :nth-child(5)) { border-bottom: 1px solid var(--border); }
-@media (max-width: 767.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; } }
+@media (max-width: 767.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; margin-right: 0; padding-right: 0; } }
 .fill { flex: 1; justify-content: center; }
 .link-sm { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--brand); white-space: nowrap; }
 .link-sm:hover { color: var(--brand-hover); }
@@ -705,11 +709,11 @@ a.item-link:hover { background: var(--bg-subtle); }
 .tab-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--n-100); font-size: var(--fs-micro); line-height: 18px; text-align: center; color: var(--text-muted); }
 .tab.active .tab-count { background: var(--brand-soft); color: var(--brand-ink); }
 
-/* Pengalih tampilan (pages/notifikasi.vue .seg): latar halus, pilihan aktif = permukaan putih. */
-.seg { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-subtle); }
-.seg > a, .seg > button { display: inline-flex; align-items: center; gap: 0.4rem; height: calc(var(--h-control) - 8px); padding: 0 0.9rem; border: 0; border-radius: var(--r-sm); background: none; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-muted); cursor: pointer; white-space: nowrap; }
-.seg > a:hover, .seg > button:hover { color: var(--text-heading); }
-.seg > .on { background: var(--bg-surface); color: var(--text-heading); box-shadow: var(--sh-card); }
+/* Pengalih tampilan: tanpa bungkus. Pilihan = teks + ikon; yang aktif jadi pil biru lembut (seperti menu aktif di sidebar). */
+.seg { display: inline-flex; align-items: center; gap: 0.25rem; }
+.seg > a, .seg > button { display: inline-flex; align-items: center; gap: 0.4rem; height: var(--h-control-sm); padding: 0 0.85rem; border: 0; border-radius: 999px; background: none; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+.seg > a:hover, .seg > button:hover { color: var(--text-heading); background: var(--bg-subtle); }
+.seg > .on, .seg > .on:hover { background: var(--brand-soft); color: var(--brand-ink); }
 
 /* Pilihan radio berbingkai (components/InvitationPicker.vue .row): judul + keterangan, terpilih = biru 5%. */
 .choices { display: grid; gap: 0.5rem; grid-template-columns: minmax(0, 1fr); }
@@ -777,7 +781,7 @@ a.item-link:hover { background: var(--bg-subtle); }
 
 /* Lencana */
 .badges { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
-.scroll-rows .badges { scrollbar-gutter: stable; padding-right: 4px; }
+.scroll-rows.is-scroll .badges { margin-right: -0.75rem; padding-right: 0.75rem; }
 .scroll-rows-hint { display: flex; align-items: center; justify-content: center; gap: 0.3rem; margin-top: 0.6rem; font-size: var(--fs-caption); color: var(--text-muted); }
 .badge-card { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-surface); }
 .badge-card.locked .badge-medal { color: var(--n-400); background: var(--n-100); border: 1px dashed var(--n-300); }
@@ -833,22 +837,80 @@ a.item-link:hover { background: var(--bg-subtle); }
 .overdue { color: var(--err) !important; }
 
 /* Kalender */
+.cal-layout { display: grid; gap: 1.25rem; align-items: start; }
+@media (min-width: 1200px) { .cal-layout { grid-template-columns: minmax(0, 1fr) 320px; } .cal-side { position: sticky; top: 88px; } }
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); }
 .cal-dow { padding: 0.5rem; font-size: var(--fs-micro); font-weight: var(--fw-medium); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--text-muted); text-align: center; background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
-.cal-day { min-height: 112px; padding: 0.4rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.cal-day { position: relative; min-height: 108px; padding: 0.4rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
 .cal-day:nth-child(7n) { border-right: 0; }
 .cal-day.out { background: var(--bg-subtle); }
 .cal-day.out .cal-num { color: var(--text-faint); }
-.cal-num { font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-body); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 999px; }
-.cal-day.today .cal-num { background: var(--brand); color: var(--text-inverse); }
-.cal-ev { display: block; padding: 2px 6px; border-radius: 6px; font-size: 0.72rem; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ev, var(--brand-ink)); background: color-mix(in srgb, var(--ev, var(--brand)) 10%, transparent); }
-.cal-ev:hover { background: color-mix(in srgb, var(--ev, var(--brand)) 18%, transparent); }
+.cal-day:hover { background: var(--bg-subtle); }
+.cal-day.sel { background: color-mix(in srgb, var(--brand) 6%, var(--bg-surface)); }
+.cal-hit { position: absolute; inset: 0; z-index: 0; }
+.cal-hit:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.cal-day > .cal-num, .cal-evs { position: relative; z-index: 1; pointer-events: none; }
+.cal-evs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cal-num { font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-body); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 999px; flex-shrink: 0; }
+.cal-day.sel .cal-num, .cal-wday.sel .cal-num { box-shadow: inset 0 0 0 1.5px var(--brand); color: var(--brand-ink); }
+.cal-day.today .cal-num, .cal-wday.today .cal-num { background: var(--brand); color: var(--text-inverse); box-shadow: none; }
+/* Agenda: teks netral + titik warna jenisnya */
+.cal-ev { pointer-events: auto; display: flex; align-items: center; gap: 5px; min-width: 0; padding: 2px 6px; border-radius: 6px; font-size: 0.72rem; line-height: 1.35; color: var(--text-body); }
+.cal-ev::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: var(--ev, var(--brand)); flex-shrink: 0; }
+.cal-ev:hover { background: var(--bg-hover, var(--n-100)); color: var(--text-heading); }
+.cal-ev-time { color: var(--text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.cal-ev-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev.done .cal-ev-title { color: var(--text-faint); text-decoration: line-through; }
+.cal-ev.full { align-items: flex-start; padding: 5px 7px; font-size: var(--fs-caption); border: 1px solid var(--border); background: var(--bg-surface); flex-wrap: wrap; column-gap: 5px; }
+.cal-ev.full::before { margin-top: 0.42em; }
+.cal-ev.full .cal-ev-title { white-space: normal; flex-basis: 100%; padding-left: 11px; }
+.cal-ev.full .cal-ev-time + .cal-ev-title { margin-top: 1px; }
 .cal-more { font-size: 0.7rem; color: var(--text-muted); padding-left: 6px; }
+/* Sel sempit: jam disembunyikan agar judul lebih terbaca (jam tetap ada di panel hari). */
+.cal-day { container-type: inline-size; }
+@container (max-width: 150px) { .cal-ev-time { display: none; } }
+.cal-side .items .item:last-child { border-bottom: 0; }
+.cal-side { scroll-margin-top: 76px; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); font-size: var(--fs-caption); color: var(--text-muted); }
+.cal-legend > span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.cal-legend .swatch { width: 8px; height: 8px; }
+/* Tampilan Minggu */
+.cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.cal-wday { display: flex; flex-direction: column; min-width: 0; min-height: 360px; border-right: 1px solid var(--border); }
+.cal-wday:last-child { border-right: 0; }
+.cal-wday.sel { background: color-mix(in srgb, var(--brand) 4%, var(--bg-surface)); }
+.cal-whead { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0.6rem 0.4rem; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
+.cal-whead:hover .cal-num { background: var(--n-100); }
+.cal-wday.today .cal-whead:hover .cal-num { background: var(--brand); }
+.cal-wdow { font-size: var(--fs-micro); font-weight: var(--fw-medium); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--text-muted); }
+.cal-wlist { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem; }
+.cal-wempty { text-align: center; color: var(--text-faint); font-size: var(--fs-caption); padding-top: 0.5rem; }
+/* Pemilih bulan & tahun */
+.mp { position: relative; }
+.mp-trigger { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.55rem; margin-left: -0.55rem; border: 0; border-radius: var(--r-sm); background: none; font-size: var(--fs-h3, 1.0625rem); font-weight: var(--fw-semibold); color: var(--text-heading); cursor: pointer; }
+.mp-trigger svg { color: var(--text-muted); }
+.mp-trigger:hover { background: var(--bg-subtle); }
+.mp-trigger[aria-expanded='true'] .mp-caret { transform: rotate(180deg); }
+.mp-pop { position: absolute; top: calc(100% + 6px); left: -0.55rem; z-index: 40; width: 272px; padding: 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--r); }
+.mp-year { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; font-weight: var(--fw-semibold); color: var(--text-heading); }
+.mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+.mp-month { height: 36px; border: 0; border-radius: var(--r-sm); background: none; font-size: var(--fs-label); color: var(--text-body); cursor: pointer; }
+.mp-month:hover { background: var(--bg-subtle); }
+.mp-month.now { color: var(--brand-ink); font-weight: var(--fw-semibold); }
+.mp-month.on { background: var(--brand-soft); color: var(--brand-ink); font-weight: var(--fw-semibold); }
 @media (max-width: 767.98px) {
   .cal-day { min-height: 64px; padding: 0.25rem; }
-  .cal-ev { font-size: 0; padding: 0; width: 6px; height: 6px; border-radius: 999px; background: var(--ev, var(--brand)); display: inline-block; }
-  .cal-evs { display: flex; gap: 3px; flex-wrap: wrap; }
+  .cal .cal-ev { font-size: 0; padding: 0; width: 6px; height: 6px; border-radius: 999px; background: var(--ev, var(--brand)); display: inline-block; }
+  .cal .cal-ev::before { display: none; }
+  .cal-evs { flex-direction: row; gap: 3px; flex-wrap: wrap; }
   .cal-more { display: none; }
+  /* Minggu di ponsel: hari bertumpuk ke bawah */
+  .cal-week { grid-template-columns: 1fr; }
+  .cal-wday { min-height: 0; flex-direction: row; border-right: 0; border-bottom: 1px solid var(--border); }
+  .cal-wday:last-child { border-bottom: 0; }
+  .cal-whead { width: 64px; flex-shrink: 0; border-bottom: 0; border-right: 1px solid var(--border); justify-content: flex-start; padding-top: 0.75rem; }
+  .cal-wlist { flex: 1; min-width: 0; }
+  .cal-wempty { text-align: left; padding: 0.35rem 0; }
 }
 
 /* Editor jurnal */
