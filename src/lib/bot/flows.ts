@@ -481,7 +481,8 @@ function summary(flow: Flow, st: FlowState) {
   // Tabel monospace: label tanpa ikon, titik dua sejajar. Nilai disimpan ter-escape → kembalikan ke teks polos.
   const unesc = (v: string) => v.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
   const rows_ = order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined))
-    .map((k) => [labelOf(k).replace(/^\S+\s+/u, ''), unesc(st.l[k]!)] as [string, string])
+    // buang ikon di depan label (bila ada) — jangan potong kata, mis. "Nama kegiatan"
+    .map((k) => [labelOf(k).replace(/^[^\p{L}\p{N}]+\s+/u, ''), unesc(st.l[k]!)] as [string, string])
   return rows_.length ? [`<pre>${esc(tableText(rows_, 12))}</pre>`] : []
 }
 
