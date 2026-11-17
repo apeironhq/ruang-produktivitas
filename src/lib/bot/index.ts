@@ -9,7 +9,7 @@ import {
   journalPanel, learningPanel, projectDetailPanel, projectsPanel, settingsPanel, taskDetailPanel, tasksPanel, weeklyPanel,
 } from './panels'
 import { createTimer, eveningPanel, parseDuration, parseReminder, timerPanel } from './timers'
-import { btn, cut, esc, link, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
+import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatDuration, formatShort, formatTime } from '../format'
 
 export { reminderKeyboard, reminderText } from './panels'
@@ -90,7 +90,12 @@ async function sendWelcome(chatId: number) {
 async function sendLinkedWelcome(ctx: Ctx) {
   const first = ctx.name.split(' ')[0] || ctx.name
   const p: Panel = {
-    head: [`<b>Halo ${esc(first)}, selamat! 🎉</b>`, '<i>Akun Ruang Produktivitas kamu sudah tertaut ke Telegram.</i>'],
+    head: [
+      `<b>${greetingFor(ctx.tz)}, ${esc(first)}! 👋</b>`,
+      `<i>${longDay(todayIn(ctx.tz))} · pukul ${formatTime(new Date().toISOString(), ctx.tz)}</i>`,
+      '',
+      '🎉 <b>Selamat, akun Ruang Produktivitas kamu sudah tertaut ke Telegram.</b>',
+    ],
     sections: [
       { lines: ['Aku <b>Rupi</b>, asisten produktivitas pribadimu. Mulai sekarang aku bantu kamu tetap teratur langsung dari chat ini.'] },
       { title: 'Yang bisa aku bantu', quote: true, lines: FEATURES },

@@ -35,40 +35,74 @@ export async function todayAgenda(ctx: Pick<Ctx, 'db' | 'userId' | 'tz'>) {
 
 export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>, note?: string): Promise<Panel> {
   const today = todayIn(ctx.tz)
-  const [a, tasks, sess, spend, goals, habits, checks] = await Promise.all([
+  const tomorrowIso = startOfDayIso(addDays(today, 1), ctx.tz)
+  const [a, tasks, sess, spend, goals, habits, checks, nextTask, nextEvent, habitList] = await Promise.all([
     todayAgenda(ctx),
     ctx.db.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).eq('kind', 'tugas').in('status', OPEN),
     ctx.db.from('learning_sessions').select('duration_minutes').eq('user_id', ctx.userId).eq('session_date', today).limit(200),
     ctx.db.from('transactions').select('amount').eq('user_id', ctx.userId).eq('type', 'pengeluaran').eq('occurred_on', today).limit(1000),
     ctx.db.from('goals').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).eq('status', 'aktif'),
     ctx.db.from('habits').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).eq('is_archived', false).eq('frequency', 'harian'),
-    ctx.db.from('habit_checkins').select('id', { count: 'exact', head: true }).eq('user_id', ctx.userId).eq('checkin_date', today),
+    ctx.db.from('habit_checkins').select('habit_id').eq('user_id', ctx.userId).eq('checkin_date', today).limit(200),
+    // Agenda terdekat setelah hari ini (dipakai bila hari ini kosong).
+    ctx.db.from('tasks').select('title, due_at').eq('user_id', ctx.userId).eq('kind', 'tugas').in('status', OPEN).gte('due_at', tomorrowIso).order('due_at').limit(1).maybeSingle(),
+    ctx.db.from('tasks').select('title, start_at').eq('user_id', ctx.userId).eq('kind', 'kegiatan').in('status', OPEN).gte('start_at', tomorrowIso).order('start_at').limit(1).maybeSingle(),
+    ctx.db.from('habits').select('id, name').eq('user_id', ctx.userId).eq('is_archived', false).eq('frequency', 'harian').limit(20),
   ])
   const now = Date.now()
   const late = [
     ...a.overdue.map((t) => `• ${cut(t.title, 46)} — <i>${formatShort(t.due_at!, ctx.tz)}</i>`),
     ...a.dueToday.filter((t) => t.due_at && new Date(t.due_at).getTime() < now).map((t) => `• ${cut(t.title, 46)} — <i>${formatTime(t.due_at!, ctx.tz)}</i>`),
   ]
-  const rest = [
-    ...a.events.map((e) => ({ at: e.start_at!, line: `• <b>${formatTime(e.start_at!, ctx.tz)}</b>  ${cut(e.title, 42)}${e.location ? ` <i>· ${cut(e.location, 20)}</i>` : ''}` })),
-    ...a.dueToday.filter((t) => !(t.due_at && new Date(t.due_at).getTime() < now)).map((t) => {
-      const at = (t.due_at ?? t.start_at)!
-      return { at, line: `• <b>${formatTime(at, ctx.tz)}</b>  ${cut(t.title, 42)}` }
-    }),
-  ].sort((x, y) => x.at.localeCompare(y.at)).map((x) => x.line)
+  // Agenda hari ini: yang sudah lewat ditandai, yang berikutnya disorot beserta sisa waktunya.
+  type Item = { at: string; end: string | null; title: string; place: string }
+  const items: Item[] = [
+    ...a.events.map((e) => ({ at: e.start_at!, end: e.end_at, title: e.title, place: e.location ? ` <i>· ${cut(e.location, 20)}</i>` : '' })),
+    ...a.dueToday.filter((t) => !(t.due_at && new Date(t.due_at).getTime() < now)).map((t) => ({ at: (t.due_at ?? t.start_at)!, end: null, title: t.title, place: '' })),
+  ].sort((x, y) => x.at.localeCompare(y.at))
+  const isPast = (x: Item) => new Date(x.end ?? x.at).getTime() < now
+  const upcoming = items.filter((x) => !isPast(x))
+  const nextUp = upcoming[0]
+  const rest = items.map((x) => isPast(x)
+    ? `• <s>${formatTime(x.at, ctx.tz)}</s>  <i>${cut(x.title, 38)} · sudah lewat</i>`
+    : `• <b>${formatTime(x.at, ctx.tz)}</b>  ${cut(x.title, 42)}${x.place}`)
+  const until = (iso: string) => {
+    const m = Math.max(1, Math.round((new Date(iso).getTime() - now) / 60_000))
+    const h = Math.floor(m / 60), r = m % 60
+    return `${h ? `${h} jam ` : ''}${r ? `${r} menit ` : ''}lagi`
+  }
+  // Hari ini kosong → tunjukkan agenda terdekat berikutnya.
+  const later = [
+    nextTask.data?.due_at ? { at: nextTask.data.due_at, title: nextTask.data.title } : null,
+    nextEvent.data?.start_at ? { at: nextEvent.data.start_at, title: nextEvent.data.title } : null,
+  ].filter((x): x is { at: string; title: string } => !!x).sort((x, y) => x.at.localeCompare(y.at))[0]
   const agenda = [
     ...(late.length ? [`<b>${late.length} tugas terlambat</b>`, ...late.slice(0, 4), ...(late.length > 4 ? [`<i>+${late.length - 4} lainnya</i>`] : [])] : []),
     ...(late.length && rest.length ? [''] : []),
     ...rest,
+    ...(nextUp ? ['', `⏰ Berikutnya <b>${formatTime(nextUp.at, ctx.tz)}</b> ${cut(nextUp.title, 30)} · <i>${until(nextUp.at)}</i>`] : []),
+    ...(!items.length && !late.length ? (later
+      ? ['Hari ini belum ada agenda.', `Berikutnya: <b>${shortDay(dayOf(later.at, ctx.tz))}, ${formatTime(later.at, ctx.tz)}</b> · ${cut(later.title, 36)}`]
+      : ['Belum ada agenda. Ketik saja, mis. <code>rapat besok jam 9</code> atau tekan <b>Catat Cepat</b>.']) : []),
+    ...(items.length && !upcoming.length && !late.length ? ['', '<i>Semua agenda hari ini sudah lewat.</i>'] : []),
   ]
+  // Saran singkat Rupi sesuai keadaan hari ini.
+  const doneHabits = new Set((checks.data ?? []).map((c) => c.habit_id))
+  const pendingHabits = (habitList.data ?? []).filter((h) => !doneHabits.has(h.id))
+  const tip = late.length
+    ? `Selesaikan dulu ${late.length > 1 ? `${late.length} tugas yang terlambat` : 'tugas yang terlambat'}, ya.`
+    : pendingHabits.length
+      ? `Jangan lupa check-in: <b>${esc(cut(pendingHabits[0]!.name, 40))}</b>${pendingHabits.length > 1 ? ` +${pendingHabits.length - 1} lainnya` : ''}.`
+      : nextUp ? null
+        : !items.length ? 'Hari yang lowong — pas untuk mencicil target atau belajar.' : null
   const sessions = sess.data ?? []
   const minutes = sessions.reduce((n, s) => n + s.duration_minutes, 0)
   const expense = (spend.data ?? []).reduce((n, r) => n + Number(r.amount), 0)
   const first = ctx.name.split(' ')[0] || ctx.name
   return {
-    head: [`<b>${greetingFor(ctx.tz)}, ${esc(first)}!</b>`, `<i>${longDay(today)}</i>`],
+    head: [`<b>${greetingFor(ctx.tz)}, ${esc(first)}!</b>`, `<i>${longDay(today)} · pukul ${formatTime(new Date(now).toISOString(), ctx.tz)}</i>`],
     sections: [
-      { title: 'Agenda Hari Ini', lines: agenda.length ? agenda : ['Tidak ada tugas atau kegiatan hari ini.'], quote: true },
+      { title: 'Agenda Hari Ini', lines: agenda, quote: true },
       {
         title: 'Ringkasan', lines: [],
         table: [
@@ -76,9 +110,10 @@ export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>,
           ['Belajar', `${sessions.length} sesi${minutes ? ` · ${formatDuration(minutes)}` : ''}`],
           ['Pengeluaran', formatRupiah(expense)],
           ['Target aktif', String(goals.count ?? 0)],
-          ...(habits.count ? [['Kebiasaan', `${Math.min(checks.count ?? 0, habits.count)}/${habits.count} selesai`] as [string, string]] : []),
+          ...(habits.count ? [['Kebiasaan', `${Math.min(doneHabits.size, habits.count)}/${habits.count} selesai`] as [string, string]] : []),
         ],
       },
+      ...(tip ? [{ lines: [`💡 <i>${tip}</i>`] }] : []),
       ...(note ? [{ lines: [note] }] : []),
     ],
     foot: ['<b>Apa yang ingin kamu lakukan?</b>', '<i>Pilih menu di bawah ini</i>'],
