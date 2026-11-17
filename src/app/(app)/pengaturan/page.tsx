@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { Bell, Download, KeyRound, LogOut, Send, ShieldCheck, User } from 'lucide-react'
+import { Bell, Download, KeyRound, LogOut, Send, ShieldCheck, Sparkles, User } from 'lucide-react'
 import { PageHead, SectionHead } from '@/components/ui/display'
 import { signOut } from '@/app/auth-actions'
 import { formatDateTime } from '@/lib/format'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 import { botUsername, telegramConfigured } from '@/lib/telegram'
 import { PasswordForm, ProfileForm } from './SettingsForms'
+import { AiCard } from './AiCard'
 import { NotificationForm, TelegramLink } from './TelegramCard'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
@@ -19,11 +20,13 @@ const LOG_STATUS: Record<string, { label: string; color: string }> = {
 export default async function Page() {
   const user = (await getCurrentUser())!
   const supabase = await createClient()
-  const [conn, prof, logs] = await Promise.all([
+  const [conn, prof, logs, ai] = await Promise.all([
     supabase.from('telegram_connections').select('username, linked_at').maybeSingle(),
     supabase.from('profiles').select('notification_settings').eq('id', user.id).maybeSingle(),
     supabase.from('reminder_logs').select('id, kind, status, detail, created_at, task_id').order('created_at', { ascending: false }).limit(6),
+    supabase.from('ai_settings').select('enabled, key_hint, updated_at, key_secret_id').maybeSingle(),
   ])
+  const a = ai.data?.key_secret_id ? ai.data : null
   const ns = (prof.data?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string; tg_prompt?: unknown }
   const c = conn.data
   return (
@@ -44,6 +47,12 @@ export default async function Page() {
                 connection: c ? { username: c.username, linked_at: c.linked_at, linkedLabel: formatDateTime(c.linked_at, user.timezone) } : null,
                 promptOn: ns.tg_prompt !== 'off',
               }} />
+            </div>
+          </section>
+          <section className="card" aria-labelledby="ai-title" id="ai">
+            <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Bot lebih pintar dengan Gemini — memakai kunci API milik Anda sendiri" />
+            <div className="card-body">
+              <AiCard telegram={!!c} info={a ? { enabled: a.enabled, hint: a.key_hint, updatedLabel: formatDateTime(a.updated_at, user.timezone) } : null} />
             </div>
           </section>
           <section className="card" aria-labelledby="pw-title">

@@ -10,6 +10,7 @@ import {
 } from './panels'
 import { createTimer, eveningPanel, parseDuration, pomodoroStarted, repeatText, splitReminder, startPomodoro, timerPanel, type Pomo } from './timers'
 import { extractRepeat, extractWhen, minutesLabel, whenLabel } from './when'
+import { aiOffer, saveAiItems, type AiItem } from './ai'
 import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatTime } from '../format'
 
@@ -199,7 +200,7 @@ export async function handleUpdate(db: SupabaseClient, u: TgUpdate, user?: BotUs
  * Bila ada waktunya ("rapat tim besok jam 9"), Rupi membacanya dan menawarkan kegiatan / tugas / pengingat.
  * Diawali "ingatkan …" → langsung ke isian pengingat.
  */
-async function offerFreeText(ctx: Ctx, text: string) {
+async function offerFreeText(ctx: Ctx, text: string, opts: { noAi?: boolean } = {}) {
   const body = text.slice(0, 50000)
   const first = (body.split('\n')[0] ?? '').trim()
   const remind = /^(?:tolong\s+)?(?:ingatkan|ingetin|ingatin|ingetkan|remind(?:er)?)\b[\s,:]*/i.exec(first)
@@ -220,12 +221,17 @@ async function offerFreeText(ctx: Ctx, text: string) {
     ])
     return
   }
+  // Asisten AI (bila aktif): pahami pesan apa pun, termasuk beberapa aksi sekaligus.
+  const ai = opts.noAi ? {} : await aiOffer(ctx, body)
+  if (ai === 'done') return
   const looksMoney = !!splitMoney(text)
   const w = looksMoney ? null : extractWhen(first, ctx.tz, { defaultTime: '09:00' })
   const timed = !!(w && w.rest)
   await sendMessageKb(ctx.chatId, [
+    ...(ai.reply ? [`✨ ${esc(ai.reply)}`, ''] : []),
     '<b>Pesan diterima</b>',
     `<blockquote expandable>${esc(body.length > 700 ? `${body.slice(0, 700)}…` : body)}</blockquote>`,
+    ...(ai.note ? [ai.note] : []),
     ...(timed
       ? [`🕒 Terbaca: <b>${whenLabel(w!.iso, ctx.tz)}</b> — ${cut(w!.rest, 60)}`, '<i>Mau dijadwalkan sebagai apa?</i>']
       : ['<i>Mau disimpan sebagai apa?</i>']),
@@ -339,6 +345,23 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       if (rest === 'x') { await clearFlow(ctx); await editMessageKb(ctx.chatId, msg.message_id, '✖️ <i>Pesan diabaikan.</i>', [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
       const flow = ({ catat: 'catatan', tugas: 'tugas', keg: 'kegiatan', ingat: 'ingat', keluar: 'keluar', masuk: 'masuk' } as Record<string, string>)[rest] ?? null
       if (flow) await startFlow(ctx, flow, ['tugas', 'kegiatan', 'ingat'].includes(flow) ? (text.split('\n')[0] ?? '').slice(0, 300) : text, edit)
+      return 'selesai'
+    }
+    case 'ai': { // usulan Asisten AI
+      const pend = await loadPending(ctx)
+      const pl = pend?.action === 'ai' ? (pend.payload as { items?: AiItem[]; text?: string }) : null
+      if (!pl?.items?.length) { toast = 'Usulan ini sudah tidak aktif.'; break }
+      answerNow(rest === 'ok' ? 'Menyimpan…' : undefined)
+      await clearFlow(ctx)
+      if (rest === 'ok') {
+        const lines = await saveAiItems(ctx, pl.items)
+        await editMessageKb(ctx.chatId, msg.message_id, ['<b>✅ Tersimpan</b>', '', ...lines].join('\n'), [[btn('✅ Tugas', 'p:tugas'), btn('📅 Kalender', 'p:kal'), btn('🏠 Menu', 'p:home')]])
+      } else if (rest === 'man') {
+        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [])
+        await offerFreeText(ctx, pl.text ?? '', { noAi: true })
+      } else {
+        await editMessageKb(ctx.chatId, msg.message_id, '✖️ <i>Dibatalkan — tidak ada yang disimpan.</i>', [[btn('🏠 Menu', 'p:home')]])
+      }
       return 'selesai'
     }
     case 'f': { // mulai isian (f:tugas, f:tp:<proyek>, f:prog:<target>, f:sub:<tugas>, ...)
@@ -567,6 +590,12 @@ async function applySetting(ctx: Ctx, what: string): Promise<boolean | 'putus' |
   else if (/^dt:(0[5-9]|1\d|2[0-2])$/.test(what)) { ns.digest_time = `${what.slice(3)}:00`; ns.digest = true }
   else if (what === 'eg') ns.evening = ns.evening === false
   else if (/^et:(1[5-9]|2[0-2])$/.test(what)) { ns.evening_time = `${what.slice(3)}:00`; ns.evening = true }
+  else if (what === 'ai') {
+    const { data: s } = await ctx.db.from('ai_settings').select('enabled').eq('user_id', ctx.userId).not('key_secret_id', 'is', null).maybeSingle()
+    if (!s) return false
+    const { error } = await ctx.db.from('ai_settings').update({ enabled: !s.enabled, updated_at: new Date().toISOString() }).eq('user_id', ctx.userId)
+    return !error
+  }
   else return false
   const { error } = await ctx.db.from('profiles').update({ notification_settings: ns }).eq('id', ctx.userId)
   return !error

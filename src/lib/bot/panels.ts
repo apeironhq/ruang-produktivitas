@@ -551,9 +551,10 @@ export async function remindersPanel(ctx: Ctx): Promise<Panel> {
 
 /* ================= Pengaturan ================= */
 export async function settingsPanel(ctx: Ctx): Promise<Panel> {
-  const [{ data: prof }, { data: conn }] = await Promise.all([
+  const [{ data: prof }, { data: conn }, { data: ai }] = await Promise.all([
     ctx.db.from('profiles').select('display_name, timezone, notification_settings').eq('id', ctx.userId).maybeSingle(),
     ctx.db.from('telegram_connections').select('username, linked_at').eq('user_id', ctx.userId).maybeSingle(),
+    ctx.db.from('ai_settings').select('enabled, key_hint').eq('user_id', ctx.userId).not('key_secret_id', 'is', null).maybeSingle(),
   ])
   const ns = (prof?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string; evening?: boolean; evening_time?: string }
   const on = ns.digest !== false
@@ -567,6 +568,7 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
     sections: [
       { title: 'Akun', lines: [], table: [['Nama', plain(prof?.display_name || '—')], ['Zona waktu', prof?.timezone ?? 'Asia/Jakarta'], ['Telegram', conn?.username ? `@${conn.username}` : 'tertaut'], ...(conn ? [['Tertaut sejak', formatDay(dayOf(conn.linked_at, ctx.tz))] as [string, string]] : [])] },
       { title: 'Notifikasi otomatis', lines: [], table: [['Ringkasan pagi', on ? `Aktif · ${time.replace(':', '.')}` : 'Nonaktif'], ['Cek tugas sore', eveOn ? `Aktif · ${eveTime.replace(':', '.')}` : 'Nonaktif']] },
+      { title: 'Asisten AI', lines: [], table: [['Gemini', ai ? `${ai.enabled ? 'Aktif' : 'Nonaktif'} · kunci ••••${ai.key_hint}` : 'Belum diatur']] },
       { lines: ['<i>Cek sore hanya dikirim bila masih ada tugas hari ini yang belum selesai. Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
     ],
     kb: [
@@ -574,6 +576,7 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
       ...times,
       [btn(eveOn ? '🔕 Matikan cek sore' : '🔔 Aktifkan cek sore', 'set:eg')],
       ...eveTimes,
+      [ai ? btn(ai.enabled ? '✨ Matikan Asisten AI' : '✨ Aktifkan Asisten AI', 'set:ai') : link('✨ Atur Asisten AI (web)', '/pengaturan')],
       [btn('⏱ Timer & Pengingat', 'p:timer'), btn('📖 Bantuan', 'p:bantuan')],
       [btn('🔌 Putuskan bot', 'set:putus', 'danger')],
       [btn('⬅️ Menu', 'p:home'), link('🌐 Pengaturan web', '/pengaturan')],
@@ -591,6 +594,7 @@ export function helpPanel(): Panel {
         'Ada waktunya? Mis. <code>rapat tim besok jam 9</code> — Rupi membacanya dan menawarkan jadi kegiatan, tugas, atau pengingat.',
         'Awali dengan <i>ingatkan</i> untuk langsung membuat pengingat: <code>ingatkan aku 30 menit lagi angkat jemuran</code>.',
       ] },
+      { title: 'Asisten AI (opsional)', lines: ['Tempel kunci Gemini milikmu di Pengaturan web → pesan bebas apa pun dipahami AI, satu pesan bisa jadi beberapa catatan sekaligus (tetap dikonfirmasi dulu).'] },
       { title: 'Waktu yang dipahami', lines: ['<i>jam 14 · jam 4 sore · besok pagi · nanti malam · jumat 10.00 · senin depan · 20/11 · tgl 25 · 2 jam lagi · 3 hari lagi</i>'] },
     ],
     kb: [navRow('p:home')],

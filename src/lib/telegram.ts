@@ -95,6 +95,11 @@ export function editMessage(chatId: number | string, messageId: number, html: st
   return call('editMessageText', { chat_id: chatId, message_id: messageId, text: html.slice(0, 4000), parse_mode: 'HTML', link_preview_options: { is_disabled: true } })
 }
 
+/** Indikator "sedang mengetik…" (mis. saat menunggu jawaban AI). */
+export function sendChatAction(chatId: number | string, action: 'typing' = 'typing') {
+  return call('sendChatAction', { chat_id: chatId, action })
+}
+
 export function answerCallback(id: string, text?: string) {
   return call('answerCallbackQuery', { callback_query_id: id, ...(text ? { text } : {}) })
 }
