@@ -18,7 +18,8 @@ export { siteUrl }
 
 /* ---------- Tipe minimal update Telegram ---------- */
 interface TgUser { id: number; username?: string; first_name?: string }
-interface TgMessage { message_id: number; chat: { id: number; type: string }; from?: TgUser; text?: string; photo?: unknown[] }
+interface TgMessage { message_id: number; chat: { id: number; type: string }; from?: TgUser; text?: string; photo?: unknown[]
+  reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> } }
 interface TgCallback { id: string; from: TgUser; data?: string; message?: TgMessage }
 export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallback }
 
@@ -205,6 +206,16 @@ async function offerFreeText(ctx: Ctx, text: string) {
   // "tiap hari jam 7 minum obat" → pengingat berulang
   if (/^(tiap|setiap|saban)\b/i.test(first) && extractRepeat(first, ctx.tz)) { await startFlow(ctx, 'ingat', first.slice(0, 300), null); return }
   await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'teks', payload: { text: body }, created_at: new Date().toISOString() })
+  // "7 menit", "timer 25", "1 jam 30 menit" → tawarkan timer / pengingat
+  const durText = first.replace(/^(?:timer|hitung mundur)\s+/i, '')
+  const dur = (durText !== first || /[a-z]/i.test(durText)) ? parseDuration(durText) : null
+  if (dur) {
+    await sendMessageKb(ctx.chatId, [`<b>${minutesLabel(dur)}</b>`, '<i>Mau dijadikan timer atau pengingat?</i>'].join('\n'), [
+      [btn(`⏱ Mulai timer ${minutesLabel(dur)}`, `tm:n:${dur}`)],
+      [btn('🔔 Pengingat', 'q:ingat'), btn('✖️ Abaikan', 'q:x')],
+    ])
+    return
+  }
   const looksMoney = !!splitMoney(text)
   const w = looksMoney ? null : extractWhen(first, ctx.tz, { defaultTime: '09:00' })
   const timed = !!(w && w.rest)
@@ -411,15 +422,15 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       if (act === 'ok') { answerNow('Oke'); await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
       if (act === 'n') { // mulai timer preset
         const min = Number(arg)
-        if (![5, 15, 25, 50].includes(min)) break
+        if (!Number.isInteger(min) || min < 1 || min > 1440) break
         // Tombol tertekan dua kali → jangan buat timer kembar.
         const { count: twin } = await db.from('bot_timers').select('id', { count: 'exact', head: true })
           .eq('user_id', ctx.userId).eq('kind', 'timer').eq('minutes', min).is('sent_at', null)
           .gte('fire_at', new Date(Date.now() + min * 60_000 - 20_000).toISOString())
-        if (twin) { toast = `Timer ${min} menit sudah berjalan.`; break }
+        if (twin) { toast = `Timer ${minutesLabel(min)} sudah berjalan.`; break }
         const r = await createTimer(ctx, 'timer', new Date(Date.now() + min * 60_000).toISOString(), '', min)
-        answerNow('error' in r ? r.error : `Timer ${min} menit dimulai`)
-        await showPanel(ctx, await timerPanel(ctx, 'error' in r ? undefined : `<b>Timer ${min} menit dimulai.</b> Selesai pukul ${formatTime(new Date(Date.now() + min * 60_000).toISOString(), ctx.tz)}.`), msg)
+        answerNow('error' in r ? r.error : `Timer ${minutesLabel(min)} dimulai`)
+        await showPanel(ctx, await timerPanel(ctx, 'error' in r ? undefined : `<b>Timer ${minutesLabel(min)} dimulai.</b> Selesai pukul ${formatTime(new Date(Date.now() + min * 60_000).toISOString(), ctx.tz)}.`), msg)
         return 'selesai'
       }
       if (!UUID.test(arg)) break
@@ -444,7 +455,12 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       const r = await createTimer(ctx, act === 'r' ? 'timer' : 'ingat', fireAt, t.label, act === 'r' ? min : null)
       if ('error' in r) { toast = r.error; break }
       answerNow(act === 'r' ? `Timer ${minutesLabel(min)} dimulai lagi` : snooze === -1 ? `Ditunda sampai ${whenLabel(fireAt, ctx.tz)}` : `Ditunda ${minutesLabel(min)}`)
-      await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')]])
+      // Pengingat berulang: tombol "Hentikan pengulangan" tetap ada setelah ditunda.
+      const stop = (msg.reply_markup?.inline_keyboard ?? []).flat().find((b) => b.callback_data?.startsWith('tm:s:'))
+      await editMessageReplyMarkup(ctx.chatId, msg.message_id, [
+        ...(stop ? [[btn(stop.text, stop.callback_data!)]] : []),
+        [btn('⏱ Timer & Pengingat', 'p:timer'), btn('🏠 Menu', 'p:home')],
+      ])
       return 'selesai'
     }
     case 'ev': { // cek sore: tandai tugas selesai lalu perbarui daftar
