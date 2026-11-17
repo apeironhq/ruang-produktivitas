@@ -18,7 +18,9 @@ interface Claimed {
 }
 
 /**
- * Dipanggil pg_cron (Supabase) setiap menit dengan header Authorization: Bearer CRON_SECRET.
+ * Dipanggil pg_cron (Supabase) dengan header Authorization: Bearer CRON_SECRET:
+ *  - setiap menit (lengkap: langkah 0–3 + pembersihan), dan
+ *  - setiap 15 detik dengan ?cepat=1 (hanya langkah 0–1) agar timer & pengingat tiba paling lambat ±15 detik.
  *  0. Timer & "ingatkan saya" yang waktunya tiba (diklaim atomik).
  *  1. Pengingat tugas/kegiatan yang jatuh tempo (diklaim atomik → tidak terkirim dua kali).
  *     Gagal kirim → dicatat di reminder_logs & dicoba lagi putaran berikutnya (maks. 5×) — UJ-12.
@@ -30,6 +32,7 @@ async function run(req: NextRequest) {
   if (!secretMatches(auth.replace(/^Bearer\s+/i, ''), process.env.CRON_SECRET)) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
+  const fast = req.nextUrl.searchParams.get('cepat') === '1'
   const db = createAdminClient()
   const stats = { timers: 0, reminders: 0, sent: 0, failed: 0, skipped: 0, digests: 0, digestFailed: 0, evenings: 0 }
   const logs: Array<{ user_id: string; task_id: string | null; kind: string; status: string; detail: string }> = []
@@ -86,6 +89,12 @@ async function run(req: NextRequest) {
       await db.from('tasks').update({ remind_attempts: attempts, ...(retry ? { reminded_at: null } : {}) }).eq('id', t.id)
       logs.push({ user_id: t.user_id, task_id: t.id, kind: 'tugas', status: 'gagal', detail: `${retry ? `Percobaan ${attempts}, dicoba lagi` : 'Tidak dicoba lagi'}: ${res.error}`.slice(0, 500) })
     }))
+  }
+
+  // Mode cepat: cukup timer & pengingat (yang sensitif waktu); sisanya dikerjakan putaran per menit.
+  if (fast) {
+    if (logs.length) await db.from('reminder_logs').insert(logs)
+    return NextResponse.json({ ok: true, cepat: true, timers: stats.timers, reminders: stats.reminders, sent: stats.sent, failed: stats.failed })
   }
 
   /* ---- 2. Ringkasan harian ---- */

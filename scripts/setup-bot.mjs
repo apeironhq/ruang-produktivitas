@@ -4,7 +4,8 @@
 //
 // Langkah:
 //  1. Membuat CRON_SECRET & TELEGRAM_WEBHOOK_SECRET acak bila belum ada (ditulis ke .env.local, tidak di-commit).
-//  2. Menjadwalkan pg_cron + pg_net di Supabase: POST {url}/api/cron/pengingat setiap 5 menit
+//  2. Menjadwalkan pg_cron + pg_net di Supabase: POST {url}/api/cron/pengingat setiap menit
+//     (+ ?cepat=1 setiap 15 detik untuk timer & pengingat)
 //     dengan header Authorization: Bearer CRON_SECRET.
 //  3. Bila TELEGRAM_BOT_TOKEN ada: setWebhook (dengan secret_token), setMyCommands, dan
 //     menulis TELEGRAM_BOT_USERNAME ke .env.local.
@@ -54,6 +55,15 @@ const { rows } = await db.query(
   [`${url}/api/cron/pengingat`, `Bearer ${cronSecret}`],
 )
 console.log(`✓ pg_cron dijadwalkan (job ${rows[0].id}): setiap menit → ${url}/api/cron/pengingat`)
+// Putaran cepat setiap 15 detik: hanya timer & pengingat, agar tiba paling lambat ±15 detik.
+await db.query(`select cron.unschedule(jobid) from cron.job where jobname = 'ruang-pengingat-cepat'`)
+await db.query(
+  `select cron.schedule('ruang-pengingat-cepat', '15 seconds', format(
+     $f$select net.http_post(url := %L, headers := jsonb_build_object('Authorization', %L, 'Content-Type', 'application/json'), body := '{}'::jsonb, timeout_milliseconds := 14000)$f$,
+     $1::text, $2::text))`,
+  [`${url}/api/cron/pengingat?cepat=1`, `Bearer ${cronSecret}`],
+)
+console.log(`✓ pg_cron: putaran cepat setiap 15 detik → ${url}/api/cron/pengingat?cepat=1`)
 // Ping ringan ke webhook setiap 2 menit agar fungsinya tetap hangat (tombol bot tanpa cold start).
 await db.query(`select cron.unschedule(jobid) from cron.job where jobname = 'ruang-bot-hangat'`)
 await db.query(
@@ -81,14 +91,14 @@ await tg('setMyCommands', {
   commands: [
     { command: 'menu', description: '🏠 Ringkasan hari ini & menu utama' },
     { command: 'tugas', description: '✅ Tugas & kegiatan' },
-    { command: 'tambah', description: '➕ Tambah tugas (judul besok 09.00)' },
+    { command: 'tambah', description: '➕ Tambah tugas (judul besok jam 9)' },
     { command: 'kegiatan', description: '📅 Jadwalkan kegiatan' },
     { command: 'catat', description: '🗒 Catatan / jurnal' },
     { command: 'keluar', description: '💸 Catat pengeluaran (25rb makan)' },
     { command: 'masuk', description: '💵 Catat pemasukan' },
     { command: 'belajar', description: '📚 Catat sesi belajar' },
     { command: 'timer', description: '⏱ Timer, mis. /timer 25 fokus' },
-    { command: 'ingatkan', description: '🔔 Ingatkan saya, mis. /ingatkan 30m minum obat' },
+    { command: 'ingatkan', description: '🔔 Ingatkan saya, mis. /ingatkan tiap hari jam 7 minum obat' },
     { command: 'sore', description: '🌙 Tugas hari ini yang belum selesai' },
     { command: 'kalender', description: '📅 Agenda 7 hari' },
     { command: 'target', description: '🎯 Progres target' },
