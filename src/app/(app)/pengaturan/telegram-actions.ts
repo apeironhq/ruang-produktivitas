@@ -99,13 +99,15 @@ export async function saveNotifications(_: ActionState, formData: FormData): Pro
   const parsed = parseForm(z.object({
     digest: zCheckbox,
     digest_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Jam tidak valid.'),
+    evening: zCheckbox,
+    evening_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Jam tidak valid.'),
   }), formData)
   if (parsed.error) return parsed.error
   const user = await getCurrentUser()
   if (!user) return fail('Sesi berakhir. Silakan masuk kembali.')
   const supabase = await createClient()
   const { data: prof } = await supabase.from('profiles').select('notification_settings').eq('id', user.id).maybeSingle()
-  const settings = { ...((prof?.notification_settings as object) ?? {}), digest: parsed.data.digest, digest_time: parsed.data.digest_time }
+  const settings = { ...((prof?.notification_settings as object) ?? {}), digest: parsed.data.digest, digest_time: parsed.data.digest_time, evening: parsed.data.evening, evening_time: parsed.data.evening_time }
   const { error } = await supabase.from('profiles').update({ notification_settings: settings }).eq('id', user.id)
   if (error) return dbError(error)
   revalidatePath('/pengaturan')

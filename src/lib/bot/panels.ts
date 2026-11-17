@@ -576,10 +576,10 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
       ...times,
       [btn(eveOn ? '🔕 Matikan cek sore' : '🔔 Aktifkan cek sore', 'set:eg')],
       ...eveTimes,
-      [ai ? btn(ai.enabled ? '✨ Matikan Asisten AI' : '✨ Aktifkan Asisten AI', 'set:ai') : link('✨ Atur Asisten AI (web)', '/pengaturan')],
+      [ai ? btn(ai.enabled ? '✨ Matikan Asisten AI' : '✨ Aktifkan Asisten AI', 'set:ai') : link('✨ Atur Asisten AI (web)', '/pengaturan?bagian=ai')],
       [btn('⏱ Timer & Pengingat', 'p:timer'), btn('📖 Bantuan', 'p:bantuan')],
       [btn('🔌 Putuskan bot', 'set:putus', 'danger')],
-      [btn('⬅️ Menu', 'p:home'), link('🌐 Pengaturan web', '/pengaturan')],
+      [btn('⬅️ Menu', 'p:home'), link('🌐 Pengaturan web', '/pengaturan?bagian=notifikasi')],
     ],
   }
 }

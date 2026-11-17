@@ -691,6 +691,70 @@
 .row-3 .panel-body > .items:has(> :nth-child(5)) { border-bottom: 1px solid var(--border); }
 @media (max-width: 1023.98px) { .row-3 > .panel { max-height: none; } .row-3 .panel-body, .row-3 .panel-body > .items { overflow: visible; } .row-3 .panel-body > .items { border-bottom: 0; margin-right: 0; padding-right: 0; } }
 .fill { flex: 1; justify-content: center; }
+
+/* ---------- Pengaturan: tab pil di atas (sama seperti halaman lain) + isi selebar halaman ---------- */
+.settings-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.settings-nav { display: flex; gap: 0.35rem; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding: 2px 0; }
+.settings-nav::-webkit-scrollbar { display: none; }
+@media (max-width: 1023.98px) { .settings-nav { padding-right: 28px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); } }
+.settings-link {
+  position: relative; display: inline-flex; align-items: center; gap: 0.5rem; flex-shrink: 0; height: var(--h-control-sm); padding: 0 0.9rem; border-radius: 999px;
+  font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-muted); white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.settings-link svg { flex-shrink: 0; width: 16px; height: 16px; }
+.settings-link:hover { color: var(--text-heading); background: var(--bg-hover); }
+.settings-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.settings-link.active, .settings-link.active:hover { color: var(--brand-ink); background: var(--brand-soft); }
+.settings-link.active svg { color: var(--brand); }
+.settings-link-title { display: block; }
+.settings-link-desc { display: none; }
+.settings-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--ok); flex-shrink: 0; }
+/* Isi tiap bagian: selebar halaman seperti halaman lain; layar lebar → 2 kartu sejajar & sama tinggi. */
+.settings-main { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: stretch; min-width: 0; }
+.settings-main > .card { height: 100%; }
+/* Kolom kanan bertumpuk (mis. Password + Ekspor): kartu terakhir mengisi sisa tinggi agar tepi bawah rata. */
+.settings-stack { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.settings-stack > .card { display: flex; flex-direction: column; }
+/* Isi kartu mengisi tinggi kartu; baris tombol paling bawah didorong ke dasar kartu
+   sehingga tombol kartu kiri & kanan sejajar dan ruang kosong tidak menggantung di bawah. */
+.settings-main .card { display: flex; flex-direction: column; }
+.settings-main .card > .card-body { flex: 1; display: flex; flex-direction: column; }
+.settings-main .card-body > form, .settings-main .card-body > div.flex-col { flex: 1; }
+.settings-main .card-body > form > div:last-child:has(> button),
+.settings-main .card-body > div.flex-col > div:last-child:has(> button) { margin-top: auto; }
+.settings-main .card-body > a.btn:only-child { margin-top: auto; align-self: flex-start; }
+/* Kartu selebar halaman + baris pengaturan (keterangan kiri, kontrol kanan). */
+.settings-main > .settings-wide { grid-column: 1 / -1; }
+.set-body { gap: 0; }
+.set-sub { display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0 0.25rem; font-size: var(--fs-label); font-weight: var(--fw-semibold); color: var(--text-heading); }
+.set-sub svg { color: var(--text-muted); }
+.set-sub-note { font-weight: 400; color: var(--text-muted); }
+.set-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem 1.5rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+.set-body > .set-row:first-child, .set-body > form > .set-row:first-child { padding-top: 0; }
+.set-body > .set-row:only-child { padding-bottom: 0; border-bottom: 0; }
+.set-title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-weight: var(--fw-medium); color: var(--text-heading); }
+.set-desc { margin-top: 2px; font-size: var(--fs-label); color: var(--text-muted); }
+.set-desc code { font-size: 0.85em; padding: 1px 5px; border-radius: 4px; background: var(--bg-subtle); border: 1px solid var(--border); }
+.set-ctrl { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+.set-check { display: inline-flex; align-items: center; gap: 0.45rem; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-body); cursor: pointer; }
+.set-time { width: 140px; }
+.set-note { font-size: var(--fs-label); color: var(--text-muted); }
+.set-body > .flex-col > .set-row:first-child { padding-top: 0; }
+.cmd-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.cmd-list li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: var(--fs-label); color: var(--text-muted); }
+.cmd-list code { flex-shrink: 0; min-width: 82px; font-size: 0.85em; font-weight: var(--fw-medium); color: var(--text-heading); }
+.settings-main .card-body > div.flex-col > .set-actions:last-child { margin-top: auto; }
+.set-body > form { display: flex; flex-direction: column; }
+.settings-main .card-body > form > .set-actions:last-child { margin-top: auto; }
+.set-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding-top: 1rem; }
+@media (max-width: 639.98px) { .set-ctrl { width: 100%; justify-content: space-between; } }
+.settings-stack > .card:last-child { flex: 1; }
+@media (min-width: 1280px) { .settings-main { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ai-examples { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.ai-examples li { display: flex; flex-direction: column; gap: 2px; padding: 0.6rem 0.75rem; border-radius: var(--r); background: var(--bg-subtle); border: 1px solid var(--border); }
+.ai-ex-q { font-size: var(--fs-label); color: var(--text-heading); font-style: italic; }
+.ai-ex-a { font-size: var(--fs-label); color: var(--text-muted); }
 .link-sm { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--brand); white-space: nowrap; }
 .link-sm:hover { color: var(--brand-hover); }
 

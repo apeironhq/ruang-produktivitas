@@ -12,11 +12,7 @@ export function AiCard({ info, telegram }: { info: AiInfo | null; telegram: bool
   const [replacing, setReplacing] = useState(false)
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-caption">
-        Saat aktif, pesan bebas ke bot Rupi dipahami AI (Groq) — satu pesan bisa langsung jadi beberapa catatan sekaligus,
-        mis. <em>“besok jam 9 rapat tim, tadi beli bensin 20rb”</em>. Tetap ada konfirmasi sebelum disimpan.
-        {!telegram && ' Tautkan Telegram terlebih dahulu agar asisten bisa dipakai.'}
-      </p>
+      {!telegram && <p className="text-caption">Tautkan Telegram terlebih dahulu (bagian <strong>Telegram & Pengingat</strong>) agar asisten bisa dipakai di bot.</p>}
 
       {info ? (
         <>
@@ -47,10 +43,6 @@ export function AiCard({ info, telegram }: { info: AiInfo | null; telegram: bool
         </>
       )}
 
-      <p className="text-caption">
-        Setiap akun memakai kuncinya sendiri, jadi batas pemakaian mengikuti akun Groq Anda (paket gratis tersedia).
-        Isi pesan yang dipahami AI dikirim ke Groq untuk diproses — hindari menulis data sangat rahasia lewat asisten.
-      </p>
     </div>
   )
 }

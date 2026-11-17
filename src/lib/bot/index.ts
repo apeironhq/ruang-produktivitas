@@ -83,7 +83,7 @@ async function sendWelcome(chatId: number) {
       { title: 'Tautkan akunmu dulu', quote: true, lines: ['1. Buka <b>Pengaturan → Bot Telegram</b> di aplikasi', '2. Tekan <b>Buat kode tautan</b>', '3. Tekan <b>Buka di Telegram</b>, atau kirim <code>/mulai KODE</code> ke sini'] },
     ],
     foot: ['<i>Data hanya bisa diakses dari akun yang sudah ditautkan.</i>'],
-    kb: [[link('🌐 Buka Pengaturan', '/pengaturan', 'primary')]],
+    kb: [[link('🌐 Buka Pengaturan', '/pengaturan?bagian=notifikasi', 'primary')]],
   }
   const res = await sendPhoto(chatId, bannerUrl(), renderPanel(p, 1024), p.kb)
   if (!res.ok) await sendMessageKb(chatId, renderPanel(p, 4000), p.kb)
@@ -458,7 +458,7 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       const ok = await applySetting(ctx, rest)
       if (ok === 'putus') {
         answerNow('Bot diputus')
-        await editMessageKb(ctx.chatId, msg.message_id, '🔌 <b>Bot sudah diputus dari akunmu.</b>\n<i>Pengingat tidak dikirim lagi. Tautkan kembali kapan saja dari Pengaturan.</i>', [[link('🌐 Buka Pengaturan', '/pengaturan')]])
+        await editMessageKb(ctx.chatId, msg.message_id, '🔌 <b>Bot sudah diputus dari akunmu.</b>\n<i>Pengingat tidak dikirim lagi. Tautkan kembali kapan saja dari Pengaturan.</i>', [[link('🌐 Buka Pengaturan', '/pengaturan?bagian=notifikasi')]])
         return 'selesai'
       }
       if (ok === 'konfirmasi') { answerNow(); await showPanel(ctx, unlinkConfirm(), msg); return 'selesai' }
