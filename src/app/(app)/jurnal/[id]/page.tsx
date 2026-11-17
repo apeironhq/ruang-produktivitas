@@ -48,9 +48,9 @@ export default async function Page({ params }: PageProps<'/jurnal/[id]'>) {
         <div className="control-row">
           <EditJournalButton goals={goals.data ?? []} subjects={subjects.data ?? []} projects={projects.data ?? []}
             initial={{ id: e.id, kind: e.kind, title: e.title, content: e.content, entry_date: e.entry_date, tags: e.tags.join(', '), mood: e.mood, goal_id: e.goal_id, subject_id: e.subject_id, project_id: e.project_id, trading: e.trading }} />
-          <ActionButton action={setArchived.bind(null, e.id, !e.is_archived)}>{e.is_archived ? <><ArchiveRestore size={16} />Kembalikan</> : <><Archive size={16} />Arsipkan</>}</ActionButton>
+          <ActionButton action={setArchived.bind(null, e.id, !e.is_archived)} className={`btn btn-secondary${e.is_archived ? '' : ' is-warn'}`}>{e.is_archived ? <><ArchiveRestore size={16} />Kembalikan</> : <><Archive size={16} />Arsipkan</>}</ActionButton>
           <ConfirmButton action={deleteEntry.bind(null, e.id)} redirect="/jurnal" title="Hapus catatan?" message={`"${e.title || 'Tanpa judul'}" akan dihapus permanen. Pilih Arsipkan jika hanya ingin menyembunyikannya.`}
-            className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus catatan"><Trash2 size={16} /></ConfirmButton>
+            className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus catatan"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 

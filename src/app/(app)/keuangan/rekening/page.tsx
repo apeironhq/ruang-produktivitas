@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Archive, ArchiveRestore, Banknote, Landmark, Smartphone, Trash2, Wallet } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, Banknote, Landmark, Smartphone, Trash2, Wallet } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
 import { EmptyState, PageHead, SectionHead, tint } from '@/components/ui/display'
 import { todayIn } from '@/lib/dates'
@@ -73,13 +73,13 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/rekeni
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Link href={`/keuangan/transaksi?rekening=${a.id}`} className="btn btn-secondary btn-sm">Mutasi</Link>
+                    <Link href={`/keuangan/transaksi?rekening=${a.id}`} className="btn btn-secondary btn-sm"><ArrowLeftRight size={15} />Mutasi</Link>
                     <AccountButton initial={{ id: a.id, name: a.name, kind: a.kind, opening_balance: a.opening_balance }} />
-                    <ActionButton action={setAccountArchived.bind(null, a.id, !a.is_archived)} className="btn btn-ghost btn-sm">
+                    <ActionButton action={setAccountArchived.bind(null, a.id, !a.is_archived)} className={`btn btn-secondary btn-sm${a.is_archived ? '' : ' is-warn'}`}>
                       {a.is_archived ? <><ArchiveRestore size={15} />Aktifkan</> : <><Archive size={15} />Arsipkan</>}
                     </ActionButton>
                     <ConfirmButton action={deleteAccount.bind(null, a.id)} title="Hapus rekening?" message={`"${a.name}" dihapus. Rekening yang masih punya transaksi tidak bisa dihapus — arsipkan saja.`}
-                      className="btn btn-ghost btn-sm btn-icon ml-auto" ariaLabel={`Hapus ${a.name}`}><Trash2 size={15} /></ConfirmButton>
+                      className="btn btn-secondary btn-sm btn-icon is-danger ml-auto" ariaLabel={`Hapus ${a.name}`}><Trash2 size={15} /></ConfirmButton>
                   </div>
                 </article>
               ))}

@@ -221,6 +221,15 @@
   .btn-danger:hover:not(:disabled) { background: #912018; border-color: #912018; }
   .btn-danger-ghost { background: transparent; color: var(--err); }
   .btn-danger-ghost:hover:not(:disabled) { background: var(--err-soft); }
+  /* Warna aksi: Arsipkan = oranye tua, Hapus = merah. Hanya teks & ikon yang berwarna; latar lembut saat diarahkan. */
+  .btn.is-warn { color: var(--accent-ink); }
+  .btn.is-warn:hover:not(:disabled) { background: var(--accent-soft); border-color: #ffd77a; color: var(--accent-ink); }
+  .btn.is-danger { color: var(--err); }
+  .btn.is-danger:hover:not(:disabled) { background: var(--err-soft); border-color: #f3c5bf; color: var(--err); }
+  /* Ikon di baris daftar padat tetap abu-abu, baru berwarna saat diarahkan (seperti .row-act). */
+  .btn-ghost.is-warn, .btn-ghost.is-danger { color: var(--text-faint); }
+  .btn-ghost.is-warn:hover:not(:disabled) { border-color: transparent; }
+  .btn-ghost.is-danger:hover:not(:disabled) { border-color: transparent; }
   .btn-sm { height: var(--h-control-sm); padding: 0 0.75rem; font-size: var(--fs-label); }
   .btn-lg { height: var(--h-control-lg); padding: 0 1.25rem; font-size: 1rem; }
   .btn-icon { width: var(--h-control); padding: 0; flex-shrink: 0; }
@@ -1004,6 +1013,7 @@ a.item-link:hover { background: var(--bg-subtle); }
 .user-menu .menu-item { color: var(--text-body); }
 .user-menu .menu-item svg { color: var(--text-muted); }
 .menu-item-danger .menu-label, .menu-item-danger svg { color: var(--err) !important; }
+.menu-item-warn .menu-label, .menu-item-warn svg { color: var(--accent-ink) !important; }
 @media (max-width: 767.98px) {
   .user-btn { padding: 2px; }
   .user-btn > .user-meta, .user-chev { display: none; }
@@ -1017,6 +1027,7 @@ a.item-link:hover { background: var(--bg-subtle); }
 .row-act { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: var(--r-sm); background: none; color: var(--text-faint); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
 .row-act:hover, .row-act[aria-expanded='true'] { background: var(--brand-soft); color: var(--brand-ink); }
 .row-act.danger:hover { background: var(--err-soft); color: var(--err); }
+.row-act.warn:hover { background: var(--accent-soft); color: var(--accent-ink); }
 .row-menu { min-width: 170px; }
 .row-menu .menu-item { color: var(--text-body); }
 .row-menu .menu-item svg { color: var(--text-muted); flex-shrink: 0; }

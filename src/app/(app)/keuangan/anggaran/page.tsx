@@ -91,7 +91,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
                   </div>
                   <BudgetButton categories={categories} month={month} monthLabel={label} preset={{ category_id: b.category_id, limit_amount: b.limit }} />
                   <ConfirmButton action={deleteBudget.bind(null, b.id)} title="Hapus anggaran?" message={`Anggaran ${catName.get(b.category_id)} untuk ${label} dihapus. Transaksinya tidak terpengaruh.`}
-                    className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus anggaran"><Trash2 size={15} /></ConfirmButton>
+                    className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus anggaran"><Trash2 size={15} /></ConfirmButton>
                 </li>
               )
             })}
@@ -117,7 +117,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
                   <li key={c.id} className="item">
                     <span className="item-title flex-1 min-w-0 truncate">{c.name}</span>
                     <ConfirmButton action={deleteCategory.bind(null, c.id)} title="Hapus kategori?" message={`Kategori "${c.name}" dihapus. Transaksi lamanya menjadi tanpa kategori dan anggarannya ikut terhapus.`}
-                      className="btn btn-ghost btn-sm btn-icon" ariaLabel={`Hapus kategori ${c.name}`}><Trash2 size={15} /></ConfirmButton>
+                      className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel={`Hapus kategori ${c.name}`}><Trash2 size={15} /></ConfirmButton>
                   </li>
                 ))}
               </ul>

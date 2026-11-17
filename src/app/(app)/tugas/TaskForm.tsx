@@ -1,6 +1,6 @@
 'use client'
 
-import { CalendarClock, Check, CheckSquare, MapPin, Plus } from 'lucide-react'
+import { CalendarClock, Check, CheckSquare, MapPin, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
@@ -192,7 +192,7 @@ export function EditTaskButton({ initial, options }: { initial: TaskFormValues; 
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}><Pencil size={16} />Ubah</button>
       {open && <TaskFormModal open={open} onClose={() => setOpen(false)} initial={initial} options={options} />}
     </>
   )

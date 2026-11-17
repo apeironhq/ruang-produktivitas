@@ -88,7 +88,7 @@ export default async function Page() {
             <SectionHead id="priv-title" icon={<ShieldCheck size={18} />} title="Privasi" desc="Data Anda hanya dapat diakses oleh akun Anda" />
             <div className="card-body flex flex-col gap-3">
               <p className="text-caption">Setiap tabel dilindungi Row Level Security di database — pengguna lain tidak dapat membaca, mengubah, maupun menautkan data Anda. Bot Telegram hanya melayani chat pribadi dari akun yang sudah ditautkan.</p>
-              <form action={signOut}><button type="submit" className="btn btn-danger-ghost btn-block"><LogOut size={16} />Keluar dari perangkat ini</button></form>
+              <form action={signOut}><button type="submit" className="btn btn-secondary btn-block is-danger"><LogOut size={16} />Keluar dari perangkat ini</button></form>
             </div>
           </section>
         </div>

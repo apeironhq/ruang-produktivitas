@@ -95,11 +95,11 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
                   </div>
                   <div className="flex items-center gap-0.5">
                     <EditHabitButton initial={{ id: h.id, name: h.name, description: h.description, frequency: h.frequency, times_per_week: h.times_per_week }} />
-                    <ActionButton action={setHabitArchived.bind(null, h.id, !h.is_archived)} className="btn btn-ghost btn-sm btn-icon" ariaLabel={h.is_archived ? 'Aktifkan' : 'Arsipkan'} title={h.is_archived ? 'Aktifkan' : 'Arsipkan'}>
+                    <ActionButton action={setHabitArchived.bind(null, h.id, !h.is_archived)} className={`btn btn-ghost btn-sm btn-icon${h.is_archived ? '' : ' is-warn'}`} ariaLabel={h.is_archived ? 'Aktifkan' : 'Arsipkan'} title={h.is_archived ? 'Aktifkan' : 'Arsipkan'}>
                       {h.is_archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
                     </ActionButton>
                     <ConfirmButton action={deleteHabit.bind(null, h.id)} title="Hapus kebiasaan?" message={`"${h.name}" beserta ${s.total} check-in-nya dihapus permanen. Pilih Arsipkan bila hanya ingin berhenti sementara.`}
-                      className="btn btn-ghost btn-sm btn-icon" ariaLabel={`Hapus ${h.name}`}><Trash2 size={15} /></ConfirmButton>
+                      className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel={`Hapus ${h.name}`}><Trash2 size={15} /></ConfirmButton>
                   </div>
                 </li>
               )

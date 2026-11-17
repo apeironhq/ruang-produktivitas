@@ -46,7 +46,7 @@ export default async function Page({ params }: PageProps<'/tugas/[id]'>) {
         <div className="control-row">
           <EditTaskButton initial={initial} options={options} />
           <ConfirmButton action={deleteTask.bind(null, t.id)} redirect="/tugas" title={`Hapus ${TASK_KIND[t.kind]!.toLowerCase()}?`}
-            message={`"${t.title}" beserta subtugasnya akan dihapus permanen.`} className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus"><Trash2 size={16} /></ConfirmButton>
+            message={`"${t.title}" beserta subtugasnya akan dihapus permanen.`} className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 

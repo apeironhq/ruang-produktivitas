@@ -61,7 +61,7 @@ export function TxTable({ rows, accounts, categories, allAccounts }: { rows: TxR
                   }} />
                   <ConfirmButton action={deleteTransaction.bind(null, r.id, r.transfer_group_id)} title={r.kind === 'transfer' ? 'Hapus transfer?' : 'Hapus transaksi?'}
                     message={r.kind === 'transfer' ? 'Kedua mutasi transfer ini dihapus dan saldo kedua rekening dihitung ulang.' : 'Transaksi dihapus dan saldo rekening dihitung ulang.'}
-                    className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus transaksi"><Trash2 size={15} /></ConfirmButton>
+                    className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus transaksi"><Trash2 size={15} /></ConfirmButton>
                 </div>
               </td>
             </tr>

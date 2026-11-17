@@ -46,7 +46,7 @@ export function TelegramLink({ info }: { info: TelegramInfo }) {
           <p className="item-title mt-1">{info.connection.username ? `@${info.connection.username}` : 'Akun Telegram'}</p>
           <p className="item-sub">Sejak {info.connection.linkedLabel} · pengingat & ringkasan dikirim ke chat ini</p>
         </div>
-        <ConfirmButton action={unlinkTelegram} title="Putuskan Telegram?" confirmLabel="Putuskan" className="btn btn-danger-ghost btn-block"
+        <ConfirmButton action={unlinkTelegram} title="Putuskan Telegram?" confirmLabel="Putuskan" className="btn btn-secondary btn-block is-danger"
           message="Bot tidak bisa lagi membaca atau menambah data Anda, dan pengingat berhenti dikirim. Anda bisa menautkan lagi kapan saja.">
           <Unlink size={16} />Putuskan Telegram
         </ConfirmButton>

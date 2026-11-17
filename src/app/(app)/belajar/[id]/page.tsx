@@ -79,7 +79,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           <EditSubjectButton initial={{ id: subject.id, title: subject.title, description: subject.description, goal_id: subject.goal_id, status: subject.status }} goals={goalOptions} />
           <ConfirmButton action={deleteSubject.bind(null, subject.id)} redirect="/belajar" title="Hapus bidang belajar?"
             message={`"${subject.title}" beserta modul, sumber, dan seluruh riwayat sesinya akan dihapus permanen.`}
-            className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus bidang"><Trash2 size={16} /></ConfirmButton>
+            className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus bidang"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
                     {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm btn-icon" aria-label={`Buka ${s.title}`}><ExternalLink size={15} /></a>}
                     <SourceButton subjectId={subject.id} initial={s} />
                     <ConfirmButton action={deleteSource.bind(null, s.id, subject.id)} title="Hapus sumber?" message={`"${s.title}" akan dihapus. Sesi yang memakai sumber ini tetap tersimpan.`}
-                      className="btn btn-ghost btn-sm btn-icon" ariaLabel={`Hapus sumber ${s.title}`}><Trash2 size={15} /></ConfirmButton>
+                      className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel={`Hapus sumber ${s.title}`}><Trash2 size={15} /></ConfirmButton>
                   </li>
                 ))}
               </ul>
@@ -161,7 +161,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
                     )}
                   </div>
                   <ConfirmButton action={deleteSession.bind(null, s.id, subject.id)} title="Hapus sesi?" message="Sesi ini akan dihapus dari riwayat dan total durasi."
-                    className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus sesi"><Trash2 size={15} /></ConfirmButton>
+                    className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus sesi"><Trash2 size={15} /></ConfirmButton>
                 </div>
               </li>
             ))}

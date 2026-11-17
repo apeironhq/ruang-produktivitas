@@ -46,7 +46,7 @@ function SubtaskRow({ s, taskId }: { s: Subtask; taskId: string }) {
         {check.checked && <Check size={14} strokeWidth={3} aria-hidden="true" />}
       </button>
       <span className="item-title flex-1 min-w-0">{s.title}</span>
-      <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label={`Hapus subtugas ${s.title}`} disabled={pending}
+      <button type="button" className="btn btn-ghost btn-sm btn-icon is-danger" aria-label={`Hapus subtugas ${s.title}`} disabled={pending}
         onClick={() => run(() => deleteSubtask(s.id, taskId), { silent: true })}><Trash2 size={15} /></button>
     </li>
   )

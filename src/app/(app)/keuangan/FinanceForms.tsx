@@ -158,7 +158,7 @@ export function AccountButton({ initial, label = 'Rekening baru', className = 'b
   return (
     <>
       {initial
-        ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}>Ubah</button>
+        ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}><Pencil size={15} />Ubah</button>
         : <button type="button" className={className} onClick={() => setOpen(true)}><Plus size={16} />{label}</button>}
       {open && <AccountFormModal open onClose={() => setOpen(false)} initial={initial ?? { name: '', kind: 'bank', opening_balance: 0 }} />}
     </>

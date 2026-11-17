@@ -80,11 +80,11 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           <EditGoalButton initial={initial} />
           {goal.status === 'arsip' || goal.status === 'tercapai'
             ? <ActionButton action={setGoalStatus.bind(null, goal.id, 'aktif')}><RotateCcw size={16} />Aktifkan lagi</ActionButton>
-            : <ActionButton action={setGoalStatus.bind(null, goal.id, 'arsip')}><Archive size={16} />Arsipkan</ActionButton>}
-          {goal.status === 'tercapai' && <ActionButton action={setGoalStatus.bind(null, goal.id, 'arsip')}><Archive size={16} />Arsipkan</ActionButton>}
+            : <ActionButton action={setGoalStatus.bind(null, goal.id, 'arsip')} className="btn btn-secondary is-warn"><Archive size={16} />Arsipkan</ActionButton>}
+          {goal.status === 'tercapai' && <ActionButton action={setGoalStatus.bind(null, goal.id, 'arsip')} className="btn btn-secondary is-warn"><Archive size={16} />Arsipkan</ActionButton>}
           <ConfirmButton action={deleteGoal.bind(null, goal.id)} redirect="/target" title="Hapus target?"
             message={`"${goal.title}" beserta tahapan dan riwayat kontribusinya akan dihapus. Tugas & bidang belajar yang tertaut tidak ikut terhapus.`}
-            className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus target"><Trash2 size={16} /></ConfirmButton>
+            className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus target"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                       <span className="item-sub">{m.reached_at ? `Tercapai ${formatDateTime(m.reached_at, tz)}` : 'Belum tercapai'}</span>
                     </div>
                     <ConfirmButton action={deleteMilestone.bind(null, m.id, goal.id)} title="Hapus tahapan?" message={`Tahapan ${fmt(Number(m.threshold))} akan dihapus.`}
-                      className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus tahapan"><Trash2 size={15} /></ConfirmButton>
+                      className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus tahapan"><Trash2 size={15} /></ConfirmButton>
                   </li>
                 ))}
               </ul>
@@ -170,7 +170,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                         <td data-label="" className="cell-actions">
                           <div className="flex justify-end">
                             <ConfirmButton action={deleteAllocation.bind(null, a.id, goal.id)} title="Hapus alokasi?" message="Progres target dihitung ulang tanpa alokasi ini. Saldo rekening tidak berubah."
-                              className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus alokasi"><Trash2 size={15} /></ConfirmButton>
+                              className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus alokasi"><Trash2 size={15} /></ConfirmButton>
                           </div>
                         </td>
                       </tr>
@@ -198,7 +198,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                         <td data-label="" className="cell-actions">
                           <div className="flex justify-end">
                             <ConfirmButton action={deleteContribution.bind(null, e.id, goal.id)} title="Hapus kontribusi?" message="Nilai target akan dihitung ulang tanpa kontribusi ini."
-                              className="btn btn-ghost btn-sm btn-icon" ariaLabel="Hapus kontribusi"><Trash2 size={15} /></ConfirmButton>
+                              className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus kontribusi"><Trash2 size={15} /></ConfirmButton>
                           </div>
                         </td>
                       </tr>

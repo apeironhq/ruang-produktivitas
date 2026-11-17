@@ -1,7 +1,7 @@
 'use client'
 
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
-import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, ListChecks, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, BookOpen, Check, Clock, Library, ListChecks, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Field, FormModal, errClass } from '@/components/ui/forms'
@@ -67,7 +67,7 @@ export function EditSubjectButton({ initial, goals }: { initial: SubjectValues; 
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}><Pencil size={16} />Ubah</button>
       {open && <SubjectFormModal open={open} onClose={() => setOpen(false)} initial={initial} goals={goals} />}
     </>
   )
@@ -258,7 +258,7 @@ function ModuleRow({ m, subjectId, index, last }: { m: Module; subjectId: string
         <button type="button" className="btn btn-ghost btn-sm hidden sm:inline-flex" disabled={pending} onClick={() => run(() => setModuleApplicable(m.id, subjectId, !m.is_applicable))}>
           {m.is_applicable ? 'Lewati' : 'Hitung'}
         </button>
-        <button type="button" className="btn btn-ghost btn-sm btn-icon" disabled={pending} aria-label={`Hapus modul ${m.title}`} onClick={() => run(() => deleteModule(m.id, subjectId))}><Trash2 size={15} /></button>
+        <button type="button" className="btn btn-ghost btn-sm btn-icon is-danger" disabled={pending} aria-label={`Hapus modul ${m.title}`} onClick={() => run(() => deleteModule(m.id, subjectId))}><Trash2 size={15} /></button>
       </span>
     </li>
   )

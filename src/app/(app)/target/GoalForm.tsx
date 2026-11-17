@@ -1,7 +1,7 @@
 'use client'
 
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
-import { Flag, Plus, Target } from 'lucide-react'
+import { Flag, Pencil, Plus, Target } from 'lucide-react'
 import { useState } from 'react'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
 import { METRIC, PROGRESS_SOURCE } from '@/lib/labels'
@@ -132,7 +132,7 @@ export function EditGoalButton({ initial }: { initial: GoalFormValues }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}><Pencil size={16} />Ubah</button>
       {open && <GoalFormModal open={open} onClose={() => setOpen(false)} initial={initial} />}
     </>
   )

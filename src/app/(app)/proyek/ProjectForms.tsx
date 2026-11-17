@@ -1,7 +1,7 @@
 'use client'
 
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
-import { Check, FolderKanban, Milestone, Plus, Trash2 } from 'lucide-react'
+import { Check, FolderKanban, Milestone, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useOptimisticToggle, useRunAction } from '@/components/ui/actions'
 import { Choices, Field, FormModal, errClass } from '@/components/ui/forms'
@@ -78,7 +78,7 @@ export function EditProjectButton({ initial, goals }: { initial: ProjectValues; 
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>Ubah</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}><Pencil size={16} />Ubah</button>
       {open && <ProjectFormModal open onClose={() => setOpen(false)} initial={initial} goals={goals} />}
     </>
   )
@@ -122,7 +122,7 @@ export function ProjectMilestoneRow({ m, projectId, dueLabel }: { m: ProjectMile
         <span className="item-title block">{m.title}</span>
         {dueLabel && <span className="item-sub">Tenggat {dueLabel}</span>}
       </span>
-      <button type="button" className="btn btn-ghost btn-sm btn-icon" disabled={pending} aria-label={`Hapus tahapan ${m.title}`}
+      <button type="button" className="btn btn-ghost btn-sm btn-icon is-danger" disabled={pending} aria-label={`Hapus tahapan ${m.title}`}
         onClick={() => run(() => deleteProjectMilestone(m.id, projectId))}><Trash2 size={15} /></button>
     </li>
   )

@@ -25,7 +25,7 @@ export function RemovableRow({ className, children }: { className?: string; chil
 
 /* ---------- Tampilan: ikon langsung di desktop, menu ⋯ di ponsel ---------- */
 
-interface Item { key: string; label: string; icon: React.ReactNode; danger?: boolean; onSelect: () => void }
+interface Item { key: string; label: string; icon: React.ReactNode; danger?: boolean; warn?: boolean; onSelect: () => void }
 
 function ActionMenu({ items, label }: { items: Item[]; label: string }) {
   const [open, setOpen] = useState(false)
@@ -42,7 +42,7 @@ function ActionMenu({ items, label }: { items: Item[]; label: string }) {
     <div ref={root} className="row-actions">
       <div className="row-actions-inline">
         {items.map((it) => (
-          <button key={it.key} type="button" className={`row-act${it.danger ? ' danger' : ''}`} title={it.label} aria-label={`${it.label}: ${label}`} onClick={it.onSelect}>{it.icon}</button>
+          <button key={it.key} type="button" className={`row-act${it.danger ? ' danger' : it.warn ? ' warn' : ''}`} title={it.label} aria-label={`${it.label}: ${label}`} onClick={it.onSelect}>{it.icon}</button>
         ))}
       </div>
       <div className="row-actions-more relative">
@@ -52,7 +52,7 @@ function ActionMenu({ items, label }: { items: Item[]; label: string }) {
         {open && (
           <div className="menu row-menu" role="menu">
             {items.map((it) => (
-              <button key={it.key} type="button" role="menuitem" className={`menu-item${it.danger ? ' menu-item-danger' : ''}`} onClick={() => { setOpen(false); it.onSelect() }}>
+              <button key={it.key} type="button" role="menuitem" className={`menu-item${it.danger ? ' menu-item-danger' : it.warn ? ' menu-item-warn' : ''}`} onClick={() => { setOpen(false); it.onSelect() }}>
                 {it.icon}<span className="menu-label">{it.label}</span>
               </button>
             ))}
@@ -111,7 +111,7 @@ export function NoteRowActions({ id, title, archived, values }: { id: string; ti
   return (
     <ActionMenu label={title} items={[
       { key: 'ubah', label: 'Ubah', icon: <Pencil size={16} />, onSelect: () => edit({ kind: 'catatan', values }) },
-      { key: 'arsip', label: archived ? 'Kembalikan' : 'Arsipkan', icon: archived ? <ArchiveRestore size={16} /> : <Archive size={16} />, onSelect: toggleArchive },
+      { key: 'arsip', label: archived ? 'Kembalikan' : 'Arsipkan', icon: archived ? <ArchiveRestore size={16} /> : <Archive size={16} />, warn: !archived, onSelect: toggleArchive },
       { key: 'hapus', label: 'Hapus', icon: <Trash2 size={16} />, danger: true, onSelect: () => remove('Catatan dihapus.', () => deleteEntry(id)) },
     ]} />
   )

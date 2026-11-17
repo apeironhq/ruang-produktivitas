@@ -67,10 +67,10 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
             ? <ActionButton action={setProjectStatus.bind(null, p.id, 'aktif')}><RotateCcw size={16} />Aktifkan lagi</ActionButton>
             : <ActionButton action={setProjectStatus.bind(null, p.id, 'selesai')} className="btn btn-primary"><Check size={16} />Tandai selesai</ActionButton>}
           <EditProjectButton goals={options.goals} initial={{ id: p.id, title: p.title, description: p.description, status: p.status, goal_id: p.goal_id, start_date: p.start_date ?? '', due_date: p.due_date ?? '' }} />
-          {p.status !== 'arsip' && <ActionButton action={setProjectStatus.bind(null, p.id, 'arsip')}><Archive size={16} />Arsipkan</ActionButton>}
+          {p.status !== 'arsip' && <ActionButton action={setProjectStatus.bind(null, p.id, 'arsip')} className="btn btn-secondary is-warn"><Archive size={16} />Arsipkan</ActionButton>}
           <ConfirmButton action={deleteProject.bind(null, p.id)} redirect="/proyek" title="Hapus proyek?"
             message={`"${p.title}" beserta tahapannya dihapus. Tugas dan catatan yang tertaut tetap ada, hanya tautannya dilepas.`}
-            className="btn btn-danger-ghost btn-icon" ariaLabel="Hapus proyek"><Trash2 size={16} /></ConfirmButton>
+            className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus proyek"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
 
