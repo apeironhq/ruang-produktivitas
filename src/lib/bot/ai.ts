@@ -1,6 +1,6 @@
 import 'server-only'
 import { aiJson } from '../ai/groq'
-import { todayIn, weekdayMon0, zonedToIso } from '../dates'
+import { addDays, todayIn, weekdayMon0, zonedToIso } from '../dates'
 import { formatRupiah, formatTime } from '../format'
 import { sendChatAction, sendMessageKb } from '../telegram'
 import { createTimer, repeatText } from './timers'
@@ -17,7 +17,7 @@ export interface AiItem {
   t: AiKind; title: string; at?: string; repeat?: string; amount?: number; minutes?: number; place?: string
   account?: string; accountName?: string; category?: string; categoryName?: string
 }
-interface RawAction { type?: string; judul?: string; waktu?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string }
+interface RawAction { type?: string; judul?: string; waktu?: string; jam?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string }
 interface Raw { actions?: RawAction[]; balasan?: string }
 
 const KINDS: AiKind[] = ['tugas', 'kegiatan', 'pengingat', 'pengeluaran', 'pemasukan', 'catatan']
@@ -38,13 +38,14 @@ function systemPrompt(tz: string, now: Date): string {
     '- type "catatan": ide, curhat, atau informasi untuk disimpan.',
     '- judul: singkat & jelas, tanpa kata waktu dan nominal. Pertahankan teks berkurung siku seperti [TES QA].',
     '- waktu: "YYYY-MM-DDTHH:MM" hanya bila disebut atau tersirat jelas. "pagi" = 08:00, "siang" = 12:00, "sore" = 16:00, "malam" = 19:00, "jam 2" tanpa keterangan = 14:00. Kosongkan bila tidak disebut — jangan mengarang.',
+    '- jam: "HH:MM" (24 jam) setiap kali pengguna menyebut jam, terpisah dari tanggal. WAJIB diisi untuk pengingat berulang yang menyebut jam. Contoh: "jam 7 malam" = "19:00", "jam 9" = "09:00", "jam 2 siang" = "14:00".',
     '- ulang: "harian", "kerja" (Senin–Jumat), atau "mingguan" (isi hari) hanya bila pengguna menyebut "tiap"/"setiap"; selain itu "".',
     '- durasi_menit dan lokasi hanya untuk kegiatan, bila disebut.',
     `- Satu pesan boleh berisi beberapa aksi (maksimal ${MAX_ITEMS}).`,
     '- Bila pesan hanya sapaan, obrolan, atau pertanyaan dan tidak ada yang perlu dicatat: actions kosong, isi "balasan" singkat dan ramah (maks. 2 kalimat). Jangan mengarang data milik pengguna.',
     '',
     'Jawab HANYA dengan satu objek JSON berbentuk:',
-    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"balasan":""}',
+    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"balasan":""}',
     'Isi "jumlah" hanya untuk uang, "hari" hanya untuk ulang mingguan, sisanya boleh 0 / "" / [].',
   ].join('\n')
 }
@@ -64,6 +65,14 @@ function normalize(raw: Raw, tz: string, now: Date): AiItem[] {
     const money = t === 'pengeluaran' || t === 'pemasukan'
     if (!title && !money) continue
     let at = typeof a.waktu === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(a.waktu) ? zonedToIso(a.waktu, tz) ?? undefined : undefined
+    // "jam" terpisah: menang atas jam di "waktu" (lebih andal), tanggalnya diambil dari "waktu" / hari ini.
+    const jam = typeof a.jam === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(a.jam) ? a.jam : null
+    if (jam) {
+      const day = typeof a.waktu === 'string' && /^\d{4}-\d{2}-\d{2}/.test(a.waktu) ? a.waktu.slice(0, 10) : todayIn(tz, now)
+      at = zonedToIso(`${day}T${jam}`, tz) ?? at
+      // jam tanpa tanggal yang sudah lewat → besok (untuk pengingat & kegiatan)
+      if (at && !/^\d{4}-\d{2}-\d{2}/.test(a.waktu ?? '') && new Date(at).getTime() <= now.getTime() && t !== 'tugas') at = zonedToIso(`${addDays(day, 1)}T${jam}`, tz) ?? at
+    }
     const item: AiItem = { t, title }
     if (money) {
       const amount = Math.round(Number(a.jumlah))
