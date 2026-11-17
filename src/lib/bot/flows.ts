@@ -1,10 +1,11 @@
 import 'server-only'
 import { addDays, todayIn, zonedToIso } from '../dates'
-import { formatDuration, formatNumber, formatRupiah, formatShort, parseIdNumber } from '../format'
+import { formatNumber, formatRupiah, parseIdNumber } from '../format'
 import { JOURNAL_KIND, MOOD } from '../labels'
 import { editMessageCaption, editMessageKb, editMessageReplyMarkup, sendMessageKb, type Keyboard } from '../telegram'
-import { createTimer, parseDuration } from './timers'
+import { createTimer, splitReminder } from './timers'
 import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
+import { extractWhen, guessCategory, minutesLabel, whenLabel } from './when'
 
 /*
  * Isian bertahap ("alur"): satu pesan formulir yang terus diperbarui. Status disimpan di
@@ -33,30 +34,6 @@ interface Flow {
 }
 
 const NAV_AFTER = (panel: string, label: string): Keyboard => [[btn(label, panel), btn('🏠 Menu', 'p:home')]]
-
-/* ---------- Penguraian waktu: "17.00", "besok 09.00", "20/11 14.30", "2026-11-20 08:00" ---------- */
-export function parseWhen(text: string, tz: string, defaultTime = '09:00'): string | null {
-  const s = text.toLowerCase().replace(/\b(jam|pukul|tgl|tanggal)\b/g, ' ').replace(/\s+/g, ' ').trim()
-  const today = todayIn(tz)
-  let day: string | null = null
-  let rest = s
-  const rel = /\b(hari ini|besok|lusa)\b/.exec(s)
-  if (rel) { day = rel[1] === 'besok' ? addDays(today, 1) : rel[1] === 'lusa' ? addDays(today, 2) : today; rest = s.replace(rel[0], ' ') }
-  const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(rest)
-  const dm = /\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/.exec(rest)
-  if (!day && iso) { day = `${iso[1]}-${iso[2]}-${iso[3]}`; rest = rest.replace(iso[0], ' ') }
-  else if (!day && dm) {
-    const y = dm[3] ? (dm[3].length === 2 ? `20${dm[3]}` : dm[3]) : today.slice(0, 4)
-    day = `${y}-${dm[2]!.padStart(2, '0')}-${dm[1]!.padStart(2, '0')}`
-    rest = rest.replace(dm[0], ' ')
-    if (!dm[3] && day < today) day = `${Number(y) + 1}${day.slice(4)}` // "5/1" di bulan Desember → tahun depan
-  }
-  const tm = /\b([01]?\d|2[0-3])[.:]([0-5]\d)\b/.exec(rest)
-  if (!day && !tm) return null
-  if (day && !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(day)) return null
-  const time = tm ? `${tm[1]!.padStart(2, '0')}:${tm[2]}` : defaultTime
-  return zonedToIso(`${day ?? today}T${time}`, tz)
-}
 
 /* ---------- Langkah umum ---------- */
 const textStep = (key: string, label: string, q: string, hint: string, opts: { optional?: boolean; max?: number; when?: Step['when'] } = {}): Step => ({
@@ -87,11 +64,11 @@ const whenAccept = (tz: string, input: { text?: string; choice?: string }, allow
   if (input.choice && QUICK_TIMES[input.choice]) {
     const [plus, time] = QUICK_TIMES[input.choice]!
     const iso = zonedToIso(`${addDays(todayIn(tz), plus)}T${time}`, tz)!
-    return { value: iso, label: formatShort(iso, tz) }
+    return { value: iso, label: whenLabel(iso, tz) }
   }
-  const iso = input.text ? parseWhen(input.text, tz, defTime) : null
-  if (!iso) return { error: 'Format waktu tidak dikenali. Contoh: <code>17.00</code>, <code>besok 09.00</code>, <code>20/11 14.30</code>.' }
-  return { value: iso, label: formatShort(iso, tz) }
+  const w = input.text ? extractWhen(input.text, tz, { defaultTime: defTime }) : null
+  if (!w) return { error: 'Waktunya belum terbaca. Contoh: <code>besok jam 9</code>, <code>jam 4 sore</code>, <code>jumat 14.30</code>, <code>20/11</code>.' }
+  return { value: w.iso, label: whenLabel(w.iso, tz) }
 }
 
 /* ---------- Definisi alur ---------- */
@@ -105,18 +82,18 @@ export const FLOWS: Record<string, Flow> = {
         return p ? { d: { project: p.id }, l: { project: cut(p.title, 40) } } : { error: 'Proyek tidak ditemukan.' }
       }
       if (!arg) return {}
-      const m = /^([\s\S]+?)(\s+(?:(?:hari ini|besok|lusa)(?:\s+(?:jam\s+)?\d{1,2}[.:]\d{2})?|(?:jam\s+)?\d{1,2}[.:]\d{2}))?$/i.exec(arg.trim())
-      const title = (m?.[1] ?? arg).trim().slice(0, 200)
-      const due = m?.[2] ? parseWhen(m[2], ctx.tz, '23:59') : null
+      // "servis motor besok jam 2 siang" → judul "servis motor", tenggat besok 14.00
+      const w = extractWhen(arg, ctx.tz, { defaultTime: '23:59' })
+      const title = (w?.rest || arg).trim().slice(0, 200)
       const d: Record<string, unknown> = { title }, l: Record<string, string> = { title: cut(title, 60) }
-      if (due) { d.due = due; l.due = formatShort(due, ctx.tz) }
+      if (w) { d.due = w.iso; l.due = whenLabel(w.iso, ctx.tz) }
       return { d, l }
     },
     steps: [
       textStep('title', 'Judul', 'Apa judul tugasnya?', 'Ketik judulnya, mis. <i>Kirim laporan mingguan</i>'),
       {
         key: 'due', label: 'Tenggat',
-        ask: () => ({ q: 'Kapan tenggatnya?', hint: 'Pilih tombol, atau ketik mis. <code>20/11 14.30</code>', choices: [{ text: 'Hari ini 17.00', v: 'h17' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Lusa 09.00', v: 'l09' }, { text: 'Tanpa tenggat', v: 'none' }], perRow: 2, typing: true }),
+        ask: () => ({ q: 'Kapan tenggatnya?', hint: 'Pilih tombol, atau ketik mis. <code>besok jam 2 siang</code>, <code>jumat 10.00</code>', choices: [{ text: 'Hari ini 17.00', v: 'h17' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Lusa 09.00', v: 'l09' }, { text: 'Tanpa tenggat', v: 'none' }], perRow: 2, typing: true }),
         accept: (ctx, _s, input) => whenAccept(ctx.tz, input, true, '23:59'),
       },
       remindStep(),
@@ -153,17 +130,26 @@ export const FLOWS: Record<string, Flow> = {
 
   kegiatan: {
     title: 'Kegiatan baru',
+    init: async (ctx, arg) => {
+      if (!arg) return {}
+      // "rapat tim besok jam 9" → nama "rapat tim", mulai besok 09.00
+      const w = extractWhen(arg, ctx.tz, { defaultTime: '09:00' })
+      const title = (w?.rest || arg).trim().slice(0, 200)
+      const d: Record<string, unknown> = { title }, l: Record<string, string> = { title: cut(title, 60) }
+      if (w) { d.start = w.iso; l.start = whenLabel(w.iso, ctx.tz) }
+      return { d, l }
+    },
     steps: [
       textStep('title', 'Nama kegiatan', 'Apa nama kegiatannya?', 'Mis. <i>Kajian rutin</i>, <i>Rapat tim</i>'),
       {
         key: 'start', label: 'Mulai',
-        ask: () => ({ q: 'Kapan mulainya?', hint: 'Pilih tombol, atau ketik mis. <code>besok 19.30</code>', choices: [{ text: 'Hari ini 19.00', v: 'h19' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Besok 19.00', v: 'b19' }], perRow: 3, typing: true }),
+        ask: () => ({ q: 'Kapan mulainya?', hint: 'Pilih tombol, atau ketik mis. <code>besok jam 7 malam</code>, <code>sabtu 08.00</code>', choices: [{ text: 'Hari ini 19.00', v: 'h19' }, { text: 'Besok 09.00', v: 'b09' }, { text: 'Besok 19.00', v: 'b19' }], perRow: 3, typing: true }),
         accept: (ctx, _s, input) => whenAccept(ctx.tz, input, false, '09:00'),
       },
       {
         key: 'dur', label: 'Durasi',
         ask: () => ({ q: 'Berapa lama?', choices: [{ text: '30 menit', v: '30' }, { text: '1 jam', v: '60' }, { text: '2 jam', v: '120' }, { text: '3 jam', v: '180' }, { text: 'Tidak ditentukan', v: '-' }], perRow: 2 }),
-        accept: (_c, _s, { choice }) => (choice === '-' ? { value: null, label: 'Tidak ditentukan' } : choice && /^\d+$/.test(choice) ? { value: Number(choice), label: formatDuration(Number(choice)) } : { error: 'Pilih salah satu tombol.' }),
+        accept: (_c, _s, { choice }) => (choice === '-' ? { value: null, label: 'Tidak ditentukan' } : choice && /^\d+$/.test(choice) ? { value: Number(choice), label: minutesLabel(Number(choice)) } : { error: 'Pilih salah satu tombol.' }),
       },
       textStep('location', 'Lokasi', 'Di mana lokasinya?', 'Ketik lokasinya, atau tekan Lewati.', { optional: true }),
       remindStep(),
@@ -221,7 +207,7 @@ export const FLOWS: Record<string, Flow> = {
       const s = (subs ?? []).filter((x) => lower === x.title.toLowerCase() || lower.startsWith(`${x.title.toLowerCase()} `)).sort((a, b) => b.title.length - a.title.length)[0]
       const minutes = Number(m[1])
       const d: Record<string, unknown> = {}, l: Record<string, string> = {}
-      if (minutes >= 1 && minutes <= 1440) { d.minutes = minutes; l.minutes = formatDuration(minutes) }
+      if (minutes >= 1 && minutes <= 1440) { d.minutes = minutes; l.minutes = minutesLabel(minutes) }
       if (s) {
         d.subject = s.id; l.subject = cut(s.title, 40)
         const mat = rest.slice(s.title.length).trim().slice(0, 200)
@@ -244,10 +230,10 @@ export const FLOWS: Record<string, Flow> = {
       },
       {
         key: 'minutes', label: 'Durasi',
-        ask: () => ({ q: 'Berapa lama belajarnya?', hint: 'Pilih tombol, atau ketik jumlah menit.', choices: ['15', '25', '30', '45', '60', '90'].map((v) => ({ text: formatDuration(Number(v)), v })), perRow: 3, typing: true }),
+        ask: () => ({ q: 'Berapa lama belajarnya?', hint: 'Pilih tombol, atau ketik jumlah menit.', choices: ['15', '25', '30', '45', '60', '90'].map((v) => ({ text: minutesLabel(Number(v)), v })), perRow: 3, typing: true }),
         accept: (_c, _s, { text, choice }) => {
           const n = Number(choice ?? (text ?? '').replace(/\D/g, ''))
-          return Number.isInteger(n) && n >= 1 && n <= 1440 ? { value: n, label: formatDuration(n) } : { error: 'Durasi harus 1–1440 menit.' }
+          return Number.isInteger(n) && n >= 1 && n <= 1440 ? { value: n, label: minutesLabel(n) } : { error: 'Durasi harus 1–1440 menit.' }
         },
       },
       textStep('material', 'Materi', 'Materi apa yang dipelajari?', 'Mis. <i>Middleware & proxy</i>. Atau tekan Lewati.', { optional: true }),
@@ -264,22 +250,31 @@ export const FLOWS: Record<string, Flow> = {
 
   ingat: {
     title: 'Ingatkan saya',
+    init: async (ctx, arg) => {
+      if (!arg) return {}
+      // "jam 4 sore angkat jemuran" → pesan & waktu langsung terisi
+      const p = splitReminder(arg, ctx.tz)
+      const d: Record<string, unknown> = {}, l: Record<string, string> = {}
+      if (p.label) { d.label = p.label.slice(0, 200); l.label = cut(p.label, 60) }
+      if (p.at) { d.at = p.at; l.at = whenLabel(p.at, ctx.tz) }
+      return { d, l }
+    },
     steps: [
       textStep('label', 'Pesan', 'Ingatkan tentang apa?', 'Mis. <i>Minum obat</i>, <i>Telepon ibu</i>, <i>Angkat jemuran</i>'),
       {
         key: 'at', label: 'Waktu',
-        ask: () => ({ q: 'Kapan diingatkan?', hint: 'Pilih tombol, atau ketik mis. <code>45m</code>, <code>14.30</code>, <code>besok 08.00</code>', choices: [{ text: '15 menit lagi', v: 'r15' }, { text: '30 menit lagi', v: 'r30' }, { text: '1 jam lagi', v: 'r60' }, { text: '3 jam lagi', v: 'r180' }, { text: 'Besok 09.00', v: 'b09' }], perRow: 2, typing: true }),
+        ask: () => ({ q: 'Kapan diingatkan?', hint: 'Pilih tombol, atau ketik mis. <code>45 menit</code>, <code>jam 4 sore</code>, <code>besok pagi</code>', choices: [{ text: '15 menit lagi', v: 'r15' }, { text: '30 menit lagi', v: 'r30' }, { text: '1 jam lagi', v: 'r60' }, { text: '3 jam lagi', v: 'r180' }, { text: 'Besok 09.00', v: 'b09' }], perRow: 2, typing: true }),
         accept: (ctx, _s, { text, choice }) => {
           let iso: string | null = null
           if (choice?.startsWith('r')) iso = new Date(Date.now() + Number(choice.slice(1)) * 60_000).toISOString()
           else if (choice === 'b09') iso = zonedToIso(`${addDays(todayIn(ctx.tz), 1)}T09:00`, ctx.tz)
           else if (text) {
-            const min = parseDuration(text)
-            iso = min ? new Date(Date.now() + min * 60_000).toISOString() : parseWhen(text, ctx.tz, '09:00')
+            iso = splitReminder(text, ctx.tz).at
+            if (!iso && extractWhen(text, ctx.tz)) return { error: 'Waktunya sudah lewat. Pilih waktu yang akan datang.' }
           }
-          if (!iso) return { error: 'Waktu tidak dikenali. Contoh: <code>45m</code>, <code>14.30</code>, <code>besok 08.00</code>.' }
+          if (!iso) return { error: 'Waktunya belum terbaca. Contoh: <code>45 menit</code>, <code>jam 4 sore</code>, <code>besok jam 8</code>.' }
           if (new Date(iso).getTime() <= Date.now()) return { error: 'Waktunya sudah lewat. Pilih waktu yang akan datang.' }
-          return { value: iso, label: formatShort(iso, ctx.tz) }
+          return { value: iso, label: whenLabel(iso, ctx.tz) }
         },
       },
     ],
@@ -310,7 +305,7 @@ export const FLOWS: Record<string, Flow> = {
         accept: (_c, st, { text, choice }) => {
           const n = choice ? Number(choice) : parseIdNumber(text ?? '')
           if (n === null || !Number.isFinite(n) || n === 0) return { error: 'Ketik angka selain 0.' }
-          return { value: n, label: st.d.metric === 'rupiah' ? formatRupiah(n) : st.d.metric === 'durasi' ? formatDuration(n) : formatNumber(n) }
+          return { value: n, label: st.d.metric === 'rupiah' ? formatRupiah(n) : st.d.metric === 'durasi' ? minutesLabel(n) : formatNumber(n) }
         },
       },
       textStep('note', 'Catatan', 'Ada catatan?', 'Ketik keterangan singkat, atau tekan Lewati.', { optional: true, max: 500 }),
@@ -370,10 +365,17 @@ function moneyFlow(type: 'pengeluaran' | 'pemasukan'): Flow {
       },
       {
         key: 'category', label: 'Kategori',
-        ask: async (ctx) => {
+        ask: async (ctx, st) => {
           const { data } = await ctx.db.from('transaction_categories').select('id, name').eq('user_id', ctx.userId).eq('type', type).order('name').limit(12)
           if (!(data ?? []).length) return { q: '', autoSkip: { value: null } }
-          return { q: 'Kategorinya apa?', choices: (data ?? []).map((c) => ({ text: c.name, v: c.id })), perRow: 2, optional: true }
+          // Tebak dari keterangan ("makan siang" → Makan & minum) dan taruh paling depan.
+          const g = guessCategory(String(st.d.note ?? ''), data ?? [])
+          const list = g ? [g, ...(data ?? []).filter((c) => c.id !== g.id)] : (data ?? [])
+          return {
+            q: 'Kategorinya apa?',
+            ...(g ? { hint: `Saran Rupi: <b>${esc(g.name)}</b> — tekan ✨ bila sesuai.` } : {}),
+            choices: list.map((c) => ({ text: c.id === g?.id ? `✨ ${c.name}` : c.name, v: c.id })), perRow: 2, optional: true,
+          }
         },
         accept: async (ctx, _s, { choice }) => {
           if (!choice) return { error: 'Pilih salah satu tombol.' }

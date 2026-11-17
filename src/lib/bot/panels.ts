@@ -1,5 +1,6 @@
 import 'server-only'
 import { addDays, startOfDayIso, todayIn } from '../dates'
+import { minutesLabel } from './when'
 import { formatDay, formatDuration, formatNumber, formatRupiah, formatShort, formatTime } from '../format'
 import { habitStats } from '../habits'
 import { EVENT_STATUS, JOURNAL_KIND, MOOD, PRIORITY, PROJECT_STATUS, RECURRENCE, TASK_STATUS, remindLabel } from '../labels'
@@ -584,8 +585,13 @@ export function helpPanel(): Panel {
   return {
     head: ['<b>Bantuan Rupi</b>', '<i>Semua fitur bisa dipakai lewat tombol. Perintah cepat:</i>'],
     sections: [
-      { title: 'Perintah', lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul [besok] [09.00]</i>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/timer <i>25 [keterangan]</i> — timer hitung mundur', '/ingatkan <i>30m / 14.30 / besok 08.00 pesan</i>', '/sore — tugas hari ini yang belum selesai', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
-      { title: 'Pesan bebas', lines: ['Kirim teks apa saja → pilih <b>simpan sebagai catatan</b> atau <b>jadikan tugas</b>.'] },
+      { title: 'Perintah', lines: ['/menu — ringkasan & menu utama', '/tugas — tugas & kegiatan', '/tambah <i>judul + waktu</i> — mis. <code>/tambah servis motor besok jam 2 siang</code>', '/kegiatan <i>nama + waktu</i> — mis. <code>/kegiatan kajian jumat jam 7 malam</code>', '/catat <i>isi catatan</i>', '/belajar <i>menit bidang materi</i>', '/keluar <i>jumlah keterangan</i> — pengeluaran', '/masuk <i>jumlah keterangan</i> — pemasukan', '/kalender · /target · /keuangan', '/timer <i>25 [keterangan]</i> — timer hitung mundur', '/ingatkan <i>waktu + pesan</i> — mis. <code>/ingatkan jam 4 sore angkat jemuran</code>', '/sore — tugas hari ini yang belum selesai', '/kebiasaan · /ringkasan · /pengingat', '/batal — batalkan isian', '/putus — putuskan bot'] },
+      { title: 'Pesan bebas', lines: [
+        'Kirim teks apa saja → pilih disimpan sebagai apa.',
+        'Ada waktunya? Mis. <code>rapat tim besok jam 9</code> — Rupi membacanya dan menawarkan jadi kegiatan, tugas, atau pengingat.',
+        'Awali dengan <i>ingatkan</i> untuk langsung membuat pengingat: <code>ingatkan aku 30 menit lagi angkat jemuran</code>.',
+      ] },
+      { title: 'Waktu yang dipahami', lines: ['<i>jam 14 · jam 4 sore · besok pagi · nanti malam · jumat 10.00 · senin depan · 20/11 · tgl 25 · 2 jam lagi · 3 hari lagi</i>'] },
     ],
     kb: [navRow('p:home')],
   }
@@ -595,7 +601,7 @@ export function helpPanel(): Panel {
 export function reminderText(t: { id: string; kind: string; title: string; due_at: string | null; start_at: string | null; end_at: string | null; location: string }, tz: string) {
   const at = anchorOf(t)
   const mins = at ? Math.round((new Date(at).getTime() - Date.now()) / 60_000) : null
-  const rel = mins === null ? '' : mins <= 0 ? 'sekarang' : mins < 60 ? `${mins} menit lagi` : `${formatDuration(mins)} lagi`
+  const rel = mins === null ? '' : mins <= 0 ? 'sekarang' : mins < 60 ? `${mins} menit lagi` : `${minutesLabel(mins)} lagi`
   const rows_: Array<[string, string]> = [
     [t.kind === 'kegiatan' ? 'Mulai' : t.due_at ? 'Tenggat' : 'Mulai', `${formatShort(at!, tz)}${t.kind === 'kegiatan' && t.end_at ? `–${formatTime(t.end_at, tz)}` : ''}`],
     ...(rel ? [['Waktu', rel] as [string, string]] : []),
