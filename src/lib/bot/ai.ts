@@ -143,7 +143,9 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
     const reply = String(r.data.balasan ?? '').trim().slice(0, 400)
     return reply ? { reply } : {}
   }
-  await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
+  const saved = await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
+  // Usulan tidak bisa disimpan → jangan tampilkan tombol yang tidak akan berfungsi.
+  if (saved.error) return { note: '⚠️ <i>Rupi AI belum bisa menyimpan usulan. Memakai mode biasa.</i>' }
   await sendMessageKb(ctx.chatId, [
     `✨ <b>Rupi AI memahami ${items.length > 1 ? `${items.length} hal` : 'ini'}:</b>`,
     '',
