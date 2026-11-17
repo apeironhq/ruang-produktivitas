@@ -568,7 +568,7 @@ export async function settingsPanel(ctx: Ctx): Promise<Panel> {
     sections: [
       { title: 'Akun', lines: [], table: [['Nama', plain(prof?.display_name || '—')], ['Zona waktu', prof?.timezone ?? 'Asia/Jakarta'], ['Telegram', conn?.username ? `@${conn.username}` : 'tertaut'], ...(conn ? [['Tertaut sejak', formatDay(dayOf(conn.linked_at, ctx.tz))] as [string, string]] : [])] },
       { title: 'Notifikasi otomatis', lines: [], table: [['Ringkasan pagi', on ? `Aktif · ${time.replace(':', '.')}` : 'Nonaktif'], ['Cek tugas sore', eveOn ? `Aktif · ${eveTime.replace(':', '.')}` : 'Nonaktif']] },
-      { title: 'Asisten AI', lines: [], table: [['Gemini', ai ? `${ai.enabled ? 'Aktif' : 'Nonaktif'} · kunci ••••${ai.key_hint}` : 'Belum diatur']] },
+      { title: 'Asisten AI', lines: [], table: [['Groq', ai ? `${ai.enabled ? 'Aktif' : 'Nonaktif'} · kunci ••••${ai.key_hint}` : 'Belum diatur']] },
       { lines: ['<i>Cek sore hanya dikirim bila masih ada tugas hari ini yang belum selesai. Pengingat tiap tugas diatur saat menambah tugas.</i>'] },
     ],
     kb: [
@@ -594,7 +594,7 @@ export function helpPanel(): Panel {
         'Ada waktunya? Mis. <code>rapat tim besok jam 9</code> — Rupi membacanya dan menawarkan jadi kegiatan, tugas, atau pengingat.',
         'Awali dengan <i>ingatkan</i> untuk langsung membuat pengingat: <code>ingatkan aku 30 menit lagi angkat jemuran</code>.',
       ] },
-      { title: 'Asisten AI (opsional)', lines: ['Tempel kunci Gemini milikmu di Pengaturan web → pesan bebas apa pun dipahami AI, satu pesan bisa jadi beberapa catatan sekaligus (tetap dikonfirmasi dulu).'] },
+      { title: 'Asisten AI (opsional)', lines: ['Tempel kunci Groq (gratis) milikmu di Pengaturan web → pesan bebas apa pun dipahami AI, satu pesan bisa jadi beberapa catatan sekaligus (tetap dikonfirmasi dulu).'] },
       { title: 'Waktu yang dipahami', lines: ['<i>jam 14 · jam 4 sore · besok pagi · nanti malam · jumat 10.00 · senin depan · 20/11 · tgl 25 · 2 jam lagi · 3 hari lagi</i>'] },
     ],
     kb: [navRow('p:home')],

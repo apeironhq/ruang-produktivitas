@@ -50,7 +50,7 @@ export default async function Page() {
             </div>
           </section>
           <section className="card" aria-labelledby="ai-title" id="ai">
-            <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Bot lebih pintar dengan Gemini — memakai kunci API milik Anda sendiri" />
+            <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Bot lebih pintar dengan AI Groq — memakai kunci API milik Anda sendiri (gratis)" />
             <div className="card-body">
               <AiCard telegram={!!c} info={a ? { enabled: a.enabled, hint: a.key_hint, updatedLabel: formatDateTime(a.updated_at, user.timezone) } : null} />
             </div>

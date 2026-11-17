@@ -2,25 +2,25 @@
 
 import { revalidatePath } from 'next/cache'
 import { dbError, fail, ok, type ActionState } from '@/lib/action'
-import { testGeminiKey } from '@/lib/ai/gemini'
+import { testAiKey } from '@/lib/ai/groq'
 import { createClient, getCurrentUser } from '@/lib/supabase/server'
 
-// Kunci AI Studio lama ("AIza…") maupun format baru ("AQ.Ab8…", mengandung titik).
+// Kunci Groq diawali "gsk_".
 const KEY_RE = /^[A-Za-z0-9._-]{20,300}$/
 
-/** Uji kunci ke Gemini lalu simpan terenkripsi (Supabase Vault). Kunci tidak pernah dikirim balik ke browser. */
+/** Uji kunci ke Groq lalu simpan terenkripsi (Supabase Vault). Kunci tidak pernah dikirim balik ke browser. */
 export async function saveAiKey(_: ActionState, formData: FormData): Promise<ActionState> {
   const key = String(formData.get('key') ?? '').trim()
-  if (!KEY_RE.test(key)) return fail('Format kunci tidak valid.', { key: 'Tempel kunci API dari Google AI Studio (diawali “AIza” atau “AQ.”), tanpa spasi.' })
+  if (!KEY_RE.test(key)) return fail('Format kunci tidak valid.', { key: 'Tempel kunci API dari console.groq.com (diawali “gsk_”), tanpa spasi.' })
   const user = await getCurrentUser()
   if (!user) return fail('Sesi berakhir. Silakan masuk kembali.')
-  const test = await testGeminiKey(key)
+  const test = await testAiKey(key)
   if (!test.ok && test.kind !== 'kuota') return fail(test.error, { key: test.error })
   const supabase = await createClient()
   const { error } = await supabase.rpc('ai_save_key', { p_key: key })
   if (error) return dbError(error)
   revalidatePath('/pengaturan')
-  return ok(test.ok ? 'Kunci tersimpan. Asisten AI aktif.' : 'Kunci tersimpan, tetapi kuota Gemini sedang habis — coba lagi nanti.')
+  return ok(test.ok ? 'Kunci tersimpan. Asisten AI aktif.' : 'Kunci tersimpan, tetapi batas pemakaian Groq sedang tercapai — coba lagi nanti.')
 }
 
 export async function setAiEnabled(on: boolean): Promise<ActionState> {

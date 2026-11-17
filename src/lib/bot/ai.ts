@@ -1,5 +1,5 @@
 import 'server-only'
-import { geminiJson } from '../ai/gemini'
+import { aiJson } from '../ai/groq'
 import { todayIn, weekdayMon0, zonedToIso } from '../dates'
 import { formatRupiah, formatTime } from '../format'
 import { sendChatAction, sendMessageKb } from '../telegram'
@@ -8,7 +8,7 @@ import { btn, cut, esc, longDay, type Ctx } from './ui'
 import { guessCategory, hhmmIn, minutesLabel, nextOccurrence, whenLabel } from './when'
 
 /*
- * Asisten AI (Gemini, kunci milik pengguna): pesan bebas → daftar aksi (tugas, kegiatan, pengingat,
+ * Asisten AI (Groq, kunci milik pengguna): pesan bebas → daftar aksi (tugas, kegiatan, pengingat,
  * pengeluaran, pemasukan, catatan). Tidak ada yang disimpan sebelum pengguna menekan ✅ Simpan semua (BT-04).
  */
 
@@ -23,31 +23,6 @@ interface Raw { actions?: RawAction[]; balasan?: string }
 const KINDS: AiKind[] = ['tugas', 'kegiatan', 'pengingat', 'pengeluaran', 'pemasukan', 'catatan']
 const MAX_ITEMS = 6
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
-
-const SCHEMA = {
-  type: 'OBJECT',
-  properties: {
-    actions: {
-      type: 'ARRAY',
-      items: {
-        type: 'OBJECT',
-        properties: {
-          type: { type: 'STRING', enum: KINDS },
-          judul: { type: 'STRING' },
-          waktu: { type: 'STRING', description: 'YYYY-MM-DDTHH:MM waktu lokal pengguna; string kosong bila tidak disebut' },
-          ulang: { type: 'STRING', enum: ['', 'harian', 'kerja', 'mingguan'] },
-          hari: { type: 'ARRAY', items: { type: 'INTEGER' }, description: 'untuk ulang=mingguan: 0=Senin … 6=Minggu' },
-          jumlah: { type: 'NUMBER', description: 'rupiah, bilangan bulat' },
-          durasi_menit: { type: 'INTEGER' },
-          lokasi: { type: 'STRING' },
-        },
-        required: ['type', 'judul'],
-      },
-    },
-    balasan: { type: 'STRING' },
-  },
-  required: ['actions'],
-}
 
 function systemPrompt(tz: string, now: Date): string {
   const today = todayIn(tz, now)
@@ -67,10 +42,14 @@ function systemPrompt(tz: string, now: Date): string {
     '- durasi_menit dan lokasi hanya untuk kegiatan, bila disebut.',
     `- Satu pesan boleh berisi beberapa aksi (maksimal ${MAX_ITEMS}).`,
     '- Bila pesan hanya sapaan, obrolan, atau pertanyaan dan tidak ada yang perlu dicatat: actions kosong, isi "balasan" singkat dan ramah (maks. 2 kalimat). Jangan mengarang data milik pengguna.',
+    '',
+    'Jawab HANYA dengan satu objek JSON berbentuk:',
+    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"balasan":""}',
+    'Isi "jumlah" hanya untuk uang, "hari" hanya untuk ulang mingguan, sisanya boleh 0 / "" / [].',
   ].join('\n')
 }
 
-/** Kunci Gemini pengguna bila Asisten AI aktif (null = nonaktif / belum diatur). */
+/** Kunci AI (Groq) pengguna bila Asisten AI aktif (null = nonaktif / belum diatur). */
 export async function aiKey(ctx: Pick<Ctx, 'db' | 'userId'>): Promise<string | null> {
   const { data } = await ctx.db.rpc('ai_get_key', { p_user: ctx.userId })
   return typeof data === 'string' && data ? data : null
@@ -157,7 +136,7 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   if (!key) return {}
   void sendChatAction(ctx.chatId, 'typing')
   const now = new Date()
-  const r = await geminiJson<Raw>(key, { system: systemPrompt(ctx.tz, now), prompt: text.slice(0, 2000), schema: SCHEMA })
+  const r = await aiJson<Raw>(key, { system: systemPrompt(ctx.tz, now), prompt: text.slice(0, 2000) })
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
   if (!items.length) {
