@@ -1130,9 +1130,9 @@ a.item-link:hover { background: var(--bg-subtle); }
 .stat-tiles { display: grid; gap: 0.6rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .stat-tiles.auto { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 @media (max-width: 640px) { .stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.stat-tile { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0.7rem 0.85rem; border-radius: var(--r-sm); background: var(--bg-subtle); border: 1px solid var(--border); }
+.stat-tile { container-type: inline-size; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0.7rem 0.85rem; border-radius: var(--r-sm); background: var(--bg-subtle); border: 1px solid var(--border); }
 .stat-label { font-size: var(--fs-micro); color: var(--text-muted); }
-.stat-value { font-size: 1.125rem; font-weight: var(--fw-medium); color: var(--text-heading); overflow-wrap: anywhere; }
+.stat-value { font-size: clamp(0.8125rem, 12.5cqi, 1.125rem); font-weight: var(--fw-medium); color: var(--text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat-sub { font-size: var(--fs-micro); color: var(--text-muted); }
 .stat-tile.ok { background: var(--ok-soft); border-color: var(--ok-border); }
 .stat-tile.ok .stat-label, .stat-tile.ok .stat-value, .stat-tile.ok .stat-sub { color: var(--ok); }
@@ -1282,3 +1282,16 @@ a.item-link:hover { background: var(--bg-subtle); }
 .form-more > summary:hover { background: var(--bg-subtle); }
 .form-more[open] > summary { border-bottom: 1px solid var(--border); }
 .form-more > .form-stack { padding: 1rem; }
+
+/* Kartu angka sempit: ikon & pill selalu satu baris (grid), label di bawahnya; pill diringkas */
+@container (max-width: 250px) {
+  .kpi-top { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 0.5rem; row-gap: 0.6rem; }
+  .kpi-pill { justify-self: end; margin-left: 0; max-width: 100%; }
+  .kpi-label { grid-column: 1 / -1; }
+  .kpi-pill .pill-rp, .kpi-pill svg { display: none; }
+}
+@media (max-width: 639.98px) {
+  /* Ringkasan Keuangan: kartu ke-4 (Selisih) selebar layar bila jumlah kartu genap */
+  .kpis-money > .kpi:last-child:nth-child(even) { grid-column: 1 / -1 !important; }
+  .hide-sm { display: none !important; }
+}

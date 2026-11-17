@@ -46,14 +46,14 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
   /** keterangan di bawah angka saat ada pill (menggantikan "Dibanding …") */
   note?: string
 }) {
-  let delta: { up: boolean; text: string; flat: boolean } | null = null
+  let delta: { up: boolean; text: string; flat: boolean; rp?: boolean } | null = null
   if (thisWeek !== undefined && lastWeek !== undefined) {
     const diff = thisWeek - lastWeek
     // Persen tidak bermakna bila pembanding 0 atau nilai uang berganti tanda (mis. saldo jadi minus) → tampilkan selisihnya.
     if (lastWeek === 0 || (money && (lastWeek < 0 || thisWeek < 0))) {
       const abs = Math.abs(diff)
-      const amt = duration ? formatDuration(abs) : money ? `Rp${formatCompact(abs)}` : formatNumber(abs)
-      delta = { up: diff >= 0, text: diff > 0 ? (duration || money ? `+${amt}` : `+${amt} baru`) : diff < 0 ? `−${amt}` : 'Tetap', flat: diff === 0 }
+      const amt = duration ? formatDuration(abs) : money ? formatCompact(abs) : formatNumber(abs)
+      delta = { up: diff >= 0, text: diff > 0 ? (duration || money ? `+${amt}` : `+${amt} baru`) : diff < 0 ? `−${amt}` : 'Tetap', flat: diff === 0, rp: !!money && diff !== 0 }
     }
     else {
       const pct = Math.round((diff / Math.abs(lastWeek)) * 100)
@@ -69,7 +69,7 @@ export function KpiCard({ label, value, unit, icon, color, series = [], thisWeek
         <span className="kpi-label">{label}</span>
         {delta && (
           <span className={`kpi-pill${delta.flat ? '' : delta.up !== !!invert ? ' up' : ' down'}`}>
-            {!delta.flat && (delta.up ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />)}{delta.text}
+            {!delta.flat && (delta.up ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />)}<span>{delta.rp ? <>{delta.text.slice(0, 1)}<span className="pill-rp">Rp</span>{delta.text.slice(1)}</> : delta.text}</span>
           </span>
         )}
       </div>

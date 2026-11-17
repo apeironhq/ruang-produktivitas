@@ -59,7 +59,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/transa
       <FinanceTabs />
 
       <section className="card" aria-labelledby="tx-title">
-        <SectionHead id="tx-title" icon={<Receipt size={18} />} title="Transaksi" desc={<>Bulan <span className="capitalize">{label}</span> · transfer digabung menjadi satu baris</>}>
+        <SectionHead quiet id="tx-title" icon={<Receipt size={18} />} title="Transaksi" desc={<>Bulan <span className="capitalize">{label}</span> · transfer digabung menjadi satu baris</>}>
           <MonthNav base="/keuangan/transaksi" label={label} prev={r.prev} next={r.next} isCurrent={month === today.slice(0, 7)} />
         </SectionHead>
         <FilterBar>

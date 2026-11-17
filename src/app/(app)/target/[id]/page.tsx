@@ -186,25 +186,20 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
               {events.length > 0 && <span className="badge">{events.length} kontribusi</span>}
             </SectionHead>
             {events.length === 0 ? <EmptyState icon={<History size={20} strokeWidth={1.75} />} title="Belum ada kontribusi" description="Catat kontribusi pertama untuk mulai melihat progres." /> : (
-              <div className="table-wrap" tabIndex={0}>
-                <table className="table table-stack">
-                  <thead><tr><th>Tanggal</th><th>Catatan</th><th className="num">Nilai</th><th><span className="sr-only">Aksi</span></th></tr></thead>
-                  <tbody>
-                    {events.map((e) => (
-                      <tr key={e.id}>
-                        <td data-label="Tanggal" className="whitespace-nowrap">{formatDay(e.occurred_on)}</td>
-                        <td data-label="Catatan" className="cell-primary">{e.note || <span className="text-caption">—</span>}</td>
-                        <td data-label="Nilai" className="num cell-strong" style={{ color: e.value < 0 ? 'var(--err)' : undefined }}>{e.value > 0 ? '+' : '−'}{formatMetric(Math.abs(e.value), goal.metric_type, goal.unit_label)}</td>
-                        <td data-label="" className="cell-actions">
-                          <div className="flex justify-end">
-                            <ConfirmButton action={deleteContribution.bind(null, e.id, goal.id)} title="Hapus kontribusi?" message="Nilai target akan dihitung ulang tanpa kontribusi ini."
-                              className="btn btn-ghost btn-sm btn-icon is-danger" ariaLabel="Hapus kontribusi"><Trash2 size={15} /></ConfirmButton>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="card-body py-1">
+                <ul className="items">
+                  {events.map((e) => (
+                    <li key={e.id} className="item">
+                      <div className="min-w-0 flex-1">
+                        <span className="item-title block truncate">{e.note || 'Kontribusi'}</span>
+                        <span className="item-sub">{formatDay(e.occurred_on)}</span>
+                      </div>
+                      <span className="cell-strong whitespace-nowrap" style={{ color: e.value < 0 ? 'var(--err)' : 'var(--text-heading)' }}>{e.value > 0 ? '+' : '−'}{formatMetric(Math.abs(e.value), goal.metric_type, goal.unit_label)}</span>
+                      <ConfirmButton action={deleteContribution.bind(null, e.id, goal.id)} title="Hapus kontribusi?" message="Nilai target akan dihitung ulang tanpa kontribusi ini."
+                        className="btn btn-ghost btn-sm btn-icon is-danger -mr-2" ariaLabel="Hapus kontribusi"><Trash2 size={15} /></ConfirmButton>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </section>

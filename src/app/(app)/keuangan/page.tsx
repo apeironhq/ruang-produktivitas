@@ -81,11 +81,11 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
       ) : (
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-caption">Ringkasan arus kas bulan <span className="capitalize">{label}</span>. Transfer antarrekening tidak dihitung.</p>
+            <p className="text-caption page-desc">Ringkasan arus kas bulan <span className="capitalize">{label}</span>. Transfer antarrekening tidak dihitung.</p>
             <MonthNav base="/keuangan" label={label} prev={r.prev} next={r.next} isCurrent={month === today.slice(0, 7)} />
           </div>
 
-          <div className="kpis kpis-4">
+          <div className="kpis kpis-4 kpis-money">
             <KpiCard label="Total saldo" value={null} display={formatRupiah(totalBalance)} icon={<Wallet size={20} strokeWidth={1.9} />} color="var(--c-blue)" href="/keuangan/rekening"
               series={fin?.balanceSeries} thisWeek={totalBalance} lastWeek={fin?.balanceBefore} money compare={['30 hari lalu', '30 hari lalu']}
               note={totalAllocated ? `${formatRupiah(totalAllocated)} teralokasi · vs 30 hari lalu` : undefined} />

@@ -61,7 +61,7 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
       <section className="card" aria-labelledby="habit-title">
         <SectionHead id="habit-title" icon={<Repeat size={18} />} title={showArchived ? 'Kebiasaan diarsipkan' : 'Kebiasaan aktif'}
           desc={showArchived ? 'Riwayat check-in tetap tersimpan' : <>{formatDay(today, { weekday: 'long', day: 'numeric', month: 'long' })} · ketuk kotak untuk mengisi</>}>
-          {shown.length > 0 && <span className="badge">{shown.length} kebiasaan</span>}
+          {shown.length > 0 && <span className="badge hide-sm">{shown.length} kebiasaan</span>}
         </SectionHead>
         {shown.length === 0 ? (
           <EmptyState icon={<Repeat size={20} strokeWidth={1.75} />} title={showArchived ? 'Tidak ada kebiasaan diarsipkan' : 'Belum ada kebiasaan'}
