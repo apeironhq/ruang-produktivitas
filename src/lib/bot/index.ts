@@ -453,7 +453,10 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       if (act === 'q') { // hentikan pomodoro
         const { data: gone } = await db.from('bot_timers').delete().eq('user_id', ctx.userId).in('kind', ['fokus', 'rehat']).is('sent_at', null).select('id')
         answerNow(gone?.length ? 'Pomodoro dihentikan' : 'Pomodoro sudah tidak berjalan')
-        await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🍅 Mulai lagi', 'tm:p:25'), btn('🏠 Menu', 'p:home')]])
+        // Dari panel Timer & Pengingat → perbarui panelnya; dari pesan sesi → cukup ganti tombolnya.
+        const fromPanel = (msg.reply_markup?.inline_keyboard ?? []).flat().some((x) => x.callback_data === 'f:ingat')
+        if (fromPanel) await showPanel(ctx, await timerPanel(ctx, gone?.length ? '<b>Pomodoro dihentikan.</b>' : undefined), msg)
+        else await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🍅 Mulai lagi', 'tm:p:25'), btn('🏠 Menu', 'p:home')]])
         return 'selesai'
       }
       if (act === 'ok') { answerNow('Oke'); await editMessageReplyMarkup(ctx.chatId, msg.message_id, [[btn('🏠 Menu', 'p:home')]]); return 'selesai' }
