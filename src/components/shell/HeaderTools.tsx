@@ -1,10 +1,10 @@
 'use client'
 
-import { AlertCircle, Award, Bell, BookOpen, CalendarClock, CheckSquare, Clock, CornerDownLeft, FolderKanban, History, NotebookPen, Repeat, Search, Target, X } from 'lucide-react'
+import { AlertCircle, Award, Bell, BookOpen, CalendarClock, CheckCheck, CheckSquare, Clock, CornerDownLeft, FolderKanban, History, NotebookPen, Repeat, Search, Target, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
-import { globalSearch, loadNotifications, type Notif, type SearchHit, type SearchKind } from '@/app/(app)/header-actions'
+import { globalSearch, loadNotifications, markNotificationsRead, type Notif, type SearchHit, type SearchKind } from '@/app/(app)/header-actions'
 import { tint } from '@/components/ui/display'
 
 /* ------------------------------ util ------------------------------ */
@@ -170,14 +170,10 @@ const NOTIF_ICON: Record<Notif['kind'], { icon: React.ReactNode; color: string }
   kegiatan: { icon: <CalendarClock size={16} />, color: 'var(--c-lilac)' },
   lencana: { icon: <Award size={16} />, color: 'var(--c-rose)' },
 }
-const SEEN_KEY = 'rp_notif_seen'
-
-/** Lonceng: angka = tugas terlambat + tenggat & kegiatan hari ini; titik = lencana baru sejak dibuka terakhir. */
+/** Lonceng: angka = notifikasi yang belum dibaca. Tiap notifikasi bisa ditandai dibaca (centang) atau dibuka. */
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
-  const [data, setData] = useState<{ items: Notif[]; actionable: number } | null>(null)
-  // Dibaca sekali saat dibuat; data notifikasi baru datang setelah hidrasi, jadi tidak ada beda server/klien.
-  const [seen, setSeen] = useState<string>(() => { try { return typeof window === 'undefined' ? '' : localStorage.getItem(SEEN_KEY) ?? '' } catch { return '' } })
+  const [data, setData] = useState<{ items: Notif[]; unread: number } | null>(null)
   const root = useRef<HTMLDivElement | null>(null)
   const pathname = usePathname()
   usePopover(open, setOpen, root)
@@ -186,51 +182,65 @@ export function NotificationBell() {
   useEffect(() => { loadNotifications().then(setData).catch(() => {}) }, [pathname])
 
   const items = data?.items ?? []
-  const freshBadge = items.some((i) => i.kind === 'lencana' && i.at > seen)
-  const count = data?.actionable ?? 0
+  const count = items.filter((i) => !i.read).length
+
+  // Ubah status di layar lebih dulu (terasa instan), lalu simpan; bila gagal, muat ulang dari server.
+  function markRead(keys: string[]) {
+    if (!keys.length) return
+    setData((d) => d && { ...d, items: d.items.map((i) => (keys.includes(i.key) ? { ...i, read: true } : i)) })
+    markNotificationsRead(keys).then((r) => { if (!r.ok) loadNotifications().then(setData).catch(() => {}) }).catch(() => {})
+  }
+
+  const fresh = items.filter((i) => !i.read)
+  const seen = items.filter((i) => i.read)
+  const row = (n: Notif) => {
+    const k = NOTIF_ICON[n.kind]
+    return (
+      <li key={n.key} className={`notif-item${n.read ? ' is-read' : ''}`}>
+        <Link href={n.href} className="notif-row" onClick={() => { if (!n.read) markRead([n.key]); setOpen(false) }}>
+          <span className="search-ico" style={n.kind === 'terlambat' ? { color: 'var(--err)', background: 'var(--err-soft)' } : tint(k.color)} aria-hidden="true">{k.icon}</span>
+          <span className="min-w-0 flex-1"><span className="search-title">{n.title}</span><span className={`search-sub${n.kind === 'terlambat' && !n.read ? ' overdue' : ''}`}>{n.sub}</span></span>
+          {!n.read && <span className="notif-dot" role="img" aria-label="Belum dibaca" />}
+        </Link>
+      </li>
+    )
+  }
 
   function toggle() {
     const next = !open
     setOpen(next)
-    if (next) {
-      loadNotifications().then(setData).catch(() => {})
-      const now = new Date().toISOString()
-      try { localStorage.setItem(SEEN_KEY, now) } catch { /* abaikan */ }
-      setSeen(now)
-    }
+    if (next) loadNotifications().then(setData).catch(() => {})
   }
 
-  const label = count ? `Notifikasi, ${count} perlu perhatian` : 'Notifikasi'
+  const label = count ? `Notifikasi, ${count} belum dibaca` : 'Notifikasi'
   return (
     <div ref={root} className="relative">
       <button type="button" className="hdr-btn" aria-label={label} aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
         <Bell size={19} />
-        {count > 0 ? <span className="hdr-count">{count > 9 ? '9+' : count}</span> : freshBadge ? <span className="hdr-dot" aria-hidden="true" /> : null}
+        {count > 0 && <span className="hdr-count">{count > 9 ? '9+' : count}</span>}
       </button>
       {open && (
         <div className="menu notif-pop" role="dialog" aria-label="Notifikasi">
           <div className="notif-head">
-            <span className="text-label">Notifikasi</span>
-            {count > 0 && <span className="text-caption">{count} perlu perhatian</span>}
+            <div className="min-w-0">
+              <span className="text-label block">Notifikasi</span>
+              <span className="text-caption">{count ? `${count} belum dibaca` : items.length ? 'Semua sudah dibaca' : 'Tidak ada notifikasi'}</span>
+            </div>
+            {count > 0 && (
+              <button type="button" className="notif-all" onClick={() => markRead(fresh.map((i) => i.key))}>
+                <CheckCheck size={15} aria-hidden="true" />Tandai semua dibaca
+              </button>
+            )}
           </div>
           {data === null ? (
             <p className="search-empty">Memuat…</p>
           ) : items.length === 0 ? (
             <div className="notif-empty"><Bell size={20} aria-hidden="true" /><span>Semua beres. Tidak ada yang perlu dikejar hari ini.</span></div>
           ) : (
-            <ul className="notif-list">
-              {items.map((n) => {
-                const k = NOTIF_ICON[n.kind]
-                return (
-                  <li key={n.key}>
-                    <Link href={n.href} className="notif-row" onClick={() => setOpen(false)}>
-                      <span className="search-ico" style={n.kind === 'terlambat' ? { color: 'var(--err)', background: 'var(--err-soft)' } : tint(k.color)} aria-hidden="true">{k.icon}</span>
-                      <span className="min-w-0 flex-1"><span className="search-title">{n.title}</span><span className={`search-sub${n.kind === 'terlambat' ? ' overdue' : ''}`}>{n.sub}</span></span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+            <div className="notif-scroll">
+              {fresh.length > 0 && <><p className="notif-group">Baru</p><ul className="notif-list">{fresh.map(row)}</ul></>}
+              {seen.length > 0 && <><p className="notif-group">Sudah dibaca</p><ul className="notif-list">{seen.map(row)}</ul></>}
+            </div>
           )}
           <div className="notif-foot"><Link href="/tugas?tab=hari-ini" className="link-sm" onClick={() => setOpen(false)}>Lihat tugas hari ini</Link></div>
         </div>

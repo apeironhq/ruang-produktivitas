@@ -1077,10 +1077,23 @@ a.item-link:hover { background: var(--bg-subtle); }
 .search-empty { padding: 0.75rem 0.6rem; font-size: var(--fs-caption); color: var(--text-muted); }
 
 .notif-pop { width: min(360px, calc(100vw - 2rem)); padding: 0; overflow: hidden; }
-.notif-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
+.notif-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
 .notif-list { list-style: none; margin: 0; padding: 0.35rem; max-height: 380px; overflow-y: auto; }
-.notif-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.6rem; border-radius: var(--r-sm); }
+.notif-scroll { max-height: 400px; overflow-y: auto; padding: 0.25rem 0.35rem 0.4rem; }
+.notif-scroll .notif-list { max-height: none; overflow: visible; padding: 0; }
+.notif-group { padding: 0.6rem 0.6rem 0.3rem; font-size: var(--fs-micro); font-weight: var(--fw-medium); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--text-faint); }
+.notif-item { border-radius: var(--r-sm); }
+.notif-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; border-radius: var(--r-sm); }
 .notif-row:hover { background: var(--bg-subtle); }
+/* Belum dibaca: latar biru sangat lembut, judul tebal, titik biru di kanan. Sudah dibaca: teks biasa. */
+.notif-item:not(.is-read) .notif-row { background: color-mix(in srgb, var(--brand) 5%, transparent); }
+.notif-item:not(.is-read) .notif-row:hover { background: color-mix(in srgb, var(--brand) 9%, transparent); }
+.notif-item:not(.is-read) .search-title { font-weight: var(--fw-semibold); color: var(--text-heading); }
+.notif-item.is-read .search-title { color: var(--text-body); }
+.notif-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 999px; background: var(--brand); }
+.notif-list + .notif-group { margin-top: 0.25rem; }
+.notif-all { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px; padding: 0 0.6rem; margin-right: -0.4rem; border: 0; border-radius: var(--r-sm); background: none; font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--brand); white-space: nowrap; cursor: pointer; }
+.notif-all:hover { background: var(--brand-soft); }
 .notif-empty { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1.75rem 1rem; text-align: center; font-size: var(--fs-caption); color: var(--text-muted); }
 .notif-empty svg { color: var(--text-faint); }
 .notif-foot { padding: 0.65rem 1rem; border-top: 1px solid var(--border); text-align: center; }
@@ -1297,4 +1310,42 @@ a.item-link:hover { background: var(--bg-subtle); }
   /* Ringkasan Keuangan: kartu ke-4 (Selisih) selebar layar bila jumlah kartu genap */
   .kpis-money > .kpi:last-child:nth-child(even) { grid-column: 1 / -1 !important; }
   .hide-sm { display: none !important; }
+}
+
+/* Panel notifikasi: lebih ringkas dari kartu biasa, tiap notifikasi berjarak */
+.notif-pop .notif-head { padding: 0.7rem 0.9rem; }
+.notif-pop .notif-head .text-label { font-size: var(--fs-label); }
+.notif-pop .notif-head .text-caption { font-size: var(--fs-micro); }
+/* Pola daftar notifikasi: baris selebar panel dipisah garis tipis, bukan kotak-kotak */
+.notif-pop .notif-scroll { padding: 0; }
+.notif-scroll .notif-list { display: flex; flex-direction: column; gap: 0; }
+.notif-pop .notif-item { border-radius: 0; border-bottom: 1px solid var(--border); }
+.notif-pop .notif-item:last-child { border-bottom: 0; }
+.notif-pop .notif-row { border-radius: 0; padding: 0.7rem 0.9rem; gap: 0.65rem; }
+.notif-pop .notif-item:not(.is-read) .notif-row { background: color-mix(in srgb, var(--brand) 4%, transparent); }
+.notif-pop .notif-group { padding: 0.6rem 0.9rem 0.4rem; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
+.notif-pop .notif-list + .notif-group { margin-top: 0; border-top: 1px solid var(--border); }
+.notif-pop .search-ico { width: 28px; height: 28px; border-radius: 8px; }
+.notif-pop .search-ico svg { width: 14px; height: 14px; }
+.notif-pop .search-title { font-size: 0.8125rem; line-height: 1.35; }
+.notif-pop .search-sub { font-size: 0.71875rem; line-height: 1.4; margin-top: 1px; }
+.notif-pop .notif-group { padding: 0.55rem 0.55rem 0.35rem; font-size: 0.6875rem; }
+.notif-pop .notif-dot { width: 7px; height: 7px; }
+.notif-pop .notif-foot { padding: 0.55rem 1rem; }
+.notif-pop .notif-foot .link-sm { font-size: var(--fs-caption); }
+.notif-pop .notif-all { font-size: var(--fs-micro); }
+
+/* Notifikasi lebih kecil & tidak tebal: yang baru cukup ditandai titik biru + teks lebih gelap */
+.notif-pop .search-title, .notif-pop .notif-item:not(.is-read) .search-title { font-weight: 400; font-size: 0.78125rem; line-height: 1.35; }
+.notif-pop .notif-item:not(.is-read) .search-title { color: var(--text-heading); }
+.notif-pop .notif-item.is-read .search-title { color: var(--text-muted); }
+.notif-pop .search-sub { font-size: 0.6875rem; }
+.notif-pop .search-ico { width: 26px; height: 26px; border-radius: 7px; }
+.notif-pop .search-ico svg { width: 13px; height: 13px; }
+.notif-pop .notif-row { padding: 0.55rem 0.85rem; gap: 0.6rem; }
+.notif-pop .notif-head .text-label { font-size: 0.8125rem; font-weight: var(--fw-medium); }
+.notif-pop .notif-dot { width: 6px; height: 6px; }
+@media (max-width: 639.98px) {
+  .notif-pop .search-title, .notif-pop .notif-item:not(.is-read) .search-title { font-size: 0.75rem; }
+  .notif-pop .notif-row { padding: 0.5rem 0.8rem; }
 }

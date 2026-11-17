@@ -34,13 +34,13 @@ export async function globalSearch(raw: string): Promise<SearchHit[]> {
 }
 
 export type NotifKind = 'terlambat' | 'hari-ini' | 'kegiatan' | 'lencana'
-export interface Notif { key: string; kind: NotifKind; title: string; sub: string; href: string; at: string }
+export interface Notif { key: string; kind: NotifKind; title: string; sub: string; href: string; at: string; read: boolean }
 
 /**
  * Notifikasi di header: tugas terlambat, tenggat & kegiatan hari ini (perlu tindakan → dihitung di angka lonceng),
  * dan lencana yang baru diraih 7 hari terakhir.
  */
-export async function loadNotifications(): Promise<{ items: Notif[]; actionable: number } | null> {
+export async function loadNotifications(): Promise<{ items: Notif[]; unread: number } | null> {
   const user = await getCurrentUser()
   if (!user) return null
   const tz = user.timezone
@@ -57,7 +57,7 @@ export async function loadNotifications(): Promise<{ items: Notif[]; actionable:
     supabase.from('tasks').select('id, title, start_at, location').eq('kind', 'kegiatan').in('status', open).gte('start_at', dayStart).lt('start_at', dayEnd).order('start_at').limit(10),
     supabase.from('user_achievements').select('id, earned_at, achievements(name)').gte('earned_at', weekAgo).order('earned_at', { ascending: false }).limit(5),
   ])
-  const items: Notif[] = [
+  const raw: Omit<Notif, 'read'>[] = [
     ...(late.data ?? []).map((t) => ({ key: `late-${t.id}`, kind: 'terlambat' as const, title: t.title, sub: `Terlambat · tenggat ${formatShort(t.due_at!, tz)}`, href: `/tugas/${t.id}`, at: t.due_at! })),
     ...(dueToday.data ?? []).map((t) => ({ key: `due-${t.id}`, kind: 'hari-ini' as const, title: t.title, sub: `Tenggat hari ini · ${formatTime(t.due_at!, tz)}`, href: `/tugas/${t.id}`, at: t.due_at! })),
     ...(events.data ?? []).map((t) => ({ key: `ev-${t.id}`, kind: 'kegiatan' as const, title: t.title, sub: `Kegiatan hari ini · ${formatTime(t.start_at!, tz)}${t.location ? ` · ${t.location}` : ''}`, href: `/tugas/${t.id}`, at: t.start_at! })),
@@ -67,6 +67,25 @@ export async function loadNotifications(): Promise<{ items: Notif[]; actionable:
       return { key: `badge-${b.id}`, kind: 'lencana' as const, title: `Lencana baru: ${name ?? 'Pencapaian'}`, sub: `Diraih ${formatShort(b.earned_at, tz)}`, href: '/pencapaian', at: b.earned_at }
     }),
   ]
-  const actionable = items.filter((i) => i.kind !== 'lencana').length
-  return { items, actionable }
+  // Tandai yang sudah dibaca; yang belum dibaca tampil lebih dulu.
+  const reads = raw.length ? await supabase.from('notification_reads').select('key').in('key', raw.map((i) => i.key)) : { data: [] }
+  const readSet = new Set((reads.data ?? []).map((r) => r.key))
+  const items: Notif[] = raw.map((i) => ({ ...i, read: readSet.has(i.key) }))
+  items.sort((a, b) => Number(a.read) - Number(b.read))
+  return { items, unread: items.filter((i) => !i.read).length }
+}
+
+const NOTIF_KEY = /^(late|due|ev|badge)-[0-9a-f-]{36}$/
+
+/** Tandai notifikasi sudah dibaca (satu, atau banyak untuk "Tandai semua dibaca"). Sekali dibaca tetap dibaca. */
+export async function markNotificationsRead(keys: string[]): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser()
+  if (!user) return { ok: false }
+  const valid = [...new Set(keys)].filter((k) => typeof k === 'string' && NOTIF_KEY.test(k)).slice(0, 50)
+  if (!valid.length) return { ok: true }
+  const supabase = await createClient()
+  const { error } = await supabase.from('notification_reads').upsert(valid.map((key) => ({ user_id: user.id, key })), { onConflict: 'user_id,key', ignoreDuplicates: true })
+  // Bersihkan catatan lama (notifikasinya sudah tidak relevan) agar tabel tetap kecil.
+  await supabase.from('notification_reads').delete().eq('user_id', user.id).lt('read_at', new Date(Date.now() - 60 * 86_400_000).toISOString())
+  return { ok: !error }
 }
