@@ -21,11 +21,15 @@ export type GeminiResult<T> = { ok: true; data: T } | { ok: false; error: string
 
 /** Pesan ramah untuk kegagalan umum. */
 function explain(status: number, body: string): { error: string; kind: 'kunci' | 'kuota' | 'jaringan' | 'lain' } {
-  if (status === 400 && /API_KEY_INVALID|API key not valid|API_KEY_SERVICE_BLOCKED|invalid authentication/i.test(body)) return { error: 'Kunci API Gemini tidak valid.', kind: 'kunci' }
-  if (status === 401 || status === 403) return { error: 'Kunci API Gemini ditolak (tidak punya akses).', kind: 'kunci' }
+  // Alasan asli dari Google (tidak pernah memuat kunci) agar masalahnya bisa dilacak.
+  let reason = ''
+  try { reason = String((JSON.parse(body) as { error?: { message?: string } }).error?.message ?? '') } catch { reason = '' }
+  const why = reason ? ` Alasan Google: ${reason.replace(/\s+/g, ' ').slice(0, 160)}` : ` (HTTP ${status})`
+  if (status === 400 && /API_KEY_INVALID|API key not valid|API_KEY_SERVICE_BLOCKED|invalid authentication/i.test(body)) return { error: `Kunci API Gemini tidak valid.${why}`, kind: 'kunci' }
+  if (status === 401 || status === 403) return { error: `Kunci API Gemini ditolak.${why}`, kind: 'kunci' }
   if (status === 429) return { error: 'Kuota Gemini sedang habis. Coba lagi nanti.', kind: 'kuota' }
-  if (status >= 500) return { error: 'Layanan Gemini sedang bermasalah.', kind: 'jaringan' }
-  return { error: `Gemini menolak permintaan (HTTP ${status}).`, kind: 'lain' }
+  if (status >= 500) return { error: `Layanan Gemini sedang bermasalah.${why}`, kind: 'jaringan' }
+  return { error: `Gemini menolak permintaan.${why}`, kind: 'lain' }
 }
 
 /** Kunci format baru ("AQ.…") dicoba juga ke Vertex AI bila Gemini API menolaknya. */
