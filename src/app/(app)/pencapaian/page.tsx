@@ -85,7 +85,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
           </div>
         </SectionHead>
         <div className="card-body">
-          <div className="kpis kpis-4">
+          <div className="kpis kpis-4 kpis-summary">
             <KpiCard label="Tugas selesai" value={sDone.cur} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-blue)" series={sDone.series} thisWeek={sDone.cur} lastWeek={sDone.prev} compare={cmp} />
             <KpiCard label="Waktu belajar" value={sMin.cur} display={formatDuration(sMin.cur)} duration icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={sMin.series} thisWeek={sMin.cur} lastWeek={sMin.prev} compare={cmp} />
             <KpiCard label="Catatan ditulis" value={sNote.cur} icon={<NotebookPen size={20} strokeWidth={1.9} />} color="var(--c-rose)" series={sNote.series} thisWeek={sNote.cur} lastWeek={sNote.prev} compare={cmp} />

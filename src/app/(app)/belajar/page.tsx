@@ -63,8 +63,9 @@ export default async function Page({ searchParams }: PageProps<'/belajar'>) {
       <PageHead title="Ruang Belajar" description="Bidang belajar, sumber, modul, dan riwayat sesi — semua progres dihitung dari data."
         actions={<><NewSubjectButton goals={goals} className="btn btn-secondary" /><SessionButton subjects={bundles} today={today} /></>} />
 
-      <div className="kpis kpis-4">
-        <KpiCard label="Bidang aktif" value={subjects.filter((s) => s.status === 'aktif').length} icon={<BookOpen size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${subjects.filter((s) => s.status === 'selesai').length} selesai`} />
+      <div className="kpis kpis-4 kpis-summary">
+        <KpiCard label="Bidang aktif" value={subjects.filter((s) => s.status === 'aktif').length} icon={<BookOpen size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${subjects.filter((s) => s.status === 'selesai').length} dari ${subjects.filter((s) => s.status !== 'arsip').length} bidang selesai`}
+          progress={subjects.some((s) => s.status !== 'arsip') ? (subjects.filter((s) => s.status === 'selesai').length / subjects.filter((s) => s.status !== 'arsip').length) * 100 : 0} />
         <KpiCard label="Waktu belajar" duration value={thisWeek} display={formatDuration(thisWeek)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={days.map((d) => minutesByDay.get(d) ?? 0)} thisWeek={thisWeek} lastWeek={lastWeek} />
         <KpiCard label="Sesi 7 hari" value={sessionsWeek} icon={<Layers size={20} strokeWidth={1.9} />} color="var(--c-lilac)" series={days.map((d) => sessionsByDay.get(d) ?? 0)} thisWeek={sessionsWeek} lastWeek={sessionsPrev} />
         <KpiCard label="Modul selesai" value={doneModules} icon={<CheckCircle2 size={20} strokeWidth={1.9} />} color="var(--c-rose)" caption={`dari ${formatNumber(applicable.length)} modul`} progress={applicable.length ? (doneModules / applicable.length) * 100 : undefined} />

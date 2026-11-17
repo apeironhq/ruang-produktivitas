@@ -48,7 +48,9 @@ export default async function Page({ searchParams }: PageProps<'/kebiasaan'>) {
           caption={daily.length ? (doneTodayDaily === daily.length ? 'Semua kebiasaan harian tuntas' : `${daily.length - doneTodayDaily} kebiasaan harian tersisa`) : 'Belum ada kebiasaan harian'}
           progress={daily.length ? (doneTodayDaily / daily.length) * 100 : undefined} />
         <KpiCard label="Streak berjalan" value={null} display={`${currentBest} hari`} icon={<Flame size={20} strokeWidth={1.9} />} color="var(--c-peach)" caption="Check-in 7 hari terakhir" series={checksPerDay} />
-        <KpiCard label="Streak terbaik" value={null} display={`${bestStreak} hari`} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" href="/pencapaian" caption="Rekor sepanjang waktu · lihat lencana" />
+        <KpiCard label="Streak terbaik" value={null} display={`${bestStreak} hari`} icon={<Repeat size={20} strokeWidth={1.9} />} color="var(--c-lilac)" href="/pencapaian"
+          caption={bestStreak ? (currentBest >= bestStreak ? 'Streak berjalan menyamai rekor' : `${bestStreak - currentBest} hari lagi menyamai rekor`) : 'Rekor sepanjang waktu'}
+          progress={bestStreak ? (currentBest / bestStreak) * 100 : 0} />
       </div>
 
       <nav className="tabs" aria-label="Saring kebiasaan">

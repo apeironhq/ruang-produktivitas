@@ -86,7 +86,8 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
       <div className="kpis kpis-3">
         <KpiCard label="Progres modul" value={null} display={`${Math.round(pct)}%`} icon={<ListChecks size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${done} dari ${applicable.length} modul selesai`} progress={applicable.length ? pct : undefined} />
         <KpiCard label="Total waktu belajar" value={totalMinutes} display={formatDuration(totalMinutes)} icon={<Clock size={20} strokeWidth={1.9} />} color="var(--c-peach)" series={series14} thisWeek={wkNow} lastWeek={wkPrev} duration note={`${formatNumber((allMin.data ?? []).length)} sesi sejak awal · 7 hari vs sebelumnya`} />
-        <KpiCard label="Sumber belajar" value={sources.length} icon={<Library size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption={sources[0]?.position ? `Posisi terakhir: ${sources[0].position}` : 'Tautan, buku, video, kursus'} />
+        <KpiCard label="Sumber belajar" value={sources.length} icon={<Library size={20} strokeWidth={1.9} />} color="var(--c-lilac)" caption={sources.length ? `${sources.filter((x) => x.position).length} sedang dipelajari` : 'Tautan, buku, video, kursus'}
+          progress={sources.length ? (sources.filter((x) => x.position).length / sources.length) * 100 : 0} />
       </div>
 
       <div className="row-2">

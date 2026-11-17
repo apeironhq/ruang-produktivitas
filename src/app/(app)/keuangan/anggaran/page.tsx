@@ -39,6 +39,9 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
   const over = budgets.filter((b) => b.spent > b.limit).length
   const unbudgeted = [...spent.entries()].filter(([id]) => !budgets.some((b) => b.category_id === id))
   const label = monthLabel(month)
+  // Hari yang sudah berjalan di bulan ini — dibandingkan dengan bar "Terpakai" untuk melihat laju pengeluaran.
+  const daysInMonth = Number(r.last.slice(8))
+  const dayNow = month === today.slice(0, 7) ? Number(today.slice(8)) : month < today.slice(0, 7) ? daysInMonth : 0
 
   return (
     <div className="page">
@@ -47,7 +50,8 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
       <FinanceTabs />
 
       <div className="kpis kpis-3">
-        <KpiCard label="Total anggaran" value={null} display={formatRupiah(totalLimit)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${budgets.length} kategori`} />
+        <KpiCard label="Total anggaran" value={null} display={formatRupiah(totalLimit)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-blue)"
+          caption={`${budgets.length} kategori · hari ke-${dayNow} dari ${daysInMonth}`} progress={(dayNow / daysInMonth) * 100} />
         <KpiCard label="Terpakai" value={null} display={formatRupiah(totalSpent)} icon={<Rabbit size={20} strokeWidth={1.9} />} color="var(--c-rose)"
           progress={totalLimit ? (totalSpent / totalLimit) * 100 : undefined} progressColor={totalSpent > totalLimit ? 'var(--err)' : totalSpent >= totalLimit * 0.8 ? 'var(--p-amber)' : 'var(--ok)'}
           caption={totalLimit ? `${formatNumber(Math.floor((totalSpent / totalLimit) * 100))}% dari total anggaran` : 'Belum ada anggaran'} />

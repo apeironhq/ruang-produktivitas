@@ -627,6 +627,8 @@
   .kpis-summary .kpi-pill { order: 2; margin-left: auto; }
   .kpis-summary .kpi-label { order: 3; width: 100%; font-size: var(--fs-caption); }
   .kpis-summary .kpi-icon { width: 34px; height: 34px; }
+  .kpis-summary .kpi { padding: 0.9rem 0.85rem; }
+  .kpis-summary .kpi-pill { padding: 0 0.4rem; gap: 0.15rem; }
   .kpis-summary .kpi-icon svg { width: 17px; height: 17px; }
   .kpis-summary .kpi-delta .long { display: none; }
   .kpis-summary .kpi-delta .short { display: inline; }
