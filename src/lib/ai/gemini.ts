@@ -5,8 +5,11 @@ import 'server-only'
  * Kunci tidak pernah dicatat ke log maupun dikirim ke tempat lain selain Google.
  */
 
-/** Alias "terbaru" agar tidak perlu ganti kode saat Google memperbarui model Flash. */
-export const GEMINI_MODEL = 'gemini-flash-latest'
+/**
+ * Alias "terbaru" agar tidak perlu ganti kode saat Google memperbarui model.
+ * Flash-Lite dipilih karena cepat (tanpa "berpikir" panjang) — cukup untuk memahami pesan & menyusun JSON.
+ */
+export const GEMINI_MODEL = 'gemini-flash-lite-latest'
 /** Vertex AI (mode express) tidak mengenal alias "latest". */
 const VERTEX_MODEL = 'gemini-2.5-flash'
 const ENDPOINTS = {
@@ -59,14 +62,26 @@ export async function geminiJson<T>(key: string, opts: { system: string; prompt:
     systemInstruction: { parts: [{ text: opts.system }] },
     contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
     generationConfig: { responseMimeType: 'application/json', responseSchema: opts.schema, temperature: 0.1 },
-  }, opts.timeoutMs ?? 15000)
+  }, opts.timeoutMs ?? 20000)
   if (!r.ok) return r
   try { return { ok: true, data: JSON.parse(r.data) as T } } catch { return { ok: false, error: 'Jawaban Gemini tidak terbaca.', kind: 'lain' } }
 }
 
-/** Uji kunci dengan permintaan sangat kecil. */
+/**
+ * Uji kunci tanpa menyuruh model menjawab: cukup baca info model (cepat, tidak memakai kuota token).
+ * Kunci format baru ("AQ.…") yang ditolak Gemini API dicoba ke Vertex AI dengan permintaan sangat kecil.
+ */
 export async function testGeminiKey(key: string): Promise<GeminiResult<true>> {
-  const r = await generate(key, { contents: [{ role: 'user', parts: [{ text: 'Balas satu kata: ok' }] }] }, 15000)
-  // Jawaban kosong tetap berarti kuncinya diterima.
-  return r.ok || (r.kind === 'lain' && /tidak memberi jawaban/.test(r.error)) ? { ok: true, data: true } : r
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}`, {
+      headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(10000), cache: 'no-store',
+    })
+    if (res.ok) return { ok: true, data: true }
+    const e = explain(res.status, await res.text())
+    if (e.kind !== 'kunci' || !key.startsWith('AQ.')) return { ok: false, ...e }
+  } catch {
+    return { ok: false, error: 'Tidak bisa menghubungi Gemini. Coba lagi.', kind: 'jaringan' }
+  }
+  const v = await generateAt('vertex', key, { contents: [{ role: 'user', parts: [{ text: 'ok' }] }] }, 20000)
+  return v.ok || (v.kind === 'lain' && /tidak memberi jawaban/.test(v.error)) ? { ok: true, data: true } : v
 }
