@@ -76,15 +76,19 @@ export async function homePanel(ctx: Pick<Ctx, 'db' | 'userId' | 'tz' | 'name'>,
     nextTask.data?.due_at ? { at: nextTask.data.due_at, title: nextTask.data.title } : null,
     nextEvent.data?.start_at ? { at: nextEvent.data.start_at, title: nextEvent.data.title } : null,
   ].filter((x): x is { at: string; title: string } => !!x).sort((x, y) => x.at.localeCompare(y.at))[0]
+  const laterLine = later ? `Berikutnya: <b>${shortDay(dayOf(later.at, ctx.tz))}, ${formatTime(later.at, ctx.tz)}</b> · ${cut(later.title, 36)}` : null
   const agenda = [
     ...(late.length ? [`<b>${late.length} tugas terlambat</b>`, ...late.slice(0, 4), ...(late.length > 4 ? [`<i>+${late.length - 4} lainnya</i>`] : [])] : []),
     ...(late.length && rest.length ? [''] : []),
     ...rest,
     ...(nextUp ? ['', `⏰ Berikutnya <b>${formatTime(nextUp.at, ctx.tz)}</b> ${cut(nextUp.title, 30)} · <i>${until(nextUp.at)}</i>`] : []),
-    ...(!items.length && !late.length ? (later
-      ? ['Hari ini belum ada agenda.', `Berikutnya: <b>${shortDay(dayOf(later.at, ctx.tz))}, ${formatTime(later.at, ctx.tz)}</b> · ${cut(later.title, 36)}`]
+    ...(!items.length && !late.length ? (laterLine
+      ? ['Hari ini belum ada agenda.', laterLine]
       : ['Belum ada agenda. Ketik saja, mis. <code>rapat besok jam 9</code> atau tekan <b>Catat Cepat</b>.']) : []),
-    ...(items.length && !upcoming.length && !late.length ? ['', '<i>Semua agenda hari ini sudah lewat.</i>'] : []),
+    // Hanya tugas terlambat (tanpa agenda hari ini) → tetap tunjukkan agenda terdekat berikutnya.
+    ...(!items.length && late.length && laterLine ? ['', laterLine] : []),
+    // Semua agenda hari ini sudah lewat → beri tahu, lalu tunjukkan agenda terdekat berikutnya.
+    ...(items.length && !upcoming.length ? ['', '<i>Semua agenda hari ini sudah lewat.</i>', ...(laterLine ? [laterLine] : [])] : []),
   ]
   // Saran singkat Rupi sesuai keadaan hari ini.
   const doneHabits = new Set((checks.data ?? []).map((c) => c.habit_id))
