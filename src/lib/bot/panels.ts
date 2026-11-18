@@ -9,7 +9,7 @@ import { GOAL_COLUMNS, mergeProgress } from '../queries'
 import type { Goal, GoalProgressRow } from '../types'
 import { goalNumbers } from '../../app/(app)/target/GoalCard'
 import type { Keyboard } from '../telegram'
-import { OPEN, type Section, bar, btn, cut, dayOf, esc, tableHtml, greetingFor, link, longDay, mainKeyboard, navRow, rows, shortDay, type Ctx, type Panel } from './ui'
+import { OPEN, type Section, bar, btn, cut, dayOf, esc, greetingFor, link, longDay, mainKeyboard, navRow, rows, shortDay, type Ctx, type Panel } from './ui'
 
 /*
  * Gaya pesan: judul kartu tebal (satu ikon), isi kartu utama dalam kutipan, data berpasangan
@@ -205,7 +205,7 @@ export async function taskDetailPanel(ctx: Ctx, id: string): Promise<Panel | nul
     isTask
       ? ['Tenggat', t.due_at ? formatShort(t.due_at, ctx.tz) : '—']
       : ['Jadwal', `${t.start_at ? formatShort(t.start_at, ctx.tz) : '—'}${t.end_at ? `–${formatTime(t.end_at, ctx.tz)}` : ''}`],
-    ...(t.location ? [['Lokasi', plain(t.location, 60)] as [string, string]] : []),
+    ...(t.location ? [['Lokasi', plain(t.location)] as [string, string]] : []),
     ...(isTask ? [['Prioritas', PRIORITY[t.priority]?.label ?? t.priority] as [string, string]] : []),
     ...(t.category ? [['Kategori', plain(t.category)] as [string, string]] : []),
     ...(t.recurrence !== 'tidak' ? [['Ulangi', RECURRENCE[t.recurrence]?.label ?? ''] as [string, string]] : []),
@@ -389,9 +389,9 @@ export async function financePanel(ctx: Ctx): Promise<Panel> {
         table: [['Pemasukan', formatRupiah(inc)], ['Pengeluaran', formatRupiah(exp)], [inc - exp < 0 ? 'Defisit' : 'Sisa', formatRupiah(Math.abs(inc - exp))], ['Keluar hari ini', formatRupiah(expToday)]],
       },
       (accts.data ?? []).length
-        ? { title: 'Saldo rekening', lines: [], table: [...(accts.data ?? []).map((a) => [plain(a.name, 40), formatRupiah(balance.get(a.id) ?? 0)] as [string, string]), ['Total', formatRupiah(total)]] }
+        ? { title: 'Saldo rekening', lines: [], table: [...(accts.data ?? []).map((a) => [plain(a.name, 16), formatRupiah(balance.get(a.id) ?? 0)] as [string, string]), ['Total', formatRupiah(total)]] }
         : { title: 'Saldo rekening', lines: ['<i>Belum ada rekening — tambahkan di web.</i>'] },
-      ...(by.size ? [{ title: 'Pengeluaran terbesar', lines: [], table: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => [plain(cat.get(k) ?? 'Tanpa kategori', 40), `${formatRupiah(v)} (${exp ? (v / exp < 0.005 ? '<1' : Math.round((v / exp) * 100)) : 0}%)`] as [string, string]) }] : []),
+      ...(by.size ? [{ title: 'Pengeluaran terbesar', lines: [], table: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => [plain(cat.get(k) ?? 'Tanpa kategori', 16), `${formatRupiah(v)} (${exp ? (v / exp < 0.005 ? '<1' : Math.round((v / exp) * 100)) : 0}%)`] as [string, string]) }] : []),
       ...((recent.data ?? []).length ? [{ title: 'Transaksi terakhir', quote: 'expand' as const, lines: (recent.data ?? []).map((t) => `<b>${t.type === 'pemasukan' ? '+' : '−'}${formatRupiah(t.amount)}</b>  ${cut(t.note || cat.get(t.category_id ?? '') || '', 26)} <i>· ${formatDay(t.occurred_on)}</i>`) }] : []),
     ],
     kb: [[btn('💸 Pengeluaran', 'f:keluar'), btn('💵 Pemasukan', 'f:masuk')], navRow('p:home', '/keuangan')],
@@ -414,7 +414,7 @@ export async function learningPanel(ctx: Ctx): Promise<Panel> {
     sections: [
       { title: 'Ringkasan', lines: [], table: [['Total waktu', formatDuration(total)], ['Jumlah sesi', String(sess.data?.length ?? 0)]] },
       (subs.data ?? []).length
-        ? { title: 'Per bidang', lines: [], table: (subs.data ?? []).map((s) => [plain(s.title, 40), formatDuration(per.get(s.id) ?? 0)] as [string, string]) }
+        ? { title: 'Per bidang', lines: [], table: (subs.data ?? []).map((s) => [plain(s.title, 16), formatDuration(per.get(s.id) ?? 0)] as [string, string]) }
         : { title: 'Per bidang', lines: ['<i>Belum ada bidang aktif — tambahkan di web.</i>'] },
       ...((sess.data ?? []).length ? [{ title: 'Sesi terakhir', quote: 'expand' as const, lines: (sess.data ?? []).slice(0, 6).map((s) => `• ${formatDay(s.session_date)} — ${cut(name.get(s.subject_id) ?? 'Bidang', 22)} <b>${formatDuration(s.duration_minutes)}</b>${s.material ? ` <i>${cut(s.material, 24)}</i>` : ''}`) }] : []),
     ],
@@ -486,7 +486,7 @@ export async function badgesPanel(ctx: Ctx): Promise<Panel> {
     head: ['<b>Pencapaian</b>', `<i>${got.length} dari ${(defs ?? []).length} lencana diraih</i>`],
     sections: [
       got.length
-        ? { title: 'Sudah diraih', lines: [], table: got.map((d) => [plain(d.name, 40), formatDay(dayOf(at.get(d.id)!, ctx.tz))] as [string, string]) }
+        ? { title: 'Sudah diraih', lines: [], table: got.map((d) => [plain(d.name, 18), formatDay(dayOf(at.get(d.id)!, ctx.tz))] as [string, string]) }
         : { title: 'Sudah diraih', lines: ['<i>Belum ada — ayo mulai!</i>'] },
       { title: 'Belum diraih', quote: 'expand', lines: locked.map((d) => `• <b>${esc(d.name)}</b> — <i>${esc(d.description)}</i>`) },
     ],
@@ -520,12 +520,17 @@ export async function weeklyPanel(ctx: Ctx): Promise<Panel> {
   ]
   // Tabel 3 kolom: label | 7 hari ini | 7 hari sebelumnya, dengan tanda naik/turun.
   const cells = data.map(([l, [c, p], f, lowerBetter]) => ({ l, c: f(c), p: f(p), t: c === p ? ' ' : (c > p) !== lowerBetter ? '↑' : '↓' }))
+  const wl = Math.max(...cells.map((x) => x.l.length)), wc = Math.max(5, ...cells.map((x) => x.c.length)), wp = Math.max(7, ...cells.map((x) => x.p.length))
   return {
     head: ['<b>Ringkasan Mingguan</b>', `<i>${shortDay(cur)} – ${shortDay(today)} dibanding 7 hari sebelumnya</i>`],
     sections: [{
-      lines: cells.map((x) => `${x.t === '↑' ? '📈' : x.t === '↓' ? '📉' : '•'} ${esc(x.l)}: <b>${esc(x.c)}</b> <i>(sebelumnya ${esc(x.p)})</i>`),
+      lines: [],
+      pre: [
+        `${''.padEnd(wl)}  ${'Ini'.padStart(wc)}  ${'Sebelum'.padStart(wp)}`,
+        ...cells.map((x) => `${x.l.padEnd(wl)}  ${x.c.padStart(wc)}  ${x.p.padStart(wp)} ${x.t}`),
+      ],
     }],
-    foot: ['<i>📈 membaik · 📉 menurun</i>'],
+    foot: ['<i>↑ membaik · ↓ menurun</i>'],
     kb: [navRow('p:home', '/pencapaian')],
   }
 }
@@ -605,13 +610,14 @@ export function reminderText(t: { id: string; kind: string; title: string; due_a
   const rows_: Array<[string, string]> = [
     [t.kind === 'kegiatan' ? 'Mulai' : t.due_at ? 'Tenggat' : 'Mulai', `${formatShort(at!, tz)}${t.kind === 'kegiatan' && t.end_at ? `–${formatTime(t.end_at, tz)}` : ''}`],
     ...(rel ? [['Waktu', rel] as [string, string]] : []),
-    ...(t.location ? [['Lokasi', plain(t.location, 60)] as [string, string]] : []),
+    ...(t.location ? [['Lokasi', plain(t.location)] as [string, string]] : []),
   ]
+  const w = Math.max(...rows_.map((r) => r[0].length))
   return [
-    `🔔 <b>Pengingat ${t.kind === 'kegiatan' ? 'kegiatan' : 'tugas'}</b>`,
+    `<b>Pengingat ${t.kind === 'kegiatan' ? 'kegiatan' : 'tugas'}</b>`,
     '',
     `<b>${esc(t.title)}</b>`,
-    tableHtml(rows_),
+    `<pre>${esc(rows_.map(([l, v]) => `${l.padEnd(w)} : ${v}`).join('\n'))}</pre>`,
   ].join('\n')
 }
 

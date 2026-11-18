@@ -4,7 +4,7 @@ import { formatNumber, formatRupiah, parseIdNumber } from '../format'
 import { JOURNAL_KIND, MOOD } from '../labels'
 import { editMessageCaption, editMessageKb, editMessageReplyMarkup, sendMessageKb, type Keyboard } from '../telegram'
 import { createTimer, repeatText, splitReminder } from './timers'
-import { btn, cut, esc, rows, tableHtml, type Ctx } from './ui'
+import { btn, cut, esc, rows, tableText, type Ctx } from './ui'
 import { extractWhen, guessCategory, minutesLabel, whenLabel } from './when'
 
 /*
@@ -483,12 +483,12 @@ function summary(flow: Flow, st: FlowState) {
   const order = [...flow.steps.map((s) => s.key), ...Object.keys(st.l)]
   const seen = new Set<string>()
   const labelOf = (k: string) => flow.steps.find((s) => s.key === k)?.label ?? ({ repeat: 'Berulang', project: 'Proyek', goal: 'Target', task: 'Tugas', account: 'Rekening', amount: 'Jumlah', note: 'Keterangan', kind: 'Jenis', body: 'Isi' } as Record<string, string>)[k] ?? k
-  // Daftar "label: nilai": label tanpa ikon bawaan isian. Nilai disimpan ter-escape → kembalikan ke teks polos.
+  // Tabel monospace: label tanpa ikon, titik dua sejajar. Nilai disimpan ter-escape → kembalikan ke teks polos.
   const unesc = (v: string) => v.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
   const rows_ = order.filter((k) => !seen.has(k) && (seen.add(k), st.l[k] !== undefined))
     // buang ikon di depan label (bila ada) — jangan potong kata, mis. "Nama kegiatan"
     .map((k) => [labelOf(k).replace(/^[^\p{L}\p{N}]+\s+/u, ''), unesc(st.l[k]!)] as [string, string])
-  return rows_.length ? [tableHtml(rows_)] : []
+  return rows_.length ? [`<pre>${esc(tableText(rows_, 12))}</pre>`] : []
 }
 
 async function render(ctx: Ctx, flow: Flow, st: FlowState, error?: string) {
