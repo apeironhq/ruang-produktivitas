@@ -241,7 +241,10 @@ export function formatReply(s: string): string {
     const md = /^#{1,6}\s+/.test(line)
     line = line.replace(/^#{1,6}\s+/, '').replace(/^[-*]\s+/, '• ').replace(/^•(?=\S)/, '• ')
     let html = esc(line).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '')
-    const heading = md || /^<b>[^<]{1,60}<\/b>:?$/.test(html) || (/^[^•\d<].{0,48}:$/.test(line) && !line.includes('**'))
+    // Judul bagian: Markdown #, satu baris tebal pendek, baris pendek berakhiran ":", atau baris pendek
+    // yang diawali emoji tanpa tanda baca akhir (model kadang lupa menulis **).
+    const emojiTitle = /^\p{Extended_Pictographic}/u.test(line) && line.length <= 50 && !/[.!?,]$/.test(line)
+    const heading = md || emojiTitle || /^<b>[^<]{1,60}<\/b>:?$/.test(html) || (/^[^•\d<].{0,48}:$/.test(line) && !line.includes('**'))
     if (heading && !/^<b>.*<\/b>:?$/.test(html)) html = `<b>${html}</b>`
     if (heading) html = html.replace(/:(<\/b>)?$/, '$1').replace(/<\/b>:$/, '</b>')
     if (heading && out.length && out[out.length - 1] !== '') out.push('')
