@@ -1,5 +1,5 @@
 import 'server-only'
-import { aiJson } from '../ai/groq'
+import { aiJson, type AiConfig } from '../ai/client'
 import { addDays, todayIn, weekdayMon0, zonedToIso } from '../dates'
 import { formatRupiah, formatTime } from '../format'
 import { sendChatAction, sendMessageKb } from '../telegram'
@@ -8,7 +8,7 @@ import { btn, cut, esc, longDay, type Ctx } from './ui'
 import { guessCategory, hhmmIn, minutesLabel, nextOccurrence, whenLabel } from './when'
 
 /*
- * Asisten AI (Groq, kunci milik pengguna): pesan bebas → daftar aksi (tugas, kegiatan, pengingat,
+ * Asisten AI (Groq atau endpoint kustom seperti 9router, kunci milik pengguna): pesan bebas → daftar aksi (tugas, kegiatan, pengingat,
  * pengeluaran, pemasukan, catatan). Tidak ada yang disimpan sebelum pengguna menekan ✅ Simpan semua (BT-04).
  */
 
@@ -50,10 +50,12 @@ function systemPrompt(tz: string, now: Date): string {
   ].join('\n')
 }
 
-/** Kunci AI (Groq) pengguna bila Asisten AI aktif (null = nonaktif / belum diatur). */
-export async function aiKey(ctx: Pick<Ctx, 'db' | 'userId'>): Promise<string | null> {
-  const { data } = await ctx.db.rpc('ai_get_key', { p_user: ctx.userId })
-  return typeof data === 'string' && data ? data : null
+/** Konfigurasi AI pengguna bila Asisten AI aktif (null = nonaktif / belum diatur). */
+export async function aiConfig(ctx: Pick<Ctx, 'db' | 'userId'>): Promise<AiConfig | null> {
+  const { data } = await ctx.db.rpc('ai_get_config', { p_user: ctx.userId })
+  const row = (Array.isArray(data) ? data[0] : data) as { key?: string; base_url?: string; model?: string } | null | undefined
+  if (!row?.key) return null
+  return row.base_url ? { key: row.key, baseUrl: row.base_url, model: row.model ?? '' } : { key: row.key }
 }
 
 function normalize(raw: Raw, tz: string, now: Date): AiItem[] {
@@ -141,11 +143,11 @@ export function describe(i: AiItem, tz: string): string {
  * 'done' = usulan sudah dikirim; selain itu kembali ke mode biasa (dengan balasan / catatan bila ada).
  */
 export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?: string; note?: string }> {
-  const key = await aiKey(ctx)
-  if (!key) return {}
+  const cfg = await aiConfig(ctx)
+  if (!cfg) return {}
   void sendChatAction(ctx.chatId, 'typing')
   const now = new Date()
-  const r = await aiJson<Raw>(key, { system: systemPrompt(ctx.tz, now), prompt: text.slice(0, 2000) })
+  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx.tz, now), prompt: text.slice(0, 2000) })
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
   if (!items.length) {
