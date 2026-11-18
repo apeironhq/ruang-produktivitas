@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: PageProps<'/pengaturan'>) {
   const [conn, prof, ai] = await Promise.all([
     supabase.from('telegram_connections').select('username, linked_at').maybeSingle(),
     supabase.from('profiles').select('notification_settings').eq('id', user.id).maybeSingle(),
-    supabase.from('ai_settings').select('enabled, key_hint, updated_at, key_secret_id, base_url, model').maybeSingle(),
+    supabase.from('ai_settings').select('enabled, key_hint, updated_at, key_secret_id, base_url, model, share_data').maybeSingle(),
   ])
   const ns = (prof.data?.notification_settings ?? {}) as { digest?: boolean; digest_time?: string; evening?: boolean; evening_time?: string; tg_prompt?: unknown }
   const c = conn.data
@@ -104,7 +104,7 @@ export default async function Page({ searchParams }: PageProps<'/pengaturan'>) {
               <section className="card" aria-labelledby="ai-title">
                 <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Groq atau endpoint Anda sendiri (mis. 9router), kunci milik Anda" />
                 <div className="card-body">
-                  <AiCard telegram={!!c} info={a ? { enabled: a.enabled, hint: a.key_hint, baseUrl: a.base_url, model: a.model, updatedLabel: formatDateTime(a.updated_at, user.timezone) } : null} />
+                  <AiCard telegram={!!c} info={a ? { enabled: a.enabled, hint: a.key_hint, baseUrl: a.base_url, model: a.model, shareData: a.share_data, updatedLabel: formatDateTime(a.updated_at, user.timezone) } : null} />
                 </div>
               </section>
               <section className="card" aria-labelledby="ai-how-title">

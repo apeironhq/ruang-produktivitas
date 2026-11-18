@@ -1,8 +1,9 @@
 import 'server-only'
-import { aiJson, type AiConfig } from '../ai/client'
-import { addDays, todayIn, weekdayMon0, zonedToIso } from '../dates'
+import { aiJson, type AiConfig, type AiTurn } from '../ai/client'
+import { addDays, todayIn, zonedToIso } from '../dates'
 import { formatRupiah, formatTime } from '../format'
-import { sendChatAction, sendMessageKb } from '../telegram'
+import { sendChatAction, sendMessage, sendMessageKb } from '../telegram'
+import { dataSnapshot } from './aiContext'
 import { createTimer, repeatText } from './timers'
 import { btn, cut, esc, longDay, type Ctx } from './ui'
 import { guessCategory, hhmmIn, minutesLabel, nextOccurrence, whenLabel } from './when'
@@ -22,27 +23,51 @@ interface Raw { actions?: RawAction[]; balasan?: string }
 
 const KINDS: AiKind[] = ['tugas', 'kegiatan', 'pengingat', 'pengeluaran', 'pemasukan', 'catatan']
 const MAX_ITEMS = 6
-const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 
-function systemPrompt(tz: string, now: Date): string {
-  const today = todayIn(tz, now)
+function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | null, shared: boolean): string {
+  const today = todayIn(ctx.tz, now)
+  const name = ctx.name?.trim().split(/\s+/)[0] ?? ''
   return [
-    'Kamu adalah Rupi, asisten produktivitas berbahasa Indonesia di Telegram.',
-    'Ubah pesan pengguna menjadi daftar aksi pencatatan untuk aplikasi Ruang Produktivitas.',
-    `Sekarang: ${longDay(today)} (${DAY_NAMES[weekdayMon0(today)]}), pukul ${formatTime(now.toISOString(), tz)}, zona waktu ${tz}. Tanggal hari ini ${today}.`,
-    'Aturan:',
+    'Kamu adalah Rupi, asisten produktivitas di bot Telegram aplikasi Ruang Produktivitas.',
+    `Gaya: bahasa Indonesia santai dan hangat seperti teman yang rapi, ringkas (biasanya 1–4 kalimat), emoji secukupnya.${name ? ` Nama pengguna: ${name}.` : ''}`,
+    'Jangan menyebut dirimu model / buatan perusahaan AI tertentu; kamu cukup "Rupi".',
+    `Sekarang: ${longDay(today)}, pukul ${formatTime(now.toISOString(), ctx.tz)}, zona waktu ${ctx.tz}. Tanggal hari ini ${today}.`,
+    '',
+    'Kemampuanmu:',
+    '- Mencatat dari pesan bebas: tugas, kegiatan, pengingat (termasuk berulang), pengeluaran / pemasukan, dan catatan. Semua usulan dikonfirmasi pengguna dulu lewat tombol.',
+    '- Menjawab pertanyaan tentang agenda, tugas, target, kebiasaan, dan keuangan pengguna — HANYA dari DATA PENGGUNA di bawah.',
+    '- Mengobrol ringan, memberi semangat, dan saran produktivitas singkat yang praktis.',
+    '- Fitur lain lewat perintah: /fokus (pomodoro), /timer, /kalender, /tugas, /target, /keuangan, /kebiasaan, /ringkasan, /menu. Sarankan perintah itu bila cocok.',
+    '- Kamu tidak bisa mengubah / menghapus data yang sudah tersimpan; arahkan ke /tugas atau aplikasi web.',
+    '',
+    'Kapan membuat actions:',
+    '- Hanya bila pengguna jelas ingin mencatat, menjadwalkan, diingatkan, atau mencatat uang.',
+    '- Pertanyaan ("tugasku hari ini apa?", "pengeluaranku berapa?"), sapaan, curhat, atau obrolan → actions kosong, jawab di "balasan".',
+    '- Bila pengguna merujuk pesan sebelumnya ("yang tadi", "jadikan jam 8 aja", "catat itu"), pakai riwayat percakapan. Untuk mengubah usulan yang belum disimpan, buat ulang aksinya lengkap dengan perubahan.',
+    '',
+    'Isi "balasan" (selalu diisi, teks biasa tanpa Markdown / HTML):',
+    '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
+    '- Bila tidak ada actions: jawaban lengkap; untuk daftar pakai baris baru diawali "• " (maks. 8 baris).',
+    '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya, katakan terus terang dan sarankan perintah yang relevan.',
+    '',
+    'Aturan actions:',
     '- type "tugas": pekerjaan yang harus diselesaikan (boleh ada tenggat).',
     '- type "kegiatan": acara pada waktu tertentu (rapat, kajian, janji temu, kelas).',
     '- type "pengingat": pengguna minta diingatkan sesuatu pada waktu tertentu.',
     '- type "pengeluaran" / "pemasukan": uang keluar / masuk. jumlah dalam rupiah, bilangan bulat (20 ribu = 20000, 1,5 jt = 1500000).',
-    '- type "catatan": ide, curhat, atau informasi untuk disimpan.',
+    '- type "catatan": ide, curhat, atau informasi yang pengguna minta disimpan.',
     '- judul: singkat & jelas, tanpa kata waktu dan nominal. Pertahankan teks berkurung siku seperti [TES QA].',
     '- waktu: "YYYY-MM-DDTHH:MM" hanya bila disebut atau tersirat jelas. "pagi" = 08:00, "siang" = 12:00, "sore" = 16:00, "malam" = 19:00, "jam 2" tanpa keterangan = 14:00. Kosongkan bila tidak disebut — jangan mengarang.',
     '- jam: "HH:MM" (24 jam) setiap kali pengguna menyebut jam, terpisah dari tanggal. WAJIB diisi untuk pengingat berulang yang menyebut jam. Contoh: "jam 7 malam" = "19:00", "jam 9" = "09:00", "jam 2 siang" = "14:00".',
     '- ulang: "harian", "kerja" (Senin–Jumat), atau "mingguan" (isi hari) hanya bila pengguna menyebut "tiap"/"setiap"; selain itu "".',
     '- durasi_menit dan lokasi hanya untuk kegiatan, bila disebut.',
     `- Satu pesan boleh berisi beberapa aksi (maksimal ${MAX_ITEMS}).`,
-    '- Bila pesan hanya sapaan, obrolan, atau pertanyaan dan tidak ada yang perlu dicatat: actions kosong, isi "balasan" singkat dan ramah (maks. 2 kalimat). Jangan mengarang data milik pengguna.',
+    '',
+    data
+      ? `DATA PENGGUNA (ringkasan terbaru dari aplikasi):\n${data}`
+      : shared
+        ? 'DATA PENGGUNA: sedang tidak bisa dimuat. Untuk pertanyaan tentang data, sarankan /menu, /tugas, /kalender, atau /keuangan.'
+        : 'DATA PENGGUNA: tidak dibagikan (pengguna mematikan izinnya di Pengaturan). Untuk pertanyaan tentang data, sarankan /menu, /tugas, /kalender, atau /keuangan.',
     '',
     'Jawab HANYA dengan satu objek JSON berbentuk:',
     '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"balasan":""}',
@@ -51,11 +76,31 @@ function systemPrompt(tz: string, now: Date): string {
 }
 
 /** Konfigurasi AI pengguna bila Asisten AI aktif (null = nonaktif / belum diatur). */
-export async function aiConfig(ctx: Pick<Ctx, 'db' | 'userId'>): Promise<AiConfig | null> {
+export async function aiConfig(ctx: Pick<Ctx, 'db' | 'userId'>): Promise<(AiConfig & { shareData: boolean }) | null> {
   const { data } = await ctx.db.rpc('ai_get_config', { p_user: ctx.userId })
-  const row = (Array.isArray(data) ? data[0] : data) as { key?: string; base_url?: string; model?: string } | null | undefined
+  const row = (Array.isArray(data) ? data[0] : data) as { key?: string; base_url?: string; model?: string; share_data?: boolean } | null | undefined
   if (!row?.key) return null
-  return row.base_url ? { key: row.key, baseUrl: row.base_url, model: row.model ?? '' } : { key: row.key }
+  const shareData = row.share_data !== false
+  return row.base_url ? { key: row.key, baseUrl: row.base_url, model: row.model ?? '', shareData } : { key: row.key, shareData }
+}
+
+/* ---- Ingatan percakapan: beberapa pesan terakhir (30 menit) per chat, disimpan maks. ±1 hari. ---- */
+const HISTORY_TURNS = 8
+const HISTORY_MINUTES = 30
+
+async function loadHistory(ctx: Ctx): Promise<AiTurn[]> {
+  const since = new Date(Date.now() - HISTORY_MINUTES * 60_000).toISOString()
+  const { data } = await ctx.db.from('ai_chat_turns').select('role, content').eq('chat_id', ctx.chatId).eq('user_id', ctx.userId)
+    .gte('created_at', since).order('created_at', { ascending: false }).limit(HISTORY_TURNS)
+  return ((data ?? []) as AiTurn[]).reverse()
+}
+
+/** Catat satu giliran percakapan (diabaikan bila gagal — ingatan hanya pelengkap). */
+export async function rememberTurns(ctx: Pick<Ctx, 'db' | 'userId' | 'chatId'>, turns: AiTurn[]) {
+  const rows = turns.filter((t) => t.content.trim()).map((t) => ({ user_id: ctx.userId, chat_id: ctx.chatId, role: t.role, content: t.content.slice(0, 4000) }))
+  if (!rows.length) return
+  await ctx.db.from('ai_chat_turns').insert(rows)
+  await ctx.db.from('ai_chat_turns').delete().eq('chat_id', ctx.chatId).lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
 }
 
 function normalize(raw: Raw, tz: string, now: Date): AiItem[] {
@@ -138,27 +183,53 @@ export function describe(i: AiItem, tz: string): string {
   }
 }
 
+/** Balasan AI → teks bersih (tanpa token sisa model / Markdown tebal). */
+function cleanReply(s: unknown): string {
+  return String(s ?? '')
+    .replace(/<\|[^|>]*\|>/g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 1500)
+}
+
+/** Ringkasan usulan dalam teks biasa (untuk ingatan percakapan). */
+const plainItems = (items: AiItem[], tz: string) => items.map((i) => describe(i, tz).replace(/<[^>]+>/g, '')).join('; ')
+
 /**
- * Tawarkan hasil pemahaman AI untuk pesan bebas.
- * 'done' = usulan sudah dikirim; selain itu kembali ke mode biasa (dengan balasan / catatan bila ada).
+ * Pesan bebas → Rupi AI.
+ *  - Ada yang perlu dicatat → usulan dengan tombol ✅ Simpan (belum disimpan sebelum ditekan).
+ *  - Obrolan / pertanyaan → dibalas langsung seperti mengobrol (tanpa "mau disimpan sebagai apa?").
+ * 'done' = sudah dibalas; selain itu kembali ke mode biasa (dengan catatan galat bila ada).
  */
 export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?: string; note?: string }> {
   const cfg = await aiConfig(ctx)
   if (!cfg) return {}
   void sendChatAction(ctx.chatId, 'typing')
   const now = new Date()
-  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx.tz, now), prompt: text.slice(0, 2000) })
+  const prompt = text.slice(0, 2000)
+  const [history, data] = await Promise.all([
+    loadHistory(ctx).catch(() => [] as AiTurn[]),
+    cfg.shareData ? dataSnapshot(ctx).catch(() => null) : Promise.resolve(null),
+  ])
+  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history })
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
+  const reply = cleanReply(r.data.balasan)
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
+
   if (!items.length) {
-    const reply = String(r.data.balasan ?? '').trim().slice(0, 400)
-    return reply ? { reply } : {}
+    // Mode ngobrol: cukup balas.
+    if (!reply) return {}
+    await sendMessage(ctx.chatId, `✨ ${esc(reply)}`)
+    await rememberTurns(ctx, [{ role: 'user', content: prompt }, { role: 'assistant', content: reply }]).catch(() => {})
+    return 'done'
   }
+
   const saved = await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
   // Usulan tidak bisa disimpan → jangan tampilkan tombol yang tidak akan berfungsi.
   if (saved.error) return { note: '⚠️ <i>Rupi AI belum bisa menyimpan usulan. Memakai mode biasa.</i>' }
   const sent = await sendMessageKb(ctx.chatId, [
-    `✨ <b>Rupi AI memahami ${items.length > 1 ? `${items.length} hal` : 'ini'}:</b>`,
+    reply ? `✨ ${esc(reply)}` : `✨ <b>Rupi AI memahami ${items.length > 1 ? `${items.length} hal` : 'ini'}:</b>`,
     '',
     ...items.map((i, n) => `${items.length > 1 ? `${n + 1}. ` : ''}${describe(i, ctx.tz)}`),
     '',
@@ -170,6 +241,10 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   // Tandai usulan dengan nomor pesannya: tombol di usulan lama tidak boleh bekerja atas usulan baru.
   const mid = sent.ok ? (sent.result as { message_id?: number }).message_id : undefined
   if (mid) await ctx.db.from('telegram_pending').update({ payload: { items, text: text.slice(0, 50000), mid } }).eq('chat_id', ctx.chatId).eq('action', 'ai')
+  await rememberTurns(ctx, [
+    { role: 'user', content: prompt },
+    { role: 'assistant', content: `${reply ? `${reply}\n` : ''}(Usulan belum disimpan: ${plainItems(items, ctx.tz)})` },
+  ]).catch(() => {})
   return 'done'
 }
 

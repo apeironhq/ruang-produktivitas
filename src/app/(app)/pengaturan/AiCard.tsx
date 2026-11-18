@@ -4,9 +4,9 @@ import { ExternalLink, KeyRound, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { ConfirmButton, useRunAction } from '@/components/ui/actions'
 import { Field, SubmitButton, errClass, useFormAction } from '@/components/ui/forms'
-import { deleteAiKey, saveAiEndpoint, saveAiKey, setAiEnabled } from './ai-actions'
+import { deleteAiKey, saveAiEndpoint, saveAiKey, setAiEnabled, setAiShareData } from './ai-actions'
 
-export interface AiInfo { enabled: boolean; hint: string; baseUrl: string; model: string; updatedLabel: string }
+export interface AiInfo { enabled: boolean; hint: string; baseUrl: string; model: string; shareData: boolean; updatedLabel: string }
 type Provider = 'groq' | 'kustom'
 
 function hostOf(url: string) {
@@ -36,6 +36,7 @@ export function AiCard({ info, telegram }: { info: AiInfo | null; telegram: bool
             )}
           </div>
           <EnabledToggle on={info.enabled} />
+          <ShareDataToggle on={info.shareData} provider={info.baseUrl ? hostOf(info.baseUrl) : 'Groq'} />
           {replacing ? <ProviderForms initial={info.baseUrl ? 'kustom' : 'groq'} info={info} onDone={() => setReplacing(false)} /> : (
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn btn-secondary" onClick={() => setReplacing(true)}><KeyRound size={16} />Ganti penyedia / kunci</button>
@@ -120,6 +121,19 @@ function EndpointForm({ info, onDone }: { info?: AiInfo; onDone?: () => void }) 
         {onDone && <button type="button" className="btn btn-secondary" onClick={onDone}>Batal</button>}
       </div>
     </form>
+  )
+}
+
+function ShareDataToggle({ on, provider }: { on: boolean; provider: string }) {
+  const { pending, run } = useRunAction()
+  return (
+    <label className="choice">
+      <input type="checkbox" checked={on} disabled={pending} onChange={(e) => run(() => setAiShareData(e.target.checked))} />
+      <span className="min-w-0">
+        <span className="choice-title">Izinkan Rupi membaca ringkasan data saya</span>
+        <span className="choice-desc">Agenda, tugas, target, dan keuangan bulan ini ikut dikirim ke {provider} agar Rupi bisa menjawab “tugasku hari ini apa?”.</span>
+      </span>
+    </label>
   )
 }
 

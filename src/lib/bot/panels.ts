@@ -319,7 +319,7 @@ export async function projectDetailPanel(ctx: Ctx, id: string): Promise<Panel | 
 }
 
 /* ================= Target ================= */
-async function loadGoals(ctx: Ctx, ids?: string[]) {
+export async function loadGoals(ctx: Pick<Ctx, 'db' | 'userId'>, ids?: string[]) {
   let q = ctx.db.from('goals').select(GOAL_COLUMNS).eq('user_id', ctx.userId)
   q = ids ? q.in('id', ids) : q.eq('status', 'aktif').order('created_at', { ascending: false }).limit(10)
   const { data } = await q

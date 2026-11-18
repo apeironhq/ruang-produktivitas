@@ -68,6 +68,16 @@ export async function setAiEnabled(on: boolean): Promise<ActionState> {
   return ok(on ? 'Asisten AI diaktifkan.' : 'Asisten AI dimatikan. Kunci tetap tersimpan.')
 }
 
+export async function setAiShareData(on: boolean): Promise<ActionState> {
+  const user = await getCurrentUser()
+  if (!user) return fail('Sesi berakhir. Silakan masuk kembali.')
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('ai_set_share_data', { p_on: on })
+  if (error) return dbError(error)
+  revalidatePath('/pengaturan')
+  return ok(on ? 'Rupi boleh membaca ringkasan data Anda.' : 'Rupi tidak lagi membaca ringkasan data Anda.')
+}
+
 export async function deleteAiKey(): Promise<ActionState> {
   const user = await getCurrentUser()
   if (!user) return fail('Sesi berakhir. Silakan masuk kembali.')

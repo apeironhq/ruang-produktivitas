@@ -10,7 +10,7 @@ import {
 } from './panels'
 import { createTimer, eveningPanel, parseDuration, pomodoroStarted, repeatText, splitReminder, startPomodoro, timerPanel, type Pomo } from './timers'
 import { extractRepeat, extractWhen, minutesLabel, whenLabel } from './when'
-import { aiOffer, saveAiItems, type AiItem } from './ai'
+import { aiOffer, rememberTurns, saveAiItems, type AiItem } from './ai'
 import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatTime } from '../format'
 
@@ -360,11 +360,13 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       await clearFlow(ctx)
       if (rest === 'ok') {
         const lines = await saveAiItems(ctx, pl.items)
+        await rememberTurns(ctx, [{ role: 'assistant', content: '(Usulan tadi sudah disimpan oleh pengguna.)' }])
         await editMessageKb(ctx.chatId, msg.message_id, ['<b>✅ Tersimpan</b>', '', ...lines].join('\n'), [[btn('✅ Tugas', 'p:tugas'), btn('📅 Kalender', 'p:kal'), btn('🏠 Menu', 'p:home')]])
       } else if (rest === 'man') {
         await editMessageReplyMarkup(ctx.chatId, msg.message_id, [])
         await offerFreeText(ctx, pl.text ?? '', { noAi: true })
       } else {
+        await rememberTurns(ctx, [{ role: 'assistant', content: '(Usulan tadi dibatalkan pengguna, tidak ada yang disimpan.)' }])
         await editMessageKb(ctx.chatId, msg.message_id, '✖️ <i>Dibatalkan — tidak ada yang disimpan.</i>', [[btn('🏠 Menu', 'p:home')]])
       }
       return 'selesai'
