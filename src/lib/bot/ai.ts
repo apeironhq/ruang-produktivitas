@@ -50,9 +50,10 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '- Pertanyaan ("tugasku hari ini apa?", "pengeluaranku berapa?"), minta saran, sapaan, curhat, atau obrolan → actions kosong, jawab di "balasan". Jangan membuat aksi hanya karena kamu menyarankannya — tawarkan dulu.',
     '- Bila pengguna merujuk pesan sebelumnya ("yang tadi", "jadikan jam 8 aja", "catat itu"), pakai riwayat percakapan. Untuk mengubah usulan yang belum disimpan, buat ulang aksinya lengkap dengan perubahan.',
     '',
-    'Isi "balasan" (selalu diisi, teks biasa tanpa Markdown / HTML):',
+    'Isi "balasan" (selalu diisi):',
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
-    '- Bila tidak ada actions: jawaban lengkap; untuk daftar pakai baris baru diawali "• " (maks. 10 baris).',
+    '- Bila tidak ada actions: jawaban lengkap.',
+    '- Format rapi untuk Telegram: obrolan singkat cukup 1 paragraf tanpa judul. Jawaban panjang dibagi menjadi beberapa bagian (maks. 4); tiap bagian diawali judul di baris sendiri yang diapit **…** dan diberi emoji (mis. "**📊 Per kategori**"), lalu isinya. Poin diawali "• ", langkah diawali "1.", "2.", tebalkan hanya angka / nama terpenting (maks. 1–2 per baris, jangan setiap angka). Pisahkan bagian dengan satu baris kosong. Kalimat pembuka singkat (1 baris) dan penutup / pertanyaan lanjutan (1 baris) tanpa judul. Jangan pakai tabel, tanda #, garis pemisah, atau HTML.',
     '- Jangan menyimpulkan pola, kebiasaan, atau fakta tentang pengguna yang tidak tertulis di DATA atau percakapan (mis. jam produktifnya).',
     '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya (mis. transaksi yang lebih lama), katakan terus terang dan sarankan perintah / halaman web yang relevan.',
     '- Jangan tampilkan kode item (T1, X3, G2, …) di "balasan"; sebut judul / nominalnya.',
@@ -215,14 +216,37 @@ export function describe(i: AiItem, tz: string): string {
   }
 }
 
-/** Balasan AI → teks bersih (tanpa token sisa model / Markdown tebal). */
+/** Balasan AI → teks bersih (tanpa token sisa model); **tebal** dipertahankan untuk formatReply. */
 function cleanReply(s: unknown): string {
   return String(s ?? '')
     .replace(/<\|[^|>]*\|>/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
     .slice(0, 3500)
+}
+
+/**
+ * Teks balasan → HTML Telegram yang rapi dan aman: semua di-escape dulu, lalu hanya **tebal** yang
+ * menjadi <b>. Judul Markdown (#), butir "-" / "*", dan baris judul pendek berakhiran ":" dirapikan;
+ * judul bagian diberi jarak satu baris kosong di atasnya.
+ */
+export function formatReply(s: string): string {
+  const out: string[] = []
+  for (const raw of s.split('\n')) {
+    let line = raw.trim()
+    if (/^([-*_=])\1{2,}$/.test(line)) continue // garis pemisah
+    const md = /^#{1,6}\s+/.test(line)
+    line = line.replace(/^#{1,6}\s+/, '').replace(/^[-*]\s+/, '• ').replace(/^•(?=\S)/, '• ')
+    let html = esc(line).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '')
+    const heading = md || /^<b>[^<]{1,60}<\/b>:?$/.test(html) || (/^[^•\d<].{0,48}:$/.test(line) && !line.includes('**'))
+    if (heading && !/^<b>.*<\/b>:?$/.test(html)) html = `<b>${html}</b>`
+    if (heading) html = html.replace(/:(<\/b>)?$/, '$1').replace(/<\/b>:$/, '</b>')
+    if (heading && out.length && out[out.length - 1] !== '') out.push('')
+    out.push(html)
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 /** Ringkasan usulan dalam teks biasa (untuk ingatan percakapan). */
@@ -257,8 +281,8 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   if (!items.length && !ops.length) {
     // Mode ngobrol: cukup balas.
     if (!reply) return {}
-    await sendMessage(ctx.chatId, `✨ ${esc(reply)}`)
-    await rememberTurns(ctx, [{ role: 'user', content: prompt }, { role: 'assistant', content: reply }]).catch(() => {})
+    await sendMessage(ctx.chatId, `✨ ${formatReply(reply)}`)
+    await rememberTurns(ctx, [{ role: 'user', content: prompt }, { role: 'assistant', content: reply.replace(/\*\*/g, '') }]).catch(() => {})
     return 'done'
   }
 
@@ -267,7 +291,7 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   // Usulan tidak bisa disimpan → jangan tampilkan tombol yang tidak akan berfungsi.
   if (saved.error) return { note: '⚠️ <i>Rupi AI belum bisa menyimpan usulan. Memakai mode biasa.</i>' }
   const sent = await sendMessageKb(ctx.chatId, [
-    reply ? `✨ ${esc(reply)}` : `✨ <b>Rupi AI memahami ${n > 1 ? `${n} hal` : 'ini'}:</b>`,
+    reply ? `✨ ${formatReply(reply)}` : `✨ <b>Rupi AI memahami ${n > 1 ? `${n} hal` : 'ini'}:</b>`,
     '',
     ...[...items.map((i) => describe(i, ctx.tz)), ...ops.map((o) => describeOp(o, ctx.tz))].map((line, k) => `${n > 1 ? `${k + 1}. ` : ''}${line}`),
     '',
