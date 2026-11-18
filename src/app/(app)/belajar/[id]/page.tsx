@@ -83,7 +83,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
         </div>
       </div>
 
-      <DescCard text={subject.description} />
+      <DescCard text={subject.description} place="top" />
 
       <div className="kpis kpis-3">
         <KpiCard label="Progres modul" value={null} display={`${Math.round(pct)}%`} icon={<ListChecks size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${done} dari ${applicable.length} modul selesai`} progress={applicable.length ? pct : undefined} />
@@ -105,6 +105,8 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           )}
         </section>
 
+        <div className="flex flex-col gap-4 min-w-0">
+        <DescCard text={subject.description} place="side" />
         <section className="card" aria-labelledby="src-title">
           <SectionHead id="src-title" icon={<Library size={18} />} title="Sumber belajar" desc="Posisi terakhir ikut diperbarui dari sesi">
             <SourceButton subjectId={subject.id} />
@@ -129,6 +131,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
             )}
           </div>
         </section>
+        </div>
       </div>
 
       <section className="card" aria-labelledby="ses-title">

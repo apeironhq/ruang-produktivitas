@@ -181,12 +181,13 @@ export function DetailTitle({ title, status, meta = [] }: {
   )
 }
 
-/** Kartu "Deskripsi" halaman detail (pola sama dengan detail Tugas); teks panjang bisa dibuka-tutup. */
-export function DescCard({ text }: { text?: string | null }) {
+/** Kartu "Deskripsi" halaman detail; teks panjang bisa dibuka-tutup.
+ *  Dipasang dua kali: `top` (di bawah judul, hanya ponsel/tablet) dan `side` (kolom kanan, hanya desktop). */
+export function DescCard({ text, place }: { text?: string | null; place: 'top' | 'side' }) {
   if (!text?.trim()) return null
   return (
-    <section className="card" aria-labelledby="desc-title">
-      <SectionHead id="desc-title" icon={<AlignLeft size={18} />} title="Deskripsi" />
+    <section className={`card desc-${place}`} aria-labelledby={`desc-${place}`}>
+      <SectionHead id={`desc-${place}`} icon={<AlignLeft size={18} />} title="Deskripsi" />
       <div className="card-body"><ClampText text={text.trim()} lines={4} /></div>
     </section>
   )

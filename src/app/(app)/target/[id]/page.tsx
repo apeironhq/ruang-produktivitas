@@ -96,7 +96,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
         </div>
       </div>
 
-      <DescCard text={goal.description} />
+      <DescCard text={goal.description} place="top" />
 
       {goal.status === 'tercapai' && (
         <div className="alert" role="status">
@@ -131,7 +131,9 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
           </div>
         </section>
 
-        <section className="card panel" aria-labelledby="ms-title">
+        <div className="flex flex-col gap-4 min-w-0">
+        <DescCard text={goal.description} place="side" />
+        <section className="card panel flex-1" style={{ height: 'auto' }} aria-labelledby="ms-title">
           <SectionHead id="ms-title" icon={<Flag size={18} />} title="Tahapan" desc={`${milestones.filter((m) => m.reached_at).length} dari ${milestones.length} tercapai`}>
             {!binary && <MilestoneButton goalId={goal.id} hint={manual ? `Dalam satuan target, mis. ${goal.metric_type === 'rupiah' ? '25.000.000' : '5'}` : `Jumlah ${goal.unit_label} selesai`} />}
           </SectionHead>
@@ -162,6 +164,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             })()}
           </div>
         </section>
+        </div>
       </div>
 
       <div className="row-2 cols-even">

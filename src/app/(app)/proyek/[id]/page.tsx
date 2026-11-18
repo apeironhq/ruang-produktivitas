@@ -79,7 +79,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
         </div>
       </div>
 
-      <DescCard text={p.description} />
+      <DescCard text={p.description} place="top" />
 
       <div className="kpis kpis-3">
         <KpiCard label="Progres" value={null} display={`${formatNumber(Math.floor(prog.pct))}%`} icon={<Gauge size={20} strokeWidth={1.9} />} color="var(--c-blue)"
@@ -109,6 +109,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
         </section>
 
         <div className="flex flex-col gap-4 min-w-0">
+          <DescCard text={p.description} place="side" />
           <section className="card" aria-labelledby="pms-title">
             <SectionHead id="pms-title" icon={<Milestone size={18} />} title="Tahapan" desc={m.total ? `${m.done} dari ${m.total} selesai` : 'Langkah besar menuju rampung'}>
               <AddProjectMilestonesButton projectId={p.id} />

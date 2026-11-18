@@ -799,7 +799,9 @@
 }
 @media (max-width: 767px) { .items-scroll { max-height: 22rem; } }
 /* Deskripsi panjang di kepala halaman detail (ClampText). */
-.desc-text { max-width: 75ch; white-space: pre-line; overflow-wrap: anywhere; }
+.desc-side { display: none; }
+@media (min-width: 1024px) { .desc-top { display: none; } .desc-side { display: block; } }
+.desc-text { white-space: pre-line; overflow-wrap: anywhere; }
 .desc-clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
 .item:last-child { border-bottom: 0; }
