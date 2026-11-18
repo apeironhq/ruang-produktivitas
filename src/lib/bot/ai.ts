@@ -19,8 +19,10 @@ export type AiKind = 'tugas' | 'kegiatan' | 'pengingat' | 'pengeluaran' | 'pemas
 export interface AiItem {
   t: AiKind; title: string; at?: string; repeat?: string; amount?: number; minutes?: number; place?: string
   account?: string; accountName?: string; category?: string; categoryName?: string
+  /** Nama rekening / kategori yang disebut pengguna (dipakai enrich, lalu dibuang). */
+  accountHint?: string; categoryHint?: string
 }
-interface RawAction { type?: string; judul?: string; waktu?: string; jam?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string }
+interface RawAction { type?: string; judul?: string; waktu?: string; jam?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string; rekening?: string; kategori?: string }
 interface Raw { actions?: RawAction[]; ops?: unknown[]; balasan?: string }
 
 /** Pesan saat Rupi AI gagal menjawab — ramah, tanpa nama / alamat penyedia. */
@@ -57,7 +59,7 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     'Kapan membuat actions:',
     '- Hanya bila pengguna jelas ingin mencatat, menjadwalkan, diingatkan, atau mencatat uang.',
     '- Pertanyaan ("tugasku hari ini apa?", "pengeluaranku berapa?"), minta saran, sapaan, curhat, atau obrolan → actions kosong, jawab di "balasan". Jangan membuat aksi hanya karena kamu menyarankannya — tawarkan dulu.',
-    '- Bila pengguna merujuk pesan sebelumnya ("yang tadi", "jadikan jam 8 aja", "catat itu"), pakai riwayat percakapan. Untuk mengubah usulan yang belum disimpan, buat ulang aksinya lengkap dengan perubahan.',
+    '- Bila pengguna merujuk pesan sebelumnya ("yang tadi", "jadikan jam 8 aja", "catat itu"), pakai riwayat percakapan. Untuk mengubah usulan yang belum disimpan, WAJIB buat ulang aksinya lengkap dengan perubahan (mis. rekening diganti) — jangan hanya menjawab "sudah diperbarui" tanpa actions / ops.',
     '',
     'Isi "balasan" (selalu diisi):',
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
@@ -80,6 +82,7 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '- jam: "HH:MM" (24 jam) setiap kali pengguna menyebut jam, terpisah dari tanggal. WAJIB diisi untuk pengingat berulang yang menyebut jam. Contoh: "jam 7 malam" = "19:00", "jam 9" = "09:00", "jam 2 siang" = "14:00".',
     '- ulang: "harian", "kerja" (Senin–Jumat), atau "mingguan" (isi hari) hanya bila pengguna menyebut "tiap"/"setiap"; selain itu "".',
     '- durasi_menit dan lokasi hanya untuk kegiatan, bila disebut.',
+    '- rekening dan kategori hanya untuk pengeluaran / pemasukan: tulis namanya persis seperti di DATA bila pengguna menyebutnya (mis. "ke Superbank" → rekening "Superbank"); kosongkan bila tidak disebut.',
     `- Satu pesan boleh berisi beberapa aksi (maksimal ${MAX_ITEMS}).`,
     '',
     'Aturan ops (perubahan atas data yang SUDAH ada):',
@@ -114,7 +117,7 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
         : 'DATA PENGGUNA: tidak dibagikan (pengguna mematikan izinnya di Pengaturan > Asisten AI) — jangan buat ops; bila pengguna minta mengubah data, sarankan menyalakan izin itu.',
     '',
     'Jawab HANYA dengan satu objek JSON berbentuk:',
-    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"ops":[{"op":"…","ref":"…"}],"balasan":""}',
+    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":"","rekening":"","kategori":""}],"ops":[{"op":"…","ref":"…"}],"balasan":""}',
     'Isi "jumlah" hanya untuk uang, "hari" hanya untuk ulang mingguan, sisanya boleh 0 / "" / [].',
   ].join('\n')
 }
@@ -169,6 +172,10 @@ function normalize(raw: Raw, tz: string, now: Date): AiItem[] {
       const amount = Math.round(Number(a.jumlah))
       if (!(amount > 0 && amount < 1e12)) continue
       item.amount = amount
+      const accHint = String(a.rekening ?? '').trim().slice(0, 80)
+      const catHint = String(a.kategori ?? '').trim().slice(0, 80)
+      if (accHint) item.accountHint = accHint
+      if (catHint) item.categoryHint = catHint
       out.push(item); continue
     }
     if (t === 'pengingat') {
@@ -204,13 +211,23 @@ async function enrich(ctx: Ctx, items: AiItem[]): Promise<AiItem[]> {
     ctx.db.from('transaction_categories').select('id, name, type').eq('user_id', ctx.userId).limit(60),
   ])
   const list = accts ?? []
-  const acc = list.find((a) => a.id === last?.account_id) ?? list[0]
+  const fallback = list.find((a) => a.id === last?.account_id) ?? list[0]
+  // Cocokkan nama yang disebut pengguna ("ke Superbank") — abaikan huruf besar/kecil, spasi, tanda baca, dan [label].
+  const norm = (x: string) => x.toLowerCase().replace(/\[[^\]]*\]/g, '').replace(/[^\p{L}\p{N}]/gu, '')
+  const byName = <T extends { name: string }>(rows: T[], hint?: string): T | undefined => {
+    const h = hint ? norm(hint) : ''
+    if (!h) return undefined
+    return rows.find((x) => norm(x.name) === h) ?? rows.find((x) => { const n = norm(x.name); return !!n && (n.includes(h) || h.includes(n)) })
+  }
   return items.flatMap((i) => {
-    if (!i.amount) return [i]
+    const { accountHint, categoryHint, ...rest } = i
+    if (!i.amount) return [rest]
+    const acc = byName(list, accountHint) ?? fallback
     if (!acc) return [] // belum punya rekening → aksi uang dilewati
     const type = i.t === 'pengeluaran' ? 'pengeluaran' : 'pemasukan'
-    const cat = guessCategory(i.title, (cats ?? []).filter((c) => c.type === type))
-    return [{ ...i, account: acc.id, accountName: acc.name, ...(cat ? { category: cat.id, categoryName: cat.name } : {}) }]
+    const ofType = (cats ?? []).filter((c) => c.type === type)
+    const cat = byName(ofType, categoryHint) ?? guessCategory(i.title, ofType)
+    return [{ ...rest, account: acc.id, accountName: acc.name, ...(cat ? { category: cat.id, categoryName: cat.name } : {}) }]
   })
 }
 
