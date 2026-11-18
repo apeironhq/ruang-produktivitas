@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, BookOpen, Check, CheckSquare, Flag, Gauge, History, Link2, RotateCcw, Trash2, TrendingUp, Trophy } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint, InfoList, StatTile } from '@/components/ui/display'
+import { BackLink, DescCard, Badge, DetailTitle, EmptyState, ProgressBar, SectionHead, tint, InfoList, StatTile } from '@/components/ui/display'
 import { NewJournalButton } from '../../jurnal/JournalForm'
 import { AllocationButton } from '../../keuangan/FinanceForms'
 import { deleteAllocation } from '../../keuangan/actions'
@@ -79,7 +79,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
     <div className="page">
       <BackLink href="/target">Target Saya</BackLink>
       <div className="page-head">
-        <DetailTitle title={goal.title} status={st} desc={goal.description}
+        <DetailTitle title={goal.title} status={st}
           meta={[PROGRESS_SOURCE[goal.progress_source]!.label, goal.category, goal.due_date ? `Tenggat ${formatDay(goal.due_date)}` : null]} />
         <div className="control-row">
           {goal.status === 'aktif' && manual && !binary && <ContributionButton goalId={goal.id} metric={goal.metric_type} today={today} direction={goal.direction} />}
@@ -95,6 +95,8 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus target"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
+
+      <DescCard text={goal.description} />
 
       {goal.status === 'tercapai' && (
         <div className="alert" role="status">
@@ -174,7 +176,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
                 description={activeAccounts.length ? 'Sisihkan dana dari rekening untuk mulai melihat progres.' : 'Tambahkan rekening di menu Keuangan terlebih dahulu.'}
                 action={activeAccounts.length ? undefined : <Link href="/keuangan/rekening" className="btn btn-secondary">Buka Keuangan</Link>} />
             ) : (
-              <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel alokasi">
+              <div className="table-wrap items-scroll" tabIndex={0} role="region" aria-label="Tabel alokasi">
                 <table className="table table-stack">
                   <thead><tr><th>Tanggal</th><th>Rekening</th><th>Catatan</th><th className="num">Nilai</th><th><span className="sr-only">Aksi</span></th></tr></thead>
                   <tbody>
@@ -206,7 +208,7 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             </SectionHead>
             {events.length === 0 ? <EmptyState icon={<History size={20} strokeWidth={1.75} />} title="Belum ada kontribusi" description="Catat kontribusi pertama untuk mulai melihat progres." /> : (
               <div className="card-body py-1">
-                <ul className="items">
+                <ul className="items items-scroll">
                   {events.map((e) => (
                     <li key={e.id} className="item">
                       <div className="min-w-0 flex-1">
@@ -234,13 +236,13 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             <div className="card-body pt-2">
               {goal.progress_source === 'modul' ? (
                 (subjects.data ?? []).length === 0 ? <EmptyState icon={<BookOpen size={20} strokeWidth={1.75} />} title="Belum ada bidang belajar tertaut" action={<Link href="/belajar" className="btn btn-secondary">Buka Ruang Belajar</Link>} /> : (
-                  <ul className="items">{(subjects.data ?? []).map((s) => (
+                  <ul className="items items-scroll">{(subjects.data ?? []).map((s) => (
                     <li key={s.id} className="item"><span className="act-icon" style={tint('var(--c-blue)')}><BookOpen size={16} /></span>
                       <Link href={`/belajar/${s.id}`} className="item-title flex-1 hover:text-[var(--brand)]">{s.title}</Link></li>
                   ))}</ul>
                 )
               ) : linkedTasks.length === 0 ? <EmptyState icon={<CheckSquare size={20} strokeWidth={1.75} />} title="Belum ada tugas tertaut" action={<Link href="/tugas" className="btn btn-secondary">Buka Tugas</Link>} /> : (
-                <ul className="items">{linkedTasks.map((t) => (
+                <ul className="items items-scroll">{linkedTasks.map((t) => (
                   <li key={t.id} className={`item${t.status === 'selesai' ? ' is-done' : ''}`}>
                     <Link href={`/tugas/${t.id}`} className="item-title flex-1 min-w-0 truncate hover:text-[var(--brand)]">{t.title}</Link>
                     <Badge tone={displayStatus(t).tone}>{displayStatus(t).label}</Badge>
@@ -273,14 +275,14 @@ export default async function Page({ params }: PageProps<'/target/[id]'>) {
             {manual && linkedTasks.length > 0 && (
               <>
                 <p className="text-overline mt-2 mb-1">Tugas</p>
-                <ul className="items mb-3">{linkedTasks.slice(0, 6).map((t) => (
+                <ul className="items items-scroll mb-3">{linkedTasks.slice(0, 6).map((t) => (
                   <li key={t.id} className={`item${t.status === 'selesai' ? ' is-done' : ''}`}><Link href={`/tugas/${t.id}`} className="item-title truncate hover:text-[var(--brand)]">{t.title}</Link></li>
                 ))}</ul>
               </>
             )}
             <p className="text-overline mt-2 mb-1">Catatan & jurnal</p>
             {(journals.data ?? []).length === 0 ? <p className="text-caption py-2">Belum ada catatan tertaut.</p> : (
-              <ul className="items">{(journals.data ?? []).map((j) => (
+              <ul className="items items-scroll">{(journals.data ?? []).map((j) => (
                 <li key={j.id} className="item"><Link href={`/jurnal/${j.id}`} className="item-title flex-1 truncate hover:text-[var(--brand)]">{j.title || 'Tanpa judul'}</Link><span className="item-meta">{formatDay(j.entry_date)}</span></li>
               ))}</ul>
             )}

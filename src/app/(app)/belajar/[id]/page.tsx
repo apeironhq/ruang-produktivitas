@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BookOpen, Clock, ExternalLink, Library, ListChecks, Target, Trash2 } from 'lucide-react'
 import { ConfirmButton } from '@/components/ui/actions'
-import { BackLink, DetailTitle, EmptyState, KpiCard, ProgressBar, SectionHead, tint } from '@/components/ui/display'
+import { BackLink, DescCard, DetailTitle, EmptyState, KpiCard, ProgressBar, SectionHead, tint } from '@/components/ui/display'
 import { addDays, todayIn } from '@/lib/dates'
 import { formatDay, formatDuration, formatNumber } from '@/lib/format'
 import { SOURCE_TYPE, SUBJECT_STATUS } from '@/lib/labels'
@@ -69,7 +69,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
     <div className="page">
       <BackLink href="/belajar">Ruang Belajar</BackLink>
       <div className="page-head">
-        <DetailTitle title={subject.title} status={st} desc={subject.description}
+        <DetailTitle title={subject.title} status={st}
           meta={[
             `${applicable.length} modul`,
             goal ? <Link href={`/target/${goal.id}`} className="inline-flex items-center gap-1"><Target size={13} aria-hidden="true" />{goal.title}</Link> : null,
@@ -82,6 +82,8 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
             className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus bidang"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
+
+      <DescCard text={subject.description} />
 
       <div className="kpis kpis-3">
         <KpiCard label="Progres modul" value={null} display={`${Math.round(pct)}%`} icon={<ListChecks size={20} strokeWidth={1.9} />} color="var(--c-blue)" caption={`${done} dari ${applicable.length} modul selesai`} progress={applicable.length ? pct : undefined} />
@@ -109,7 +111,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           </SectionHead>
           <div className="card-body pt-1">
             {sources.length === 0 ? <EmptyState icon={<Library size={20} strokeWidth={1.75} />} title="Belum ada sumber" description="Dokumentasi, buku, PDF, video, atau kursus." /> : (
-              <ul className="items">
+              <ul className="items items-scroll">
                 {sources.map((s) => (
                   <li key={s.id} className="item">
                     <span className="act-icon" style={tint('var(--c-lilac)')} aria-hidden="true"><BookOpen size={16} /></span>
@@ -137,7 +139,7 @@ export default async function Page({ params, searchParams }: PageProps<'/belajar
           </div>
         </SectionHead>
         {sessions.length === 0 ? <EmptyState icon={<Clock size={20} strokeWidth={1.75} />} title="Belum ada sesi di rentang ini" description="Catat sesi belajar untuk membangun riwayat." /> : (
-          <ul className="items">
+          <ul className="items items-scroll">
             {sessions.map((s) => (
               <li key={s.id} className="px-5 py-4 border-b border-[var(--border)] last:border-0">
                 <div className="flex items-start gap-3">

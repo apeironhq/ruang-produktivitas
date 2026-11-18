@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
+import { AlignLeft, ArrowLeft, Inbox, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatByUnit, formatCompact, formatDuration, formatNumber } from '@/lib/format'
 import { Sparkline } from './charts'
+import { ClampText } from './ClampText'
 
 /** Ikon bernada lembut: warna modul (dari palet) di atas latar 14% warna yang sama. */
 // Navy 14% terlihat abu-abu kusam → latarnya memakai langit (#8ECAE6) dari palet yang sama.
@@ -165,8 +166,8 @@ export function PageHead({ title, description, actions }: { title: string; descr
  * Kepala halaman detail (pola MDUNDIG): judul dulu, lalu satu baris keterangan kecil dipisah "·".
  * Status ditulis sebagai teks bertitik warna, bukan kotak badge di atas judul.
  */
-export function DetailTitle({ title, status, meta = [], desc }: {
-  title: string; status?: { label: string; tone: string }; meta?: React.ReactNode[]; desc?: string
+export function DetailTitle({ title, status, meta = [] }: {
+  title: string; status?: { label: string; tone: string }; meta?: React.ReactNode[]
 }) {
   const items = meta.filter((m) => m !== null && m !== undefined && m !== false && m !== '')
   return (
@@ -176,8 +177,18 @@ export function DetailTitle({ title, status, meta = [], desc }: {
         {status && <span className={`meta-status ${status.tone}`}>{status.label}</span>}
         {items.map((m, i) => <span key={i}>{m}</span>)}
       </p>
-      {desc && <p className="text-caption mt-2 max-w-[70ch]">{desc}</p>}
     </div>
+  )
+}
+
+/** Kartu "Deskripsi" halaman detail (pola sama dengan detail Tugas); teks panjang bisa dibuka-tutup. */
+export function DescCard({ text }: { text?: string | null }) {
+  if (!text?.trim()) return null
+  return (
+    <section className="card" aria-labelledby="desc-title">
+      <SectionHead id="desc-title" icon={<AlignLeft size={18} />} title="Deskripsi" />
+      <div className="card-body"><ClampText text={text.trim()} lines={4} /></div>
+    </section>
   )
 }
 

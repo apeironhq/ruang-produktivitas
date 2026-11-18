@@ -784,6 +784,23 @@
 .link-sm:hover { color: var(--brand-hover); }
 
 .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Daftar / tabel panjang di dalam kartu: tinggi dibatasi, sisanya digulir di dalam kartu.
+   Bayangan tipis atas/bawah muncul hanya bila masih ada isi yang tersembunyi (scroll shadow). */
+.items-scroll {
+  max-height: 26rem; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong, rgba(16, 24, 40, 0.2)) transparent;
+  background:
+    linear-gradient(var(--bg-surface) 30%, transparent) top / 100% 24px,
+    linear-gradient(transparent, var(--bg-surface) 70%) bottom / 100% 24px,
+    radial-gradient(farthest-side at 50% 0, rgba(16, 24, 40, 0.1), transparent) top / 100% 8px,
+    radial-gradient(farthest-side at 50% 100%, rgba(16, 24, 40, 0.1), transparent) bottom / 100% 8px;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+@media (max-width: 767px) { .items-scroll { max-height: 22rem; } }
+/* Deskripsi panjang di kepala halaman detail (ClampText). */
+.desc-text { max-width: 75ch; white-space: pre-line; overflow-wrap: anywhere; }
+.desc-clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
 .item:last-child { border-bottom: 0; }
 .item-row { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }

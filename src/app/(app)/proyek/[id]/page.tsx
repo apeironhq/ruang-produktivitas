@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, Check, CheckSquare, Gauge, Milestone, NotebookPen, RotateCcw, Target, Trash2 } from 'lucide-react'
 import { ActionButton, ConfirmButton } from '@/components/ui/actions'
-import { BackLink, DetailTitle, EmptyState, KpiCard, SectionHead } from '@/components/ui/display'
+import { BackLink, DescCard, DetailTitle, EmptyState, KpiCard, SectionHead } from '@/components/ui/display'
 import { todayIn, isoToDay } from '@/lib/dates'
 import { formatDay, formatNumber } from '@/lib/format'
 import { JOURNAL_KIND, PROJECT_STATUS } from '@/lib/labels'
@@ -61,7 +61,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
     <div className="page">
       <BackLink href="/proyek">Proyek Saya</BackLink>
       <div className="page-head">
-        <DetailTitle title={p.title} status={st} desc={p.description}
+        <DetailTitle title={p.title} status={st}
           meta={[
             p.start_date || p.due_date ? `${p.start_date ? formatDay(p.start_date) : '…'} – ${p.due_date ? formatDay(p.due_date) : 'tanpa tenggat'}` : null,
             late ? <span className="overdue">Lewat tenggat</span> : null,
@@ -78,6 +78,8 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
             className="btn btn-secondary btn-icon is-danger" ariaLabel="Hapus proyek"><Trash2 size={16} /></ConfirmButton>
         </div>
       </div>
+
+      <DescCard text={p.description} />
 
       <div className="kpis kpis-3">
         <KpiCard label="Progres" value={null} display={`${formatNumber(Math.floor(prog.pct))}%`} icon={<Gauge size={20} strokeWidth={1.9} />} color="var(--c-blue)"
@@ -96,7 +98,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
           {tasks.length === 0 ? (
             <EmptyState icon={<CheckSquare size={20} strokeWidth={1.75} />} title="Belum ada tugas" description="Tambahkan tugas dari sini, atau pilih proyek ini saat membuat tugas." />
           ) : (
-            <ul className="items">{tasks.map((x) => <TaskRow key={x.id} t={x} meta={meta.get(x.id)} tz={tz} />)}</ul>
+            <ul className="items items-scroll">{tasks.map((x) => <TaskRow key={x.id} t={x} meta={meta.get(x.id)} tz={tz} />)}</ul>
           )}
           {tasks.length > 0 && (
             <div className="card-foot">
@@ -115,7 +117,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
               <EmptyState icon={<Milestone size={20} strokeWidth={1.75} />} title="Belum ada tahapan" description="Mis. Riset, Pengembangan, Uji coba, Rilis." />
             ) : (
               <div className="card-body pt-2">
-                <ul className="items">{milestones.map((x) => <ProjectMilestoneRow key={x.id} m={x} projectId={p.id} dueLabel={x.due_date ? formatDay(x.due_date) : null} />)}</ul>
+                <ul className="items items-scroll">{milestones.map((x) => <ProjectMilestoneRow key={x.id} m={x} projectId={p.id} dueLabel={x.due_date ? formatDay(x.due_date) : null} />)}</ul>
               </div>
             )}
           </section>
@@ -129,7 +131,7 @@ export default async function Page({ params }: PageProps<'/proyek/[id]'>) {
               <EmptyState icon={<NotebookPen size={20} strokeWidth={1.75} />} title="Belum ada catatan" />
             ) : (
               <div className="card-body pt-2">
-                <ul className="items">{(journalRes.data ?? []).map((j) => (
+                <ul className="items items-scroll">{(journalRes.data ?? []).map((j) => (
                   <li key={j.id} className="item">
                     <Link href={`/jurnal/${j.id}`} className="min-w-0 flex-1">
                       <span className="item-title block truncate">{j.title || 'Tanpa judul'}</span>

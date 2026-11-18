@@ -32,7 +32,7 @@ export function AddSubtaskButton({ taskId }: { taskId: string }) {
 }
 
 export function Subtasks({ taskId, items }: { taskId: string; items: Subtask[] }) {
-  return <ul className="items">{items.map((s) => <SubtaskRow key={s.id} s={s} taskId={taskId} />)}</ul>
+  return <ul className="items items-scroll">{items.map((s) => <SubtaskRow key={s.id} s={s} taskId={taskId} />)}</ul>
 }
 
 function SubtaskRow({ s, taskId }: { s: Subtask; taskId: string }) {

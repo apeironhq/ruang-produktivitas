@@ -130,7 +130,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
             {achieved.length > 0 && <span className="badge">{achieved.length} target</span>}
           </SectionHead>
           {achieved.length === 0 ? <EmptyState icon={<Trophy size={20} strokeWidth={1.75} />} title="Belum ada target tercapai" description="Saat progres target mencapai 100%, target otomatis tercatat di sini." action={<Link href="/target" className="btn btn-secondary">Lihat target</Link>} /> : (
-            <ul className="items">
+            <ul className="items items-scroll">
               {achieved.map((g) => {
                 const n = goalNumbers(g)
                 return (
@@ -166,7 +166,7 @@ export default async function Page({ searchParams }: PageProps<'/pencapaian'>) {
           <SectionHead id="ms-title" icon={<Flag size={18} />} title="Tahapan terbaru" desc="Langkah-langkah yang sudah dilewati" />
           <div className="card-body pt-1 flex flex-col">
             {(ms.data ?? []).length === 0 ? <EmptyState icon={<Flag size={20} strokeWidth={1.75} />} title="Belum ada tahapan tercapai" description="Tahapan target yang terlewati muncul di sini." className="fill" /> : (
-              <ul className="items">
+              <ul className="items items-scroll">
                 {(ms.data ?? []).map((m) => (
                   <li key={m.id} className="item">
                     <span className="act-icon" style={tint('var(--c-blue)')} aria-hidden="true"><Flag size={15} /></span>

@@ -231,7 +231,7 @@ export function AddModulesButton({ subjectId }: { subjectId: string }) {
 
 export function ModuleList({ subjectId, modules }: { subjectId: string; modules: Module[] }) {
   return (
-    <ol className="items">
+    <ol className="items items-scroll">
       {modules.map((m, i) => <ModuleRow key={m.id} m={m} subjectId={subjectId} index={i} last={i === modules.length - 1} />)}
     </ol>
   )

@@ -115,7 +115,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
               <div className="panel-head"><div><h2 id="recent-title"><Receipt size={18} />Transaksi terbaru</h2><p className="text-caption">Semua rekening</p></div><Link href="/keuangan/transaksi" className="link-sm">Lihat semua</Link></div>
               <div className="panel-body">
                 {recent.length === 0 ? <EmptyState title="Belum ada transaksi" description="Catat pemasukan atau pengeluaran pertama Anda." className="fill" /> : (
-                  <ul className="items">{recent.map((t) => (
+                  <ul className="items items-scroll">{recent.map((t) => (
                     <li key={t.id} className="item">
                       <span className="min-w-0 flex-1">
                         <span className="item-title block truncate">{txTitle(t, catName, accName)}</span>
@@ -133,7 +133,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
               <div className="panel-head"><div><h2 id="budget-title"><Rabbit size={18} />Anggaran</h2><p className="text-caption">Terpakai bulan <span className="capitalize">{label}</span></p></div><Link href={`/keuangan/anggaran?bulan=${month}`} className="link-sm">Atur</Link></div>
               <div className="panel-body">
                 {budgets.length === 0 ? <EmptyState title="Belum ada anggaran" description="Tetapkan batas pengeluaran per kategori agar mudah dikendalikan." className="fill" /> : (
-                  <ul className="items">{budgets.map((b) => {
+                  <ul className="items items-scroll">{budgets.map((b) => {
                     const pct = (b.spent / b.limit) * 100
                     return (
                       <li key={b.id} className="item">
@@ -156,7 +156,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan'>) {
             <section className="card panel" aria-labelledby="acc-title">
               <div className="panel-head"><div><h2 id="acc-title"><Landmark size={18} />Rekening</h2><p className="text-caption">Saldo saat ini</p></div><Link href="/keuangan/rekening" className="link-sm">Kelola</Link></div>
               <div className="panel-body">
-                <ul className="items">{accounts.map((a) => (
+                <ul className="items items-scroll">{accounts.map((a) => (
                   <li key={a.id} className="item">
                     <span className="act-icon" style={tint('var(--c-blue)')} aria-hidden="true"><Landmark size={16} /></span>
                     <span className="min-w-0 flex-1">

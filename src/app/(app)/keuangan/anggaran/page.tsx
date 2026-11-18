@@ -70,7 +70,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
             description="Tetapkan batas pengeluaran per kategori, mis. Makan & minum Rp1.500.000."
             action={(prevBudgets.count ?? 0) > 0 ? <ActionButton action={copyBudgets.bind(null, r.prev, month)}><Copy size={16} />Salin dari bulan lalu</ActionButton> : undefined} />
         ) : (
-          <ul className="items">
+          <ul className="items items-scroll">
             {budgets.map((b) => {
               const pct = (b.spent / b.limit) * 100
               const left = b.limit - b.spent
@@ -109,7 +109,7 @@ export default async function Page({ searchParams }: PageProps<'/keuangan/anggar
           {(['pengeluaran', 'pemasukan'] as const).map((type) => (
             <div key={type}>
               <p className="text-overline mb-1">{type === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan'}</p>
-              <ul className="items">
+              <ul className="items items-scroll">
                 {categories.filter((c) => c.type === type).map((c) => (
                   <li key={c.id} className="item">
                     <span className="item-title flex-1 min-w-0 truncate">{c.name}</span>

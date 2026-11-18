@@ -170,7 +170,7 @@ export default async function Page({ searchParams }: PageProps<'/kalender'>) {
           {selEvents.length === 0 ? (
             <EmptyState icon={<ListChecks size={20} strokeWidth={1.75} />} title="Tidak ada agenda" description="Tanggal ini masih kosong." />
           ) : (
-            <div className="card-body py-1"><ul className="items">
+            <div className="card-body py-1"><ul className="items items-scroll">
               {selEvents.map((e) => (
                 <li key={`${e.id}-s`} className={`item agenda-item${e.done ? ' is-done' : ''}`}>
                   <span className="swatch shrink-0 mt-1.5" style={{ background: e.color }} aria-hidden="true" />
