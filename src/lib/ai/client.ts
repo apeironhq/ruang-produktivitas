@@ -162,7 +162,14 @@ export async function aiJson<T>(cfg: AiConfig, opts: { system: string; prompt: s
     }
     const content = (r.data as { choices?: Array<{ message?: { content?: string } }> }).choices?.[0]?.message?.content ?? ''
     const data = parseJsonObject(content)
-    return data && typeof data === 'object' ? { ok: true, data: data as T } : { ok: false, error: `Jawaban ${name} tidak terbaca.`, kind: 'lain' }
+    if (data && typeof data === 'object') return { ok: true, data: data as T }
+    // Tidak terbaca: catat bentuknya (untuk log Vercel) lalu coba sekali lagi tanpa mode JSON.
+    console.error(`[ai] jawaban ${name} tidak terbaca (percobaan ${attempt + 1}, ${content.length} karakter):`, JSON.stringify(content.slice(0, 200)))
+    if (attempt === 0) { jsonMode = false; continue }
+    // Percobaan kedua berupa teks biasa → pakai langsung sebagai balasan obrolan.
+    const plain = content.replace(/<\|[^|>]*\|>/g, '').trim()
+    if (plain && !/^[[{]/.test(plain)) return { ok: true, data: { actions: [], ops: [], balasan: plain.slice(0, 3500) } as unknown as T }
+    return { ok: false, error: `Jawaban ${name} tidak terbaca.`, kind: 'lain' }
   }
   return { ok: false, error: `${name} menolak permintaan.`, kind: 'lain' }
 }
