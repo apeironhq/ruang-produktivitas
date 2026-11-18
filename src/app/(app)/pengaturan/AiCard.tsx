@@ -130,8 +130,8 @@ function ShareDataToggle({ on, provider }: { on: boolean; provider: string }) {
     <label className="choice">
       <input type="checkbox" checked={on} disabled={pending} onChange={(e) => run(() => setAiShareData(e.target.checked))} />
       <span className="min-w-0">
-        <span className="choice-title">Izinkan Rupi membaca ringkasan data saya</span>
-        <span className="choice-desc">Agenda, tugas, target, dan keuangan bulan ini ikut dikirim ke {provider} agar Rupi bisa menjawab “tugasku hari ini apa?”.</span>
+        <span className="choice-title">Izinkan Rupi membaca &amp; mengubah data saya</span>
+        <span className="choice-desc">Seluruh data dashboard ikut dikirim ke {provider} agar Rupi bisa menjawab pertanyaan dan mengusulkan perubahan (tetap dikonfirmasi lewat tombol).</span>
       </span>
     </label>
   )

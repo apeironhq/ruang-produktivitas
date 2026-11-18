@@ -11,6 +11,7 @@ import {
 import { createTimer, eveningPanel, parseDuration, pomodoroStarted, repeatText, splitReminder, startPomodoro, timerPanel, type Pomo } from './timers'
 import { extractRepeat, extractWhen, minutesLabel, whenLabel } from './when'
 import { aiOffer, rememberTurns, saveAiItems, type AiItem } from './ai'
+import { executeOps, type AiOp } from './aiOps'
 import { btn, cut, esc, greetingFor, link, longDay, renderPanel, siteUrl, type Ctx, type Panel } from './ui'
 import { formatTime } from '../format'
 
@@ -349,9 +350,9 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
     }
     case 'ai': { // usulan Asisten AI
       const pend = await loadPending(ctx)
-      const pl = pend?.action === 'ai' ? (pend.payload as { items?: AiItem[]; text?: string; mid?: number }) : null
+      const pl = pend?.action === 'ai' ? (pend.payload as { items?: AiItem[]; ops?: AiOp[]; text?: string; mid?: number }) : null
       // Usulan sudah diganti pesan yang lebih baru (atau kedaluwarsa) → tombol di pesan ini tidak berlaku lagi.
-      if (!pl?.items?.length || (pl.mid && pl.mid !== msg.message_id)) {
+      if (!(pl?.items?.length || pl?.ops?.length) || (pl.mid && pl.mid !== msg.message_id)) {
         toast = 'Usulan ini sudah tidak aktif.'
         await editMessageReplyMarkup(ctx.chatId, msg.message_id, [])
         break
@@ -359,12 +360,16 @@ async function callbackInner(db: SupabaseClient, cb: TgCallback, user: BotUser |
       answerNow(rest === 'ok' ? 'Menyimpan…' : undefined)
       await clearFlow(ctx)
       if (rest === 'ok') {
-        const lines = await saveAiItems(ctx, pl.items)
-        await rememberTurns(ctx, [{ role: 'assistant', content: '(Usulan tadi sudah disimpan oleh pengguna.)' }])
+        const lines = [
+          ...(pl.items?.length ? await saveAiItems(ctx, pl.items) : []),
+          ...(pl.ops?.length ? await executeOps(ctx, pl.ops) : []),
+        ]
+        if (pl.ops?.length) await ctx.db.rpc('evaluate_achievements_for', { p_user: ctx.userId })
+        await rememberTurns(ctx, [{ role: 'assistant', content: '(Usulan tadi sudah dijalankan oleh pengguna.)' }])
         await editMessageKb(ctx.chatId, msg.message_id, ['<b>✅ Tersimpan</b>', '', ...lines].join('\n'), [[btn('✅ Tugas', 'p:tugas'), btn('📅 Kalender', 'p:kal'), btn('🏠 Menu', 'p:home')]])
       } else if (rest === 'man') {
         await editMessageReplyMarkup(ctx.chatId, msg.message_id, [])
-        await offerFreeText(ctx, pl.text ?? '', { noAi: true })
+        await offerFreeText(ctx, pl?.text ?? '', { noAi: true })
       } else {
         await rememberTurns(ctx, [{ role: 'assistant', content: '(Usulan tadi dibatalkan pengguna, tidak ada yang disimpan.)' }])
         await editMessageKb(ctx.chatId, msg.message_id, '✖️ <i>Dibatalkan — tidak ada yang disimpan.</i>', [[btn('🏠 Menu', 'p:home')]])

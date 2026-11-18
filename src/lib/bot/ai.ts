@@ -4,13 +4,15 @@ import { addDays, todayIn, zonedToIso } from '../dates'
 import { formatRupiah, formatTime } from '../format'
 import { sendChatAction, sendMessage, sendMessageKb } from '../telegram'
 import { dataSnapshot } from './aiContext'
+import { describeOp, normalizeOps, type AiOp } from './aiOps'
 import { createTimer, repeatText } from './timers'
 import { btn, cut, esc, longDay, type Ctx } from './ui'
 import { guessCategory, hhmmIn, minutesLabel, nextOccurrence, whenLabel } from './when'
 
 /*
- * Asisten AI (Groq atau endpoint kustom seperti 9router, kunci milik pengguna): pesan bebas → daftar aksi (tugas, kegiatan, pengingat,
- * pengeluaran, pemasukan, catatan). Tidak ada yang disimpan sebelum pengguna menekan ✅ Simpan semua (BT-04).
+ * Asisten AI (Groq atau endpoint kustom seperti 9router, kunci milik pengguna): pesan bebas → obrolan, jawaban dari data,
+ * data baru (tugas, kegiatan, pengingat, pengeluaran, pemasukan, catatan) dan perubahan atas data yang sudah ada (aiOps.ts).
+ * Tidak ada yang disimpan / diubah sebelum pengguna menekan ✅ Simpan (BT-04).
  */
 
 export type AiKind = 'tugas' | 'kegiatan' | 'pengingat' | 'pengeluaran' | 'pemasukan' | 'catatan'
@@ -19,7 +21,7 @@ export interface AiItem {
   account?: string; accountName?: string; category?: string; categoryName?: string
 }
 interface RawAction { type?: string; judul?: string; waktu?: string; jam?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string }
-interface Raw { actions?: RawAction[]; balasan?: string }
+interface Raw { actions?: RawAction[]; ops?: unknown[]; balasan?: string }
 
 const KINDS: AiKind[] = ['tugas', 'kegiatan', 'pengingat', 'pengeluaran', 'pemasukan', 'catatan']
 const MAX_ITEMS = 6
@@ -36,12 +38,12 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '',
     'Kemampuanmu:',
     '- Mencatat dari pesan bebas: tugas, kegiatan, pengingat (termasuk berulang), pengeluaran / pemasukan, dan catatan. Semua usulan dikonfirmasi pengguna dulu lewat tombol.',
-    '- Menjawab pertanyaan tentang agenda, tugas, proyek, target, belajar, kebiasaan, jurnal, dan keuangan pengguna — HANYA dari DATA PENGGUNA di bawah.',
+    '- Membaca SELURUH data dashboard pengguna (DATA PENGGUNA di bawah) dan menjawab pertanyaan tentangnya — hanya dari DATA itu.',
+    '- Mengubah data yang sudah ada lewat "ops": ubah / selesaikan / batalkan / hapus tugas & kegiatan, ubah / hapus transaksi, transfer antar rekening, atur anggaran, progres / buat / ubah target, catat sesi belajar, check-in / buat / arsipkan kebiasaan, ubah proyek, ubah / hapus jurnal, batalkan pengingat.',
     '- Menjadi teman ngobrol untuk topik apa saja (cerita harian, curhat, pengetahuan umum, ide) dan penasihat: beri saran yang konkret, bertahap, dan bisa langsung dilakukan.',
     '- Saat memberi saran tentang hidup pengguna (boros, menunda, susah fokus, target meleset), kaitkan dengan angka / nama dari DATA: sebut kategori pengeluaran terbesar, tugas yang terlambat, kebiasaan yang putus, dsb. Tawarkan bantuan lanjutan (mis. "mau aku buatkan pengingat?").',
     '- Untuk kesehatan, hukum, atau investasi: beri gambaran umum yang aman saja dan sarankan bertanya ke ahlinya; jangan memberi diagnosis atau rekomendasi produk investasi tertentu.',
     '- Fitur lain lewat perintah: /fokus (pomodoro), /timer, /kalender, /tugas, /target, /keuangan, /kebiasaan, /ringkasan, /menu. Sarankan perintah itu bila cocok.',
-    '- Kamu tidak bisa mengubah / menghapus data yang sudah tersimpan; arahkan ke /tugas atau aplikasi web.',
     '',
     'Kapan membuat actions:',
     '- Hanya bila pengguna jelas ingin mencatat, menjadwalkan, diingatkan, atau mencatat uang.',
@@ -52,7 +54,8 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
     '- Bila tidak ada actions: jawaban lengkap; untuk daftar pakai baris baru diawali "• " (maks. 10 baris).',
     '- Jangan menyimpulkan pola, kebiasaan, atau fakta tentang pengguna yang tidak tertulis di DATA atau percakapan (mis. jam produktifnya).',
-    '- Jangan mengarang data pengguna. DATA berisi ringkasan + RINCIAN sesuai topik pesan; bila rincian yang dibutuhkan tidak ada, katakan terus terang dan minta pengguna bertanya lebih spesifik (mis. sebut "keuangan", "proyek", "belajar") atau sarankan perintah yang relevan.',
+    '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya (mis. transaksi yang lebih lama), katakan terus terang dan sarankan perintah / halaman web yang relevan.',
+    '- Jangan tampilkan kode item (T1, X3, G2, …) di "balasan"; sebut judul / nominalnya.',
     '',
     'Aturan actions:',
     '- type "tugas": pekerjaan yang harus diselesaikan (boleh ada tenggat).',
@@ -67,14 +70,39 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '- durasi_menit dan lokasi hanya untuk kegiatan, bila disebut.',
     `- Satu pesan boleh berisi beberapa aksi (maksimal ${MAX_ITEMS}).`,
     '',
+    'Aturan ops (perubahan atas data yang SUDAH ada):',
+    '- Buat ops hanya bila pengguna jelas meminta perubahan itu; hapus hanya bila diminta eksplisit. Semua ops tetap dikonfirmasi pengguna lewat tombol.',
+    '- "ref" WAJIB kode item persis dari DATA (mis. "T3"); jangan mengarang kode. Bila item yang dimaksud tidak jelas atau ada beberapa yang cocok, jangan buat ops — tanyakan di "balasan" dengan menyebut pilihannya.',
+    '- Isi hanya kolom yang berubah. Rekening & kategori ditulis dengan namanya persis seperti di DATA.',
+    '- Data baru (tugas, kegiatan, pengingat, pengeluaran, pemasukan, catatan) tetap memakai "actions"; target baru, kebiasaan baru, transfer, dan anggaran memakai "ops".',
+    'Bentuk ops yang tersedia:',
+    '{"op":"ubah_tugas","ref":"T1","judul":"","waktu":"YYYY-MM-DDTHH:MM","jam":"HH:MM","prioritas":"rendah|sedang|tinggi","lokasi":"","durasi_menit":0}',
+    '{"op":"status_tugas","ref":"T1","status":"selesai|dikerjakan|belum|tertunda|dibatalkan"}',
+    '{"op":"hapus_tugas","ref":"T1"}',
+    '{"op":"ubah_transaksi","ref":"X1","jumlah":0,"kategori":"","rekening":"","catatan":"","tanggal":"YYYY-MM-DD"}',
+    '{"op":"hapus_transaksi","ref":"X1"}',
+    '{"op":"transfer","dari":"nama rekening","ke":"nama rekening","jumlah":0,"catatan":""}',
+    '{"op":"anggaran","kategori":"nama kategori pengeluaran","jumlah":0}  (batas pengeluaran bulan ini)',
+    '{"op":"progres_target","ref":"G1","nilai":0,"catatan":""}  (tambahan progres, boleh negatif; hanya target tanpa "progres otomatis")',
+    '{"op":"tambah_target","judul":"","target":0,"satuan":"","jenis":"rupiah|jumlah|durasi|persentase","tenggat":"YYYY-MM-DD"}',
+    '{"op":"ubah_target","ref":"G1","judul":"","target":0,"tenggat":"YYYY-MM-DD","status":"aktif|tercapai|arsip"}',
+    '{"op":"sesi_belajar","ref":"B1","menit":0,"materi":""}',
+    '{"op":"checkin","ref":"H1"}',
+    '{"op":"tambah_kebiasaan","nama":"","frekuensi":"harian|mingguan","kali_per_minggu":0}',
+    '{"op":"arsip_kebiasaan","ref":"H1"}',
+    '{"op":"ubah_proyek","ref":"P1","status":"rencana|aktif|selesai|ditunda|arsip","tenggat":"YYYY-MM-DD"}',
+    '{"op":"ubah_jurnal","ref":"J1","judul":"","isi":""}',
+    '{"op":"hapus_jurnal","ref":"J1"}',
+    '{"op":"batal_pengingat","ref":"R1"}',
+    '',
     data
-      ? `DATA PENGGUNA (ringkasan terbaru dari aplikasi):\n${data}`
+      ? `DATA PENGGUNA (seluruh dashboard, terbaru; kode di awal baris dipakai untuk "ref"):\n${data}`
       : shared
-        ? 'DATA PENGGUNA: sedang tidak bisa dimuat. Untuk pertanyaan tentang data, sarankan /menu, /tugas, /kalender, atau /keuangan.'
-        : 'DATA PENGGUNA: tidak dibagikan (pengguna mematikan izinnya di Pengaturan). Untuk pertanyaan tentang data, sarankan /menu, /tugas, /kalender, atau /keuangan.',
+        ? 'DATA PENGGUNA: sedang tidak bisa dimuat — jangan buat ops. Untuk pertanyaan tentang data, sarankan /menu, /tugas, /kalender, atau /keuangan.'
+        : 'DATA PENGGUNA: tidak dibagikan (pengguna mematikan izinnya di Pengaturan > Asisten AI) — jangan buat ops; bila pengguna minta mengubah data, sarankan menyalakan izin itu.',
     '',
     'Jawab HANYA dengan satu objek JSON berbentuk:',
-    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"balasan":""}',
+    '{"actions":[{"type":"tugas|kegiatan|pengingat|pengeluaran|pemasukan|catatan","judul":"…","waktu":"YYYY-MM-DDTHH:MM atau \"\"","jam":"HH:MM atau \"\"","ulang":"\"\"|harian|kerja|mingguan","hari":[0-6],"jumlah":0,"durasi_menit":0,"lokasi":""}],"ops":[{"op":"…","ref":"…"}],"balasan":""}',
     'Isi "jumlah" hanya untuk uang, "hari" hanya untuk ulang mingguan, sisanya boleh 0 / "" / [].',
   ].join('\n')
 }
@@ -212,10 +240,11 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   void sendChatAction(ctx.chatId, 'typing')
   const now = new Date()
   const prompt = text.slice(0, 2000)
-  const history = await loadHistory(ctx).catch(() => [] as AiTurn[])
-  // Rincian data dipilih dari topik pesan ini + pesan pengguna sebelumnya ("terus gimana?" tetap paham topiknya).
-  const topicText = [prompt, ...history.filter((h) => h.role === 'user').slice(-3).map((h) => h.content)].join('\n')
-  const data = cfg.shareData ? await dataSnapshot(ctx, topicText).catch(() => null) : null
+  const [history, snap] = await Promise.all([
+    loadHistory(ctx).catch(() => [] as AiTurn[]),
+    cfg.shareData ? dataSnapshot(ctx).catch(() => null) : Promise.resolve(null),
+  ])
+  const data = snap?.text ?? null
   // Status "mengetik…" Telegram hilang ±5 detik; ulangi selama AI berpikir (model gratis bisa 15–25 detik).
   const typing = setInterval(() => void sendChatAction(ctx.chatId, 'typing'), 4500)
   const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 2000 })
@@ -223,8 +252,9 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
   const reply = cleanReply(r.data.balasan)
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
+  const ops: AiOp[] = snap ? normalizeOps(r.data.ops, snap, ctx.tz) : []
 
-  if (!items.length) {
+  if (!items.length && !ops.length) {
     // Mode ngobrol: cukup balas.
     if (!reply) return {}
     await sendMessage(ctx.chatId, `✨ ${esc(reply)}`)
@@ -232,25 +262,28 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
     return 'done'
   }
 
-  const saved = await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
+  const n = items.length + ops.length
+  const saved = await ctx.db.from('telegram_pending').upsert({ chat_id: ctx.chatId, user_id: ctx.userId, action: 'ai', payload: { items, ops, text: text.slice(0, 50000) }, created_at: new Date().toISOString() })
   // Usulan tidak bisa disimpan → jangan tampilkan tombol yang tidak akan berfungsi.
   if (saved.error) return { note: '⚠️ <i>Rupi AI belum bisa menyimpan usulan. Memakai mode biasa.</i>' }
   const sent = await sendMessageKb(ctx.chatId, [
-    reply ? `✨ ${esc(reply)}` : `✨ <b>Rupi AI memahami ${items.length > 1 ? `${items.length} hal` : 'ini'}:</b>`,
+    reply ? `✨ ${esc(reply)}` : `✨ <b>Rupi AI memahami ${n > 1 ? `${n} hal` : 'ini'}:</b>`,
     '',
-    ...items.map((i, n) => `${items.length > 1 ? `${n + 1}. ` : ''}${describe(i, ctx.tz)}`),
+    ...[...items.map((i) => describe(i, ctx.tz)), ...ops.map((o) => describeOp(o, ctx.tz))].map((line, k) => `${n > 1 ? `${k + 1}. ` : ''}${line}`),
     '',
-    `<i>${items.length > 1 ? 'Simpan semuanya?' : 'Simpan?'} Belum ada yang tersimpan sebelum kamu menekan tombol.</i>`,
+    `<i>${n > 1 ? 'Jalankan semuanya?' : 'Jalankan?'} Belum ada yang tersimpan / berubah sebelum kamu menekan tombol.</i>`,
   ].join('\n'), [
-    [btn(items.length > 1 ? `✅ Simpan semua (${items.length})` : '✅ Simpan', 'ai:ok', 'success')],
-    [btn('✏️ Atur manual', 'ai:man'), btn('✖️ Batal', 'ai:x')],
+    [btn(n > 1 ? `✅ Simpan semua (${n})` : '✅ Simpan', 'ai:ok', 'success')],
+    // "Atur manual" hanya untuk data baru (isian biasa tidak bisa mengubah data lama).
+    ops.length ? [btn('✖️ Batal', 'ai:x')] : [btn('✏️ Atur manual', 'ai:man'), btn('✖️ Batal', 'ai:x')],
   ])
   // Tandai usulan dengan nomor pesannya: tombol di usulan lama tidak boleh bekerja atas usulan baru.
   const mid = sent.ok ? (sent.result as { message_id?: number }).message_id : undefined
-  if (mid) await ctx.db.from('telegram_pending').update({ payload: { items, text: text.slice(0, 50000), mid } }).eq('chat_id', ctx.chatId).eq('action', 'ai')
+  if (mid) await ctx.db.from('telegram_pending').update({ payload: { items, ops, text: text.slice(0, 50000), mid } }).eq('chat_id', ctx.chatId).eq('action', 'ai')
+  const plain = [plainItems(items, ctx.tz), ops.map((o) => describeOp(o, ctx.tz).replace(/<[^>]+>/g, '')).join('; ')].filter(Boolean).join('; ')
   await rememberTurns(ctx, [
     { role: 'user', content: prompt },
-    { role: 'assistant', content: `${reply ? `${reply}\n` : ''}(Usulan belum disimpan: ${plainItems(items, ctx.tz)})` },
+    { role: 'assistant', content: `${reply ? `${reply}\n` : ''}(Usulan belum disimpan: ${plain})` },
   ]).catch(() => {})
   return 'done'
 }

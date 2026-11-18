@@ -75,7 +75,7 @@ export async function setAiShareData(on: boolean): Promise<ActionState> {
   const { error } = await supabase.rpc('ai_set_share_data', { p_on: on })
   if (error) return dbError(error)
   revalidatePath('/pengaturan')
-  return ok(on ? 'Rupi boleh membaca ringkasan data Anda.' : 'Rupi tidak lagi membaca ringkasan data Anda.')
+  return ok(on ? 'Rupi boleh membaca & mengubah data Anda (dengan konfirmasi).' : 'Rupi tidak lagi membaca data Anda.')
 }
 
 export async function deleteAiKey(): Promise<ActionState> {
