@@ -82,13 +82,54 @@ async function pickModel(cfg: AiConfig): Promise<AiResult<string>> {
   return { ok: true, data: model }
 }
 
-/** Ambil objek JSON dari jawaban model — sebagian model membungkusnya dengan ```json atau teks lain. */
+/** Escape karakter kontrol (baris baru, tab) yang ditulis mentah di dalam string JSON oleh model. */
+function escapeControlInStrings(s: string): string {
+  let out = '', inStr = false, esc = false
+  for (const ch of s) {
+    if (!inStr) { if (ch === '"') inStr = true; out += ch; continue }
+    if (esc) { out += ch; esc = false; continue }
+    if (ch === '\\') { out += ch; esc = true; continue }
+    if (ch === '"') { inStr = false; out += ch; continue }
+    out += ch === '\n' ? '\\n' : ch === '\r' ? '' : ch === '\t' ? '\\t' : ch
+  }
+  return out
+}
+
+/** Jawaban terpotong (batas token): selamatkan isi "balasan" sejauh yang ada. */
+function salvageReply(s: string): string | undefined {
+  const m = /"balasan"\s*:\s*"/.exec(s)
+  if (!m) return undefined
+  let body = '', esc = false
+  for (const ch of s.slice(m.index + m[0].length)) {
+    if (esc) { body += ch; esc = false; continue }
+    if (ch === '\\') { body += ch; esc = true; continue }
+    if (ch === '"') break
+    body += ch
+  }
+  // Buang escape yang terpotong di ujung (mis. "\u20"), lalu biarkan JSON.parse membaca escape-nya.
+  body = body.replace(/\\(u[0-9a-fA-F]{0,3})?$/, '')
+  try {
+    const out = String(JSON.parse(escapeControlInStrings(`"${body}"`))).trim()
+    return out || undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Ambil objek JSON dari jawaban model. Toleran terhadap: pembungkus ```json, teks di luar objek,
+ * baris baru mentah di dalam string, dan jawaban terpotong (hanya "balasan" yang diselamatkan).
+ */
 export function parseJsonObject(content: string): unknown | undefined {
   const s = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-  try { return JSON.parse(s) } catch { /* cari objek di dalam teks */ }
   const a = s.indexOf('{'), b = s.lastIndexOf('}')
-  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)) } catch { return undefined } }
-  return undefined
+  const candidates = [s, ...(a >= 0 && b > a ? [s.slice(a, b + 1)] : [])]
+  for (const c of candidates) {
+    try { return JSON.parse(c) } catch { /* coba berikutnya */ }
+    try { return JSON.parse(escapeControlInStrings(c)) } catch { /* coba berikutnya */ }
+  }
+  const reply = salvageReply(s)
+  return reply ? { actions: [], ops: [], balasan: reply } : undefined
 }
 
 /** Jawaban berupa objek JSON (format dijelaskan di `system`). */

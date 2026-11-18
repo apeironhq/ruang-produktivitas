@@ -272,7 +272,7 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   const data = snap?.text ?? null
   // Status "mengetik…" Telegram hilang ±5 detik; ulangi selama AI berpikir (model gratis bisa 15–25 detik).
   const typing = setInterval(() => void sendChatAction(ctx.chatId, 'typing'), 4500)
-  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 2000 })
+  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 3000 })
     .finally(() => clearInterval(typing))
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
   const reply = cleanReply(r.data.balasan)
