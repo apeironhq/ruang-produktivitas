@@ -94,7 +94,7 @@ export function parseJsonObject(content: string): unknown | undefined {
 /** Jawaban berupa objek JSON (format dijelaskan di `system`). */
 export interface AiTurn { role: 'user' | 'assistant'; content: string }
 
-export async function aiJson<T>(cfg: AiConfig, opts: { system: string; prompt: string; history?: AiTurn[]; timeoutMs?: number }): Promise<AiResult<T>> {
+export async function aiJson<T>(cfg: AiConfig, opts: { system: string; prompt: string; history?: AiTurn[]; timeoutMs?: number; maxTokens?: number }): Promise<AiResult<T>> {
   const name = providerName(cfg)
   let jsonMode = true
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -107,7 +107,7 @@ export async function aiJson<T>(cfg: AiConfig, opts: { system: string; prompt: s
         model: m.data,
         messages: [{ role: 'system', content: opts.system }, ...(opts.history ?? []), { role: 'user', content: opts.prompt }],
         temperature: 0.2,
-        ...(isCustom(cfg) ? { max_tokens: 1200 } : { max_completion_tokens: 1200 }),
+        ...(isCustom(cfg) ? { max_tokens: opts.maxTokens ?? 1200 } : { max_completion_tokens: opts.maxTokens ?? 1200 }),
         ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
         stream: false,
       },

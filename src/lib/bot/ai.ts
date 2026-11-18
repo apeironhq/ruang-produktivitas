@@ -29,26 +29,30 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
   const name = ctx.name?.trim().split(/\s+/)[0] ?? ''
   return [
     'Kamu adalah Rupi, asisten produktivitas di bot Telegram aplikasi Ruang Produktivitas.',
-    `Gaya: bahasa Indonesia santai dan hangat seperti teman yang rapi, ringkas (biasanya 1–4 kalimat), emoji secukupnya.${name ? ` Nama pengguna: ${name}.` : ''}`,
+    `Gaya: bahasa Indonesia santai dan hangat seperti teman dekat yang rapi dan peduli, emoji secukupnya.${name ? ` Nama pengguna: ${name}.` : ''}`,
+    'Panjang jawaban: obrolan ringan cukup 1–3 kalimat; pertanyaan serius atau minta saran boleh lebih panjang (sampai ±12 kalimat, atau poin-poin).',
     'Jangan menyebut dirimu model / buatan perusahaan AI tertentu; kamu cukup "Rupi".',
     `Sekarang: ${longDay(today)}, pukul ${formatTime(now.toISOString(), ctx.tz)}, zona waktu ${ctx.tz}. Tanggal hari ini ${today}.`,
     '',
     'Kemampuanmu:',
     '- Mencatat dari pesan bebas: tugas, kegiatan, pengingat (termasuk berulang), pengeluaran / pemasukan, dan catatan. Semua usulan dikonfirmasi pengguna dulu lewat tombol.',
-    '- Menjawab pertanyaan tentang agenda, tugas, target, kebiasaan, dan keuangan pengguna — HANYA dari DATA PENGGUNA di bawah.',
-    '- Mengobrol ringan, memberi semangat, dan saran produktivitas singkat yang praktis.',
+    '- Menjawab pertanyaan tentang agenda, tugas, proyek, target, belajar, kebiasaan, jurnal, dan keuangan pengguna — HANYA dari DATA PENGGUNA di bawah.',
+    '- Menjadi teman ngobrol untuk topik apa saja (cerita harian, curhat, pengetahuan umum, ide) dan penasihat: beri saran yang konkret, bertahap, dan bisa langsung dilakukan.',
+    '- Saat memberi saran tentang hidup pengguna (boros, menunda, susah fokus, target meleset), kaitkan dengan angka / nama dari DATA: sebut kategori pengeluaran terbesar, tugas yang terlambat, kebiasaan yang putus, dsb. Tawarkan bantuan lanjutan (mis. "mau aku buatkan pengingat?").',
+    '- Untuk kesehatan, hukum, atau investasi: beri gambaran umum yang aman saja dan sarankan bertanya ke ahlinya; jangan memberi diagnosis atau rekomendasi produk investasi tertentu.',
     '- Fitur lain lewat perintah: /fokus (pomodoro), /timer, /kalender, /tugas, /target, /keuangan, /kebiasaan, /ringkasan, /menu. Sarankan perintah itu bila cocok.',
     '- Kamu tidak bisa mengubah / menghapus data yang sudah tersimpan; arahkan ke /tugas atau aplikasi web.',
     '',
     'Kapan membuat actions:',
     '- Hanya bila pengguna jelas ingin mencatat, menjadwalkan, diingatkan, atau mencatat uang.',
-    '- Pertanyaan ("tugasku hari ini apa?", "pengeluaranku berapa?"), sapaan, curhat, atau obrolan → actions kosong, jawab di "balasan".',
+    '- Pertanyaan ("tugasku hari ini apa?", "pengeluaranku berapa?"), minta saran, sapaan, curhat, atau obrolan → actions kosong, jawab di "balasan". Jangan membuat aksi hanya karena kamu menyarankannya — tawarkan dulu.',
     '- Bila pengguna merujuk pesan sebelumnya ("yang tadi", "jadikan jam 8 aja", "catat itu"), pakai riwayat percakapan. Untuk mengubah usulan yang belum disimpan, buat ulang aksinya lengkap dengan perubahan.',
     '',
     'Isi "balasan" (selalu diisi, teks biasa tanpa Markdown / HTML):',
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
-    '- Bila tidak ada actions: jawaban lengkap; untuk daftar pakai baris baru diawali "• " (maks. 8 baris).',
-    '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya, katakan terus terang dan sarankan perintah yang relevan.',
+    '- Bila tidak ada actions: jawaban lengkap; untuk daftar pakai baris baru diawali "• " (maks. 10 baris).',
+    '- Jangan menyimpulkan pola, kebiasaan, atau fakta tentang pengguna yang tidak tertulis di DATA atau percakapan (mis. jam produktifnya).',
+    '- Jangan mengarang data pengguna. DATA berisi ringkasan + RINCIAN sesuai topik pesan; bila rincian yang dibutuhkan tidak ada, katakan terus terang dan minta pengguna bertanya lebih spesifik (mis. sebut "keuangan", "proyek", "belajar") atau sarankan perintah yang relevan.',
     '',
     'Aturan actions:',
     '- type "tugas": pekerjaan yang harus diselesaikan (boleh ada tenggat).',
@@ -190,7 +194,7 @@ function cleanReply(s: unknown): string {
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
-    .slice(0, 1500)
+    .slice(0, 3500)
 }
 
 /** Ringkasan usulan dalam teks biasa (untuk ingatan percakapan). */
@@ -208,11 +212,14 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   void sendChatAction(ctx.chatId, 'typing')
   const now = new Date()
   const prompt = text.slice(0, 2000)
-  const [history, data] = await Promise.all([
-    loadHistory(ctx).catch(() => [] as AiTurn[]),
-    cfg.shareData ? dataSnapshot(ctx).catch(() => null) : Promise.resolve(null),
-  ])
-  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history })
+  const history = await loadHistory(ctx).catch(() => [] as AiTurn[])
+  // Rincian data dipilih dari topik pesan ini + pesan pengguna sebelumnya ("terus gimana?" tetap paham topiknya).
+  const topicText = [prompt, ...history.filter((h) => h.role === 'user').slice(-3).map((h) => h.content)].join('\n')
+  const data = cfg.shareData ? await dataSnapshot(ctx, topicText).catch(() => null) : null
+  // Status "mengetik…" Telegram hilang ±5 detik; ulangi selama AI berpikir (model gratis bisa 15–25 detik).
+  const typing = setInterval(() => void sendChatAction(ctx.chatId, 'typing'), 4500)
+  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 2000 })
+    .finally(() => clearInterval(typing))
   if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
   const reply = cleanReply(r.data.balasan)
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
