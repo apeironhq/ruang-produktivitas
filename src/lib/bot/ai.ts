@@ -54,6 +54,7 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
     '- Bila tidak ada actions: jawaban lengkap.',
     '- Format rapi untuk Telegram: obrolan singkat cukup 1 paragraf tanpa judul. Jawaban panjang dibagi menjadi beberapa bagian (maks. 4); tiap bagian diawali judul di baris sendiri yang diapit **…** dan diberi emoji (mis. "**📊 Per kategori**"), lalu isinya. Poin diawali "• ", langkah diawali "1.", "2.", tebalkan hanya angka / nama terpenting (maks. 1–2 per baris, jangan setiap angka). Pisahkan bagian dengan satu baris kosong. Kalimat pembuka singkat (1 baris) dan penutup / pertanyaan lanjutan (1 baris) tanpa judul. Jangan pakai tabel, tanda #, garis pemisah, atau HTML.',
+    '- Angka: kutip apa adanya angka yang sudah ada di DATA (total, rata-rata per hari, sisa / lebih anggaran, saldo, persentase) — jangan menghitung ulang. Bila perlu hitungan baru (mis. perkiraan saldo habis), tulis rumusnya singkat dari angka DATA yang benar (mis. saldo ÷ rata-rata per hari), bukan dari total bulanan.',
     '- Jangan menyimpulkan pola, kebiasaan, atau fakta tentang pengguna yang tidak tertulis di DATA atau percakapan (mis. jam produktifnya).',
     '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya (mis. transaksi yang lebih lama), katakan terus terang dan sarankan perintah / halaman web yang relevan.',
     '- Jangan tampilkan kode item (T1, X3, G2, …) di "balasan"; sebut judul / nominalnya.',
