@@ -600,7 +600,7 @@ export function helpPanel(): Panel {
         'Ada waktunya? Mis. <code>rapat tim besok jam 9</code> — Rupi membacanya dan menawarkan jadi kegiatan, tugas, atau pengingat.',
         'Awali dengan <i>ingatkan</i> untuk langsung membuat pengingat: <code>ingatkan aku 30 menit lagi angkat jemuran</code>.',
       ] },
-      { title: 'Asisten AI (opsional)', lines: ['Tempel kunci Groq (gratis) atau endpoint milikmu (mis. 9router) di Pengaturan web → pesan bebas apa pun dipahami AI, satu pesan bisa jadi beberapa catatan sekaligus (tetap dikonfirmasi dulu).'] },
+      { title: 'Asisten AI (opsional)', lines: ['Atur endpoint AI milikmu di Pengaturan web → pesan bebas apa pun dipahami AI, satu pesan bisa jadi beberapa catatan sekaligus (tetap dikonfirmasi dulu).'] },
       { title: 'Waktu yang dipahami', lines: ['<i>jam 14 · jam 4 sore · besok pagi · nanti malam · jumat 10.00 · senin depan · 20/11 · tgl 25 · 2 jam lagi · 3 hari lagi</i>'] },
     ],
     kb: [navRow('p:home')],

@@ -19,10 +19,10 @@ const PREFERRED = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt
 const NOT_CHAT = /whisper|tts|guard|playai|orpheus|distil|prompt-guard|compound/i
 
 const isCustom = (cfg: AiConfig) => !!cfg.baseUrl
-/** Nama penyedia untuk pesan: "Groq" atau host endpoint (mis. "9router-anda.vercel.app"). */
+/** Nama penyedia untuk pesan galat: "Groq" atau "layanan AI" (alamat endpoint tidak ditampilkan). */
 export function providerName(cfg: Pick<AiConfig, 'baseUrl'>): string {
   if (!cfg.baseUrl) return 'Groq'
-  try { return new URL(cfg.baseUrl).hostname } catch { return 'endpoint AI' }
+  return 'layanan AI'
 }
 
 /** Pesan ramah + alasan asli dari penyedia (tidak pernah memuat kunci). */

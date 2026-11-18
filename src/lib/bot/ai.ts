@@ -23,6 +23,14 @@ export interface AiItem {
 interface RawAction { type?: string; judul?: string; waktu?: string; jam?: string; ulang?: string; hari?: number[]; jumlah?: number; durasi_menit?: number; lokasi?: string }
 interface Raw { actions?: RawAction[]; ops?: unknown[]; balasan?: string }
 
+/** Pesan saat Rupi AI gagal menjawab — ramah, tanpa nama / alamat penyedia. */
+const AI_FAIL: Record<string, string> = {
+  kuota: 'Rupi AI lagi kena batas pemakaian, coba lagi sebentar ya.',
+  jaringan: 'Rupi AI lagi susah tersambung, coba kirim lagi sebentar ya.',
+  kunci: 'Kunci AI-mu ditolak — cek lagi di Pengaturan web.',
+  lain: 'Rupi AI lagi kesulitan menjawab pesan ini, coba kirim lagi ya.',
+}
+
 const KINDS: AiKind[] = ['tugas', 'kegiatan', 'pengingat', 'pengeluaran', 'pemasukan', 'catatan']
 const MAX_ITEMS = 6
 
@@ -277,7 +285,7 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   const typing = setInterval(() => void sendChatAction(ctx.chatId, 'typing'), 4500)
   const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 3000 })
     .finally(() => clearInterval(typing))
-  if (!r.ok) return { note: `⚠️ <i>Rupi AI: ${esc(r.error)} Memakai mode biasa.</i>` }
+  if (!r.ok) return { note: `⚠️ <i>${AI_FAIL[r.kind] ?? AI_FAIL.lain} Sementara pakai mode biasa:</i>` }
   const reply = cleanReply(r.data.balasan)
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
   const ops: AiOp[] = snap ? normalizeOps(r.data.ops, snap, ctx.tz) : []

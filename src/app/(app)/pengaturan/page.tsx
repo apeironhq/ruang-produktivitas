@@ -102,7 +102,7 @@ export default async function Page({ searchParams }: PageProps<'/pengaturan'>) {
           {section === 'ai' && (
             <>
               <section className="card" aria-labelledby="ai-title">
-                <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Groq atau endpoint Anda sendiri (mis. 9router), kunci milik Anda" />
+                <SectionHead id="ai-title" icon={<Sparkles size={18} />} title="Asisten AI" desc="Endpoint AI pribadi berformat OpenAI, dengan kunci milik Anda" />
                 <div className="card-body">
                   <AiCard telegram={!!c} info={a ? { enabled: a.enabled, hint: a.key_hint, baseUrl: a.base_url, model: a.model, shareData: a.share_data, updatedLabel: formatDateTime(a.updated_at, user.timezone) } : null} />
                 </div>
