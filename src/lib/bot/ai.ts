@@ -62,7 +62,8 @@ function systemPrompt(ctx: Pick<Ctx, 'tz' | 'name'>, now: Date, data: string | n
     'Isi "balasan" (selalu diisi):',
     '- Bila ada actions: satu kalimat pengantar singkat, jangan mengulang daftar aksinya.',
     '- Bila tidak ada actions: jawaban lengkap.',
-    '- Format rapi untuk Telegram: jawaban singkat cukup 1 paragraf tanpa judul. Jawaban panjang dibagi menjadi beberapa bagian (maks. 4); tiap bagian diawali judul singkat di baris sendiri yang diapit **…** (tanpa emoji, atau paling banyak satu emoji), lalu isinya. Poin diawali "• ", langkah diawali "1.", "2."; tebalkan hanya angka / nama terpenting (maks. 1–2 per baris). Pisahkan bagian dengan satu baris kosong. Jangan pakai tabel, tanda #, garis pemisah, atau HTML.',
+    '- Format rapi untuk Telegram: jawaban singkat cukup 1 paragraf tanpa judul. Jawaban panjang dibagi menjadi beberapa bagian (maks. 4); tiap bagian diawali judul singkat di baris sendiri yang diapit **…** (tanpa emoji, atau paling banyak satu emoji), lalu isinya. Poin diawali "• ", langkah diawali "1.", "2."; tebalkan hanya angka / nama terpenting (maks. 1–2 per baris). Pisahkan bagian dengan satu baris kosong. Jangan pakai tabel Markdown, tanda #, garis pemisah, atau HTML.',
+    '- Data berbentuk daftar atau angka (jadwal, rincian pengeluaran / pemasukan, saldo rekening, progres target, ringkasan) tulis di dalam blok kode ``` … ``` dengan satu item per baris berformat "label : nilai" (mis. "09.00–10.00 : Rapat tim · kantor", "Belanja : Rp161.000 (54%)"). Tanggal / keterangan blok ditulis sebagai judul di atasnya. Penjelasan dan saran tetap di luar blok kode.',
     '- Angka: kutip apa adanya angka yang sudah ada di DATA (total, rata-rata per hari, sisa / lebih anggaran, saldo, persentase) — jangan menghitung ulang. Bila perlu hitungan baru (mis. perkiraan saldo habis), tulis rumusnya singkat dari angka DATA yang benar (mis. saldo ÷ rata-rata per hari), bukan dari total bulanan.',
     '- Jangan menyimpulkan pola, kebiasaan, atau fakta tentang pengguna yang tidak tertulis di DATA atau percakapan (mis. jam produktifnya).',
     '- Jangan mengarang data pengguna. Bila DATA tidak memuat jawabannya (mis. transaksi yang lebih lama), katakan terus terang dan sarankan perintah / halaman web yang relevan.',
@@ -238,15 +239,58 @@ function cleanReply(s: unknown): string {
 }
 
 /**
+ * Isi blok kode dari AI → kotak kode Telegram (<pre>). Baris "label : nilai" disejajarkan titik duanya
+ * (label maks. 22 karakter) agar rapi walaupun model menulisnya tidak rata.
+ */
+function codeBlock(lines: string[]): string {
+  const rows = lines.map((l) => l.replace(/\s+$/, '').replace(/\*\*/g, '')).filter((l, i, a) => l || (i > 0 && i < a.length - 1))
+  if (!rows.length) return ''
+  const pair = (l: string) => /^(.{1,40}?)\s*:\s+(.+)$/.exec(l.trim())
+  const pairs = rows.map(pair)
+  const aligned = pairs.filter(Boolean).length >= Math.ceil(rows.length / 2)
+  let text = rows.join('\n')
+  if (aligned) {
+    const w = Math.min(22, Math.max(...pairs.map((p) => (p ? p[1].trim().length : 0))))
+    text = rows.map((l, i) => {
+      const p = pairs[i]
+      if (!p) return l
+      const label = p[1].trim()
+      return `${(label.length > w ? `${label.slice(0, w - 1)}…` : label).padEnd(w)} : ${p[2].trim()}`
+    }).join('\n')
+  }
+  return `<pre>${esc(text)}</pre>`
+}
+
+/**
  * Teks balasan → HTML Telegram yang rapi dan aman: semua di-escape dulu, lalu hanya **tebal** yang
- * menjadi <b>. Judul Markdown (#), butir "-" / "*", dan baris judul pendek berakhiran ":" dirapikan;
- * judul bagian diberi jarak satu baris kosong di atasnya.
+ * menjadi <b>. Blok ``` menjadi kotak kode sejajar. Judul Markdown (#), butir "-" / "*", dan baris
+ * judul pendek dirapikan; judul bagian dan kotak kode diberi jarak satu baris kosong di atasnya.
  */
 export function formatReply(s: string): string {
   const out: string[] = []
+  const gap = () => { if (out.length && out[out.length - 1] !== '') out.push('') }
+  let code: string[] | null = null
+  // Judul tepat di atas kotak kode menempel padanya; teks setelah kotak kode diberi jarak.
+  let lastHeading = false, afterCode = false
+  const pushCode = (lines: string[]) => {
+    const html = codeBlock(lines)
+    if (!html) return
+    if (!lastHeading) gap()
+    out.push(html)
+    lastHeading = false
+    afterCode = true
+  }
   for (const raw of s.split('\n')) {
+    if (/^\s*```/.test(raw)) {
+      if (code) { pushCode(code); code = null }
+      else code = []
+      continue
+    }
+    if (code) { code.push(raw); continue }
     let line = raw.trim()
     if (/^([-*_=])\1{2,}$/.test(line)) continue // garis pemisah
+    if (!line) { if (out.length && out[out.length - 1] !== '') out.push(''); lastHeading = false; continue }
+    if (afterCode) { gap(); afterCode = false }
     const md = /^#{1,6}\s+/.test(line)
     line = line.replace(/^#{1,6}\s+/, '').replace(/^[-*]\s+/, '• ').replace(/^•(?=\S)/, '• ')
     let html = esc(line).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '')
@@ -256,9 +300,12 @@ export function formatReply(s: string): string {
     const heading = md || emojiTitle || /^<b>[^<]{1,60}<\/b>:?$/.test(html) || (/^[^•\d<].{0,48}:$/.test(line) && !line.includes('**'))
     if (heading && !/^<b>.*<\/b>:?$/.test(html)) html = `<b>${html}</b>`
     if (heading) html = html.replace(/:(<\/b>)?$/, '$1').replace(/<\/b>:$/, '</b>')
-    if (heading && out.length && out[out.length - 1] !== '') out.push('')
+    if (heading) gap()
     out.push(html)
+    lastHeading = heading
   }
+  // Blok kode yang tidak ditutup model tetap ditampilkan sebagai kotak kode.
+  if (code) pushCode(code)
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
