@@ -228,6 +228,11 @@ async function offerFreeText(ctx: Ctx, text: string, opts: { noAi?: boolean } = 
   const looksMoney = !!splitMoney(text)
   const w = looksMoney ? null : extractWhen(first, ctx.tz, { defaultTime: '09:00' })
   const timed = !!(w && w.rest)
+  // AI gagal pada pesan obrolan (tanpa nominal / waktu, pendek) → cukup minta maaf, tanpa menu "mau disimpan sebagai apa?".
+  if (ai.fail && !looksMoney && !timed && body.length <= 160 && !body.includes('\n')) {
+    await sendMessage(ctx.chatId, `🙏 ${esc(ai.fail)}`)
+    return
+  }
   await sendMessageKb(ctx.chatId, [
     ...(ai.reply ? [`✨ ${esc(ai.reply)}`, ''] : []),
     '<b>Pesan diterima</b>',

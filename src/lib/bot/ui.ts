@@ -34,7 +34,7 @@ export interface Section {
   title?: string
   lines: string[]
   quote?: boolean | 'expand'
-  /** Tabel 2 kolom "label : nilai" dalam blok monospace → titik dua sejajar. Teks polos (di-escape otomatis). */
+  /** Daftar "label: nilai" (nilai tebal, ikon menurut label). Teks polos (di-escape otomatis). */
   table?: Array<[string, string]>
   /** Baris monospace bebas (mis. tabel 3 kolom). Teks polos. */
   pre?: string[]
@@ -47,10 +47,25 @@ export function tableText(rows: Array<[string, string]>, maxLabel = 16) {
   return rows.map(([l, v]) => `${(l.length > w ? `${l.slice(0, w - 1)}…` : l).padEnd(w)} : ${v}`).join('\n')
 }
 
+/** Ikon per label untuk daftar "label: nilai"; label lain memakai "•". */
+const LABEL_ICON: Record<string, string> = {
+  Mulai: '🕑', Selesai: '🏁', Tenggat: '📅', Waktu: '⏳', Lokasi: '📍', Tanggal: '📅', Jam: '🕑', Durasi: '⏱',
+  Jumlah: '💵', Rekening: '🏦', Kategori: '🏷', Keterangan: '📝', Isi: '📝', Jenis: '🗂',
+  Pemasukan: '💵', Pengeluaran: '💸', Sisa: '💰', Defisit: '⚠️', 'Keluar hari ini': '🧾',
+  Prioritas: '⚡', Status: '🔄', Berulang: '🔁', Proyek: '📁', Target: '🎯', 'Saat ini': '📈', Tugas: '✅',
+  Nama: '👤', 'Zona waktu': '🌏', Telegram: '✈️', 'Tertaut sejak': '🔗', Model: '🤖',
+  'Ringkasan pagi': '🌅', 'Cek tugas sore': '🌙', 'Total waktu': '⏱', 'Jumlah sesi': '📚',
+}
+
+/** Daftar "ikon Label: <b>nilai</b>" — pengganti tabel monospace (lebih rapi di Telegram, tanpa kotak "copy"). */
+export function tableHtml(rows: Array<[string, string]>) {
+  return rows.map(([l, v]) => `${LABEL_ICON[l] ?? '•'} ${esc(l)}: <b>${esc(v)}</b>`).join('\n')
+}
+
 /** Judul bagian di luar kutipan (seperti judul kartu), isinya di dalam kutipan bila quote. */
 function sectionHtml(s: Section, hidden: number) {
   const title = s.title ? `<b>${s.title}</b>\n` : ''
-  if (s.table) return `${title}<pre>${esc(tableText(s.table))}</pre>`
+  if (s.table) return `${title}${tableHtml(s.table)}`
   if (s.pre) return `${title}<pre>${esc(s.pre.join('\n'))}</pre>`
   const body = [...s.lines, ...(hidden ? [`<i>+${hidden} lainnya</i>`] : [])].join('\n')
   if (!s.quote) return `${title}${body}`

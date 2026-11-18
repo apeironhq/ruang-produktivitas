@@ -270,7 +270,7 @@ const plainItems = (items: AiItem[], tz: string) => items.map((i) => describe(i,
  *  - Obrolan / pertanyaan → dibalas langsung seperti mengobrol (tanpa "mau disimpan sebagai apa?").
  * 'done' = sudah dibalas; selain itu kembali ke mode biasa (dengan catatan galat bila ada).
  */
-export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?: string; note?: string }> {
+export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?: string; note?: string; fail?: string }> {
   const cfg = await aiConfig(ctx)
   if (!cfg) return {}
   void sendChatAction(ctx.chatId, 'typing')
@@ -283,9 +283,16 @@ export async function aiOffer(ctx: Ctx, text: string): Promise<'done' | { reply?
   const data = snap?.text ?? null
   // Status "mengetik…" Telegram hilang ±5 detik; ulangi selama AI berpikir (model gratis bisa 15–25 detik).
   const typing = setInterval(() => void sendChatAction(ctx.chatId, 'typing'), 4500)
-  const r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 3000 })
-    .finally(() => clearInterval(typing))
-  if (!r.ok) return { note: `⚠️ <i>${AI_FAIL[r.kind] ?? AI_FAIL.lain} Sementara pakai mode biasa:</i>` }
+  let r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data, cfg.shareData), prompt, history, maxTokens: 3000 })
+  // Gagal (selain kunci ditolak) → coba sekali lagi lebih ringan: tanpa riwayat, data diringkas, jawaban lebih pendek.
+  if (!r.ok && r.kind !== 'kunci') {
+    r = await aiJson<Raw>(cfg, { system: systemPrompt(ctx, now, data ? data.slice(0, 2500) : null, cfg.shareData), prompt, maxTokens: 1500 })
+  }
+  clearInterval(typing)
+  if (!r.ok) {
+    const fail = AI_FAIL[r.kind] ?? AI_FAIL.lain
+    return { fail, note: `⚠️ <i>${fail} Sementara pakai mode biasa:</i>` }
+  }
   const reply = cleanReply(r.data.balasan)
   const items = await enrich(ctx, normalize(r.data, ctx.tz, now))
   const ops: AiOp[] = snap ? normalizeOps(r.data.ops, snap, ctx.tz) : []
