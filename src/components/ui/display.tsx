@@ -186,9 +186,9 @@ export function DetailTitle({ title, status, meta = [] }: {
 export function DescCard({ text, place }: { text?: string | null; place: 'top' | 'side' }) {
   if (!text?.trim()) return null
   return (
-    <section className={`card desc-${place}`} aria-labelledby={`desc-${place}`}>
+    <section className={`card desc-card desc-${place}`} aria-labelledby={`desc-${place}`}>
       <SectionHead id={`desc-${place}`} icon={<AlignLeft size={18} />} title="Deskripsi" />
-      <div className="card-body"><ClampText text={text.trim()} lines={4} /></div>
+      <div className="card-body"><ClampText text={text.trim()} lines={place === 'side' ? 3 : 4} /></div>
     </section>
   )
 }
